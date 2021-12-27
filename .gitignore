@@ -1,0 +1,8 @@
+**/.vs/*
+**/obj/*
+**/bin/*
+**/__pycache__/*
+**/*.egg-info/*
+*.pyc
+*.dmb
+.doit.db.*

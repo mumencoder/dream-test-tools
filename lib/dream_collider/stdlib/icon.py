@@ -1,0 +1,20 @@
+
+def init_icon(b):
+    b.dmtype("/icon")
+
+    b.dmproc("Blend")
+    b.dmproc("Crop")
+    b.dmproc("DrawBox")
+    b.dmproc("Flip")
+    b.dmproc("GetPixel")
+    b.dmproc("Height")
+    b.dmproc("IconStates")
+    b.dmproc("Insert")
+    b.dmproc("MapColors")
+    b.dmproc("New")
+    b.dmproc("Scale")
+    b.dmproc("SetIntensity")
+    b.dmproc("Shift")
+    b.dmproc("SwapColor")
+    b.dmproc("Turn")
+    b.dmproc("Width")
