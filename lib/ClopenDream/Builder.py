@@ -22,7 +22,6 @@ class Builder(object):
         dmstandard_from_path = config["clopendream.install_dir"] / 'OpenDream' / 'DMCompiler' / 'DMStandard'
         dmstandard_to_path = config["clopendream.install_dir"] / 'ClopenDreamCommandLine' / 'bin'
         dmstandard_to_path = dmstandard_to_path / config["dotnet.project.params"]['configuration'] / 'net6.0' / "DMStandard"
-        if not os.path.exists(dmstandard_to_path / "Defines.dm"):
-            shutil.rmtree(dmstandard_to_path)
-            shutil.copytree(dmstandard_from_path, dmstandard_to_path)
+        shutil.rmtree(dmstandard_to_path)
+        shutil.copytree(dmstandard_from_path, dmstandard_to_path)
     
