@@ -9,7 +9,7 @@ from . import *
 class FullRandomBuilder(object):
     def __init__(self):
         self.otree_builder = ObjectTreeBuilder()
-        for path in ['/', '/', '/', '/', '/datum', '/atom', '/area', '/turf', '/obj', '/mob']:
+        for path in ['/', '/datum', '/atom', '/area', '/turf', '/obj', '/mob']:
             self.otree_builder.add_path(path)
       
         self.const_builder = ConstExprBuilder()
@@ -28,6 +28,10 @@ class FullRandomBuilder(object):
                 if decl.stdlib:
                     continue
                 const_initial = config['decl'].const_initialization()
+
+                # BAD: model wont allow it
+                if config['model'].can_use_decl(decl):
+                    continue
 
                 if type(decl) is ObjectVarDecl:
                     const_usage = decl.const_usage()
@@ -90,6 +94,8 @@ class FullRandomBuilder(object):
 
         for i in range(0,n_stmts):
             config['model'].add_decl( self.otree_builder.decl(config) )
+
+        config['model'].compute_overrides()
 
         for decl in config['model'].decls:
             config['decl'] = decl

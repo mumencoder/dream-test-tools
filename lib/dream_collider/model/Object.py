@@ -21,7 +21,8 @@ class ObjectVarDecl(object):
             path = str(self.path) + '/'
         else:
             path = ""
-        path += 'var/'
+        if not self.is_override:
+            path += 'var/'
         for flag in self.flags:
             path += flag + '/'
         path += self.name
@@ -61,6 +62,8 @@ class DMObject(object):
     def parent_chain(self):
         cnode = self
         while cnode is not None:
+            if type(cnode) is DMObjectTree:
+                break
             yield cnode
             cnode = cnode.obj_trunk
 
@@ -74,13 +77,35 @@ class DMObject(object):
     def add_var(self, name):
         self.vars[name] = True
 
+    def add_proc(self, name):
+        self.procs[name] = True
+
     def has_var(self, name):
         return name in self.vars
+
+    def has_proc(self, name):
+        return name in self.procs
+
+    def is_var_override(self, name):
+        for cnode in self.parent_chain():
+            if cnode == self:
+                continue
+            if cnode.has_var(name):
+                return True
+        return False
+
+    def is_proc_override(self, name):
+        for cnode in self.parent_chain():
+            if cnode == self:
+                continue
+            if cnode.has_proc(name):
+                return True
+        return False
 
 class DMObjectTree(DMObject):
     def __init__(self):
         super().__init__(Path([]))
-        self.objects_by_path = {self.path:self}
+        self.objects_by_path = {}
 
     def ensure_object(self, path):
         trunk_obj = self
@@ -92,7 +117,15 @@ class DMObjectTree(DMObject):
             trunk_obj = self.objects_by_path[ppath]
         return self.get_object(path)
 
+    def is_var_override(self, name):
+        return False
+
+    def is_proc_override(self, name):
+        return None
+
     def get_object(self, path):
+        if path.is_root():
+            return self
         if path not in self.objects_by_path:
             raise Exception(str(path))
         return self.objects_by_path[path]

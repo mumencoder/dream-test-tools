@@ -10,6 +10,9 @@ class Path(object):
             cpath.append(segment)
             yield Path(cpath)
 
+    def is_root(self):
+        return len(self.segments) == 0
+
     def contains(self, path):
         for i, segment in enumerate(path.segments):
             if i >= len(self.segments):

@@ -1,5 +1,5 @@
 
-import collections
+import collections, random
 
 from . import *
 
@@ -9,7 +9,7 @@ class Toplevel(object):
         self.op_info = OpInfo()
 
         self.decls = []
-
+        self.decls_index = collections.defaultdict(list)
         self.values = {}
 
         self.decl_deps = collections.defaultdict(set)
@@ -72,16 +72,6 @@ class Toplevel(object):
         old_trunk.remove_child( leaf )
         leaf.new_parent( trunk )
 
-    def add_decl(self, decl):
-        dmobj = self.obj_tree.ensure_object( decl.path )
-        if len(self.decls) > 0:
-            prev_decl = self.decls[-1]
-            decl.prev_decl = prev_decl
-            dmobj.add_var( decl.name )
-        else:
-            decl.prev_decl = None
-        self.decls.append( decl )
-
     def ident_in_scope(self, ident):
         dmobj = self.obj_tree.get_object( self.scope )
         while dmobj is not None:
@@ -90,15 +80,33 @@ class Toplevel(object):
             dmobj = dmobj.obj_trunk
         return False
 
-    def set_value(self, decl, value):
-        self.values[ (str(decl.path), str(decl.name)) ] = value
+    def can_add_decl(self, decl):
+        pass
 
-    def get_value(self, ident):
-        dmobj = self.obj_tree.get_object( self.scope )
-        while dmobj is not None:
-            v = self.values.get( (str(dmobj.path), ident) )
-            if v is not None:
-                return v
-            dmobj = dmobj.obj_trunk
-        return None
+    def can_use_decl(self, decl):
+        if type(decl) is ObjectVarDecl:
+            dmobj = self.ensure_object(decl.path)
+            if type(dmobj) is DMObjectTree:
+                if dmobj.has_var(decl.name):
+                    return False
+        return True
+
+    def add_decl(self, decl):
+        dmobj = self.obj_tree.ensure_object( decl.path )
+        if len(self.decls) > 0:
+            prev_decl = self.decls[-1]
+            decl.prev_decl = prev_decl
+        else:
+            decl.prev_decl = None
+        if type(decl) is ObjectVarDecl:
+            dmobj.add_var( decl.name )
+            self.decls_index[ ("var", decl.path, decl.name) ].append( decl )
+        elif type(decl) is ProcDecl:
+            dmobj.add_proc( decl.name )
+            self.decls_index[ ("proc", decl.path, decl.name) ].append( decl )
+        else:
+            raise Exception("unknown decl type")
+        self.decls.append( decl )
+
+
 

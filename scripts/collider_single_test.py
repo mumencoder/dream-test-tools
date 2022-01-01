@@ -20,4 +20,4 @@ class Main(App):
         await test_runner.opendream.run(config)
 
 main = Main()
-asyncio.run( main.run(main.config['tests_dir'] / 'dm' / 'stdlib' / 'sound_flags.dm') )
+asyncio.run( main.run(main.config['tests_dir'] / 'dm' / 'tree' / 'override_global.dm') )

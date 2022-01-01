@@ -29,7 +29,9 @@ class ProcDecl(object):
             path = str(self.path) + '/'
         else:
             path = "/"
-        path += f'proc/{self.name}'
+        if not self.is_override:
+            path += f'proc/'
+        path += f'{self.name}'
         display = path + "("
         has_arg = False
         display += ",".join([str(arg) for arg in self.args])

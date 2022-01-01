@@ -50,31 +50,22 @@ class ObjectTreeBuilder(object):
         return flags
 
     def decl(self, config):
-        ty = Shared.Random.choose_choices( config['otree_builder.statement.type'], 1 )[0]
+        while True:
+            ty = Shared.Random.choose_choices( config['otree_builder.statement.type'], 1 )[0]
 
-        if ty == "var":
-            decl = ObjectVarDecl()
-            decl.path = self.path(config)
-            decl.flags = self.flags(config)
-
-            config['model'].scope = decl.path
-            while True:
+            if ty == "var":
+                decl = ObjectVarDecl()
+                decl.path = self.path(config)
+                decl.flags = self.flags(config)
                 decl.name = self.var_name(config)
-                if config['model'].ident_in_scope(decl.name) is True:
-                    continue
-                break
-
-        elif ty == "proc":
-            decl = ProcDecl()
-            decl.path = self.path(config)
-
-            config['model'].scope = decl.path
-            while True:
+                if config['model'].can_add_decl(decl) is True:
+                    break
+            elif ty == "proc":
+                decl = ProcDecl()
+                decl.path = self.path(config)
                 decl.name = self.proc_name(config)
-                if config['model'].ident_in_scope(decl.name) is True:
-                    continue
-                break
-        else:
-            raise Exception("invalid choice of statement type")
-
+                if config['model'].can_add_decl(decl) is True:
+                    break
+            else:
+                raise Exception("invalid choice of statement type")
         return decl

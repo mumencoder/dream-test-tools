@@ -1,6 +1,9 @@
 
 class Scope(object):
     def __init__(self):
+        self.trunk = None
+        self.leaves = {}
+
         self.vars = {}
         self.values = {}
         self.procs = {}
@@ -13,7 +16,7 @@ class Scope(object):
                 return v
             dmobj = dmobj.obj_trunk
         return None
-        
+
     def set_value(self, name, value):
         self.values[ name ] = value
 
