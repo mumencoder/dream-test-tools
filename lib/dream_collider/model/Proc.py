@@ -19,6 +19,7 @@ class ProcDecl(object):
         self.path = None
         self.name = None
         self.stdlib = False
+        self.allow_override = True
         self.args = []
         self.statements = []
 
@@ -47,3 +48,6 @@ class ProcDecl(object):
             return False
         else:
             return self.prev_decl.has_prev_decl( decl )
+
+    def usage(self, config):
+        return CallExpression(self.name)

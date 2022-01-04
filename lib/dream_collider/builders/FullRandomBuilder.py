@@ -83,8 +83,6 @@ class FullRandomBuilder(object):
         return expr
 
     def test(self, config, n_stmts):
-        start_time = time.time()
-
         config['model'] = Toplevel()
         self.stdlib_builder = StdlibBuilder(config['model'])
 
@@ -95,8 +93,6 @@ class FullRandomBuilder(object):
         for i in range(0,n_stmts):
             config['model'].add_decl( self.otree_builder.decl(config) )
 
-        config['model'].compute_overrides()
-
         for decl in config['model'].decls:
             config['decl'] = decl
             if type(decl) is ObjectVarDecl:
@@ -106,16 +102,17 @@ class FullRandomBuilder(object):
                         config['model'].scope = decl.path
                         try:
                             result = decl.initial.eval(config)
-                            config['model'].set_value( decl, result )
+                            decl.scope.set_value( decl, result )
                         except GenerationError:
                             continue
                     break
+            del config['decl']
 
-        del config['decl']
+        config['model'].compute_overrides()
+        
         result = str(config['model'])
         result += """
 /proc/main()
     return
 """
-        #print(f"testgen in {time.time() - start_time}")
         return result

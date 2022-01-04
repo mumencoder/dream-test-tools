@@ -14,18 +14,20 @@ class StdlibBuilder(object):
     def parent_type(self, path):
         self.toplevel.parent_type(Path.from_string(path), self.current_path)
 
-    def dmproc(self, name):
+    def dmproc(self, name, allow_override=True):
         decl = ProcDecl()
         decl.path = self.current_path
         decl.name = name
         decl.stdlib = True
+        decl.allow_override = allow_override
         self.toplevel.add_decl( decl )
 
-    def dmvar(self, name):
+    def dmvar(self, name, allow_override=True):
         decl = ObjectVarDecl()
         decl.name = name
         decl.path = self.current_path
         decl.stdlib = True
+        decl.allow_override = allow_override
         self.toplevel.add_decl( decl )
 
     def dmop(self, name):

@@ -13,9 +13,13 @@ def init_atom(b):
     b.dmvar("appearance")
     b.dmvar("contents")
     b.dmvar("loc")
-    b.dmvar("x")
-    b.dmvar("y")
-    b.dmvar("z")
+    b.dmvar("x", allow_override=False)
+    b.dmvar("y", allow_override=False)
+    b.dmvar("z", allow_override=False)
+
+    b.dmproc("x", allow_override=False)
+    b.dmproc("y", allow_override=False)
+    b.dmproc("z", allow_override=False)
 
     b.dmtype("/area")
     b.parent_type("/atom")

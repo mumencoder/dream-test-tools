@@ -97,10 +97,8 @@ class Main(App):
         start_time = time.time()
         while True:
             tests += 1
-            if tests == 10:
-                print(f"10 tests in {time.time() - start_time} secs")
-            if tests == 100:
-                print(f"100 tests in {time.time() - start_time} secs")
+            if tests in [10, 100, 1000]:
+                print(f"{tests} tests in {time.time() - start_time} secs")
             config = self.config.branch("!")
             await self.generate_test()
             config = config.pop()
