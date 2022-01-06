@@ -67,28 +67,20 @@ class OpExpression(object):
         raise Exception("cannot evaluate")
 
 class Identifier(object):
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, decl):
+        self.decl = decl
 
     def __str__(self):
-        return self.name
+        return self.decl.name
 
     def print(self, parent_op=None):
         return str(self)
 
     def is_const(self, config):
-        try:
-            self.eval(config)
-        except ConstEvalError:
-            return False
-        return True
+        return self.decl.const_usage()
 
     def eval(self, config):
-        v = config['model'].get_value(self.name)
-        if v is None:
-            raise ConstEvalError("Value not found")            
-        else:
-            return v
+        return config['scope'].get_value( self.decl.name )
 
 class CallExpression(object):
     def __init__(self, name, *args):

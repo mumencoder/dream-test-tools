@@ -35,22 +35,27 @@ class ObjectVarDecl(object):
         else:
             return self.prev_decl.pick_random_previous_decl(config)
 
-    def const_initialization(self):
+    def const_initialization(self, config):
+        dmobj = config['model'].ensure_object(self.path)
+        for o in dmobj.parent_chain(include_self=False):
+            if self.name in o.scope.vars:
+                override_decl = o.scope.vars[self.name]
+                return override_decl.const_initialization(config)
         return "const" in self.flags or self.flags in [[], ["tmp"]]
 
     def const_usage(self):
-        return self.flags not in [[], ["tmp"], ["static"], ["static","tmp"]]
-
+        return "const" in self.flags and "static" not in self.flags
+        
     def has_prev_decl(self, decl):
-        if decl == self: 
-            return True
-        elif self.prev_decl is None:
+        if self.prev_decl is None:
             return False
+        elif decl == self.prev_decl:
+            return True
         else:
             return self.prev_decl.has_prev_decl( decl )
 
-    def usage(self, decl):
-        return Identifier(decl.name)
+    def usage(self, config):
+        return Identifier(self)
 
 class DMObject(object):
     def __init__(self, path):
@@ -70,11 +75,12 @@ class DMObject(object):
             yield leaf
             yield from leaf.iter_leaves()
 
-    def parent_chain(self):
-        cnode = self
+    def parent_chain(self, include_self=True):
+        if include_self:
+            cnode = self
+        else:
+            cnode = self.obj_trunk
         while cnode is not None:
-            if type(cnode) is DMObjectTree:
-                break
             yield cnode
             cnode = cnode.obj_trunk
 
@@ -92,6 +98,7 @@ class DMObject(object):
         self.scope.procs[decl.name] = decl
 
     def add_var(self, decl):
+#        print("add_var", decl.path, decl.name)
         self.vars.append(decl)
         self.scope.vars[decl.name] = decl
 
@@ -139,7 +146,11 @@ class DMObjectTree(DMObject):
         for ppath in path.parent_paths():
             if ppath not in self.objects_by_path:
                 o = DMObject(ppath)
+                if path.is_toplevel_tree():
+                    o.scope.trunk = self.scope
                 o.obj_trunk = trunk_obj
+                if o not in self.obj_leaves:
+                    self.obj_leaves.append( o )
                 self.objects_by_path[ppath] = o
             trunk_obj = self.objects_by_path[ppath]
         return self.get_object(path)

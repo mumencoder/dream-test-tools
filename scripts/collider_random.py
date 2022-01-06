@@ -22,10 +22,10 @@ class Main(App):
         test_id = f'gentest-{Shared.Random.generate_string(8)}'
         config['test.id'] = test_id
         config['test.base_dir'] = self.test_output_dir / 'brrr' / config['test.id']
-        config['test.text'] = str(builder.test(config, 2))
+        config['test.text'] = str(builder.test(config, 4))
 
     async def generate_test(self):
-        config = self.config.branch('test')
+        config = self.config
         await self.collide(config)
         with open(config['test.base_dir'] / 'base_test.dm', "w") as f:
             f.write( config['test.text'] )
@@ -101,6 +101,9 @@ class Main(App):
                 print(f"{tests} tests in {time.time() - start_time} secs")
             config = self.config.branch("!")
             await self.generate_test()
+            if (tests+1) % 500 == 0:
+                print("--------------------")
+                print( config['test.text'] )
             config = config.pop()
             time.sleep(0.01)        
 

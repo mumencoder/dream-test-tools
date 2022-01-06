@@ -1,6 +1,8 @@
 
 import random 
 
+from ..model import *
+
 class ProcArgument(object):
     def __init__(self, name, type_path, flags=[]):
         self.name = name

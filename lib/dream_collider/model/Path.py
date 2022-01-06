@@ -13,6 +13,9 @@ class Path(object):
     def is_root(self):
         return len(self.segments) == 0
 
+    def is_toplevel_tree(self):
+        return len(self.segments) == 1
+
     def contains(self, path):
         for i, segment in enumerate(path.segments):
             if i >= len(self.segments):
