@@ -1,5 +1,6 @@
 
 import asyncio, time, shutil
+import collections
 import Shared, Byond, OpenDream
 import dream_collider
 import test_runner
@@ -10,6 +11,8 @@ class Main(App):
         super().__init__()
         self.opendream_results = {"retcodes":{}}
         self.byond_results = {"retcodes": {}}
+
+        self.results = collections.defaultdict(int)
 
     async def handle_opendream_compile(self, config, process):
         self.opendream_results['retcodes'][config['test.id']] = process.returncode
@@ -23,13 +26,19 @@ class Main(App):
         config['test.id'] = test_id
         config['test.base_dir'] = self.test_output_dir / 'brrr' / config['test.id']
         config['test.text'] = str(builder.test(config, 4))
+        config['test.builder'] = builder
 
     async def generate_test(self):
+        self.results["generation_attempts"] += 1
         config = self.config
-        await self.collide(config)
-        with open(config['test.base_dir'] / 'base_test.dm', "w") as f:
-            f.write( config['test.text'] )
-        await config.send_event('test.generated', config)
+        try:
+            await self.collide(config)
+            with open(config['test.base_dir'] / 'base_test.dm', "w") as f:
+                f.write( config['test.text'] )
+            await config.send_event('test.generated', config)
+        except Exception:
+            self.results["generation_exception"] += 1
+
 
     async def redo_test(self, test_id):
         config = self.config.branch(test_id)
@@ -86,8 +95,13 @@ class Main(App):
             retcode = self.byond_results['retcodes'][config['test.id']]
             #print( config['test.text'] )
             #print( "-------------" )
-            if retcode != 0:
-                print( config['test.id'] )
+
+            compile_success = retcode == 0
+
+            if compile_success != config['test.builder'].should_compile:
+                print("---")
+                print( f"{config['test.id']}, compile_success={compile_success}, should_compile={config['test.builder'].should_compile}" )
+                print( f"{config['test.builder'].modified_validations}")
                 shutil.move( config['test.base_dir'], self.test_output_dir / 'saved' / config['test.id'])
             else:
                 shutil.rmtree( config['test.base_dir'] )
@@ -101,11 +115,14 @@ class Main(App):
                 print(f"{tests} tests in {time.time() - start_time} secs")
             config = self.config.branch("!")
             await self.generate_test()
-            if (tests+1) % 500 == 0:
+            if (tests+1) % 1000 == 0:
                 print("--------------------")
                 print( config['test.text'] )
+                print(self.results)
             config = config.pop()
-            time.sleep(0.01)        
 
-
-asyncio.run( Main().run() )
+try:
+    asyncio.run( Main().run() )
+except KeyboardInterrupt:
+    pass
+    

@@ -12,6 +12,8 @@ class FullRandomBuilder(object):
         for path in ['/', '/datum', '/atom', '/area', '/obj']:
             self.otree_builder.add_path(path)
       
+        self.toplevel = Toplevel()
+
         self.const_builder = ConstExprBuilder()
         self.ops = ["+", "-", "*", "/"]
 
@@ -59,7 +61,7 @@ class FullRandomBuilder(object):
         return expr
 
     def test(self, config, n_stmts):
-        config['model'] = Toplevel()
+        config['model'] = self.toplevel
         self.stdlib_builder = StdlibBuilder(config['model'])
 
         for path in self.otree_builder.possible_paths:
@@ -103,4 +105,6 @@ class FullRandomBuilder(object):
 /proc/main()
     return
 """
+        self.should_compile = self.toplevel.should_compile()
+        self.modified_validations = self.toplevel.modified_validations()
         return result
