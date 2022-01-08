@@ -35,17 +35,23 @@ class ObjectVarDecl(object):
         else:
             return self.prev_decl.pick_random_previous_decl(config)
 
-    def const_initialization(self, config):
+    def initialization_mode(self, config):
         dmobj = config['model'].ensure_object(self.path)
         for o in dmobj.parent_chain(include_self=False):
             if self.name in o.scope.vars:
                 override_decl = o.scope.vars[self.name]
-                return override_decl.const_initialization(config)
-        return "const" in self.flags or self.flags in [[], ["tmp"]]
+                return override_decl.initialization_mode(config)
 
-    def const_usage(self):
-        return "const" in self.flags and "static" not in self.flags
-        
+        if "const" in self.flags:
+            return "const"
+
+        if str(self.path) == "/":
+            return "dynamic"
+        elif "static" in self.flags:
+            return "dynamic"
+        else:
+            return "const"
+
     def has_prev_decl(self, decl):
         if self.prev_decl is None:
             return False
@@ -140,6 +146,9 @@ class DMObjectTree(DMObject):
     def __init__(self):
         super().__init__(Path([]))
         self.objects_by_path = {}
+
+    def iter_leaves(self):
+        yield from []
 
     def ensure_object(self, path):
         trunk_obj = None

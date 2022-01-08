@@ -14,7 +14,7 @@ class Install(object):
 
     @staticmethod
     async def compile(config, file, args=""):
-        command = f"{config['opendream.install_dir']}/DMCompiler/bin/Debug/net6.0/DMCompiler {args} {file}"
+        command = f"{config['opendream.install_dir']}/DMCompiler/bin/Release/net6.0/DMCompiler {args} {file}"
         process = await Shared.Process.shell(config, command)
         return process
             

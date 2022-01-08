@@ -8,6 +8,9 @@ class ObjectTreeBuilder(object):
         self.possible_paths = []
         self.def_len = 1
 
+        self.should_compile = True
+        self.notes = []
+
     def add_path(self, path):
         if type(path) is str:
             self.possible_paths.append( Path.from_string(path) )
@@ -58,14 +61,23 @@ class ObjectTreeBuilder(object):
                 decl.path = self.path(config)
                 decl.flags = self.flags(config)
                 decl.name = self.var_name(config)
-                if config['model'].can_add_decl(decl) is True:
-                    break
+                result = config['model'].can_add_decl(config, decl)
+                if result["valid"] is False:
+                    continue
+                else:
+                    self.should_compile = self.should_compile and result["should_compile"]
+                    self.notes += result["notes"]
+                return decl
             elif ty == "proc":
                 decl = ProcDecl()
                 decl.path = self.path(config)
                 decl.name = self.proc_name(config)
-                if config['model'].can_add_decl(decl) is True:
-                    break
+                result = config['model'].can_add_decl(config, decl)
+                if result["valid"] is False:
+                    continue
+                else:
+                    self.should_compile = self.should_compile and result["should_compile"]
+                    self.notes += result["notes"]
+                return decl
             else:
                 raise Exception("invalid choice of statement type")
-        return decl

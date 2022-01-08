@@ -7,17 +7,20 @@ from ..model import *
 from . import *  
 
 class FullRandomBuilder(object):
-    def __init__(self):
+    def __init__(self, config):
         self.otree_builder = ObjectTreeBuilder()
         for path in ['/', '/datum', '/atom', '/area', '/obj']:
             self.otree_builder.add_path(path)
       
-        self.toplevel = Toplevel()
+        self.toplevel = Toplevel(config)
 
         self.const_builder = ConstExprBuilder()
         self.ops = ["+", "-", "*", "/"]
 
         self.expr_ty = Shared.Random.to_choices( {"var":0.5, "int":0.5 } )
+
+        self.should_compile = True
+        self.notes = []
         
     def leaf_expr(self, config, tries=20):
         expr_ty = Shared.Random.choose_choices(self.expr_ty, 1)[0]
@@ -30,8 +33,12 @@ class FullRandomBuilder(object):
                 if decl.stdlib:
                     continue
 
-                if not config['model'].can_use_decl(config, config['scope_decl'], decl):
+                result = config['model'].can_use_decl(config, config['scope_decl'], decl)
+                if result["valid"] is False:
                     continue
+                else:
+                    self.should_compile = self.should_compile and result["should_compile"]
+                    self.notes += result["notes"]
 
                 expr = decl.usage(config)
                 return expr
@@ -68,35 +75,37 @@ class FullRandomBuilder(object):
             config['model'].ensure_object(path)
         self.otree_builder.defaults(config)
 
-#        print("=======1")
         for i in range(0,n_stmts):
             decl = self.otree_builder.decl(config) 
             config['model'].add_decl( decl )
-#            print( "process decl", decl.name, decl.path, type(decl))
 
-
-#        for o in config['model'].obj_tree.iter_leaves():
-#            print(o.path, [d.name for d in o.scope.get_usr_vars()])
-
-#        print("=======2")
-        for decl in config['model'].usr_decls:
             config['scope_decl'] = decl
             if type(decl) is ObjectVarDecl:
                 dmobj = config['model'].ensure_object(decl.path)
                 config['scope'] = dmobj.scope
-#                print( "process decl", decl.name, decl.path, decl.flags)
-                while True:
+                decl.initial = None
+                should_compile = self.should_compile
+                notes = list(self.notes)
+                while decl.initial is None:
+                    self.should_compile = should_compile
+                    self.notes = notes
                     decl.initial = self.expr(config, depth=4)
-#                    print(decl.initial)
-                    if decl.const_initialization(config) or decl.initial.is_const(config):
+                    if decl.initial.is_const(config):
                         try:
                             result = decl.initial.eval(config)
-#                            print("set", dmobj.path, decl.name)
                             dmobj.scope.set_value( decl.name, result )
                         except GenerationError:
-                            continue
-                    break
+                            decl.initial = None
+                    elif decl.initialization_mode(config) == "const":
+                        decl.initial = None
                 del config['scope']
+            elif type(decl) is ProcDecl:
+                decl.statements.append( ReturnStatement(ConstExpression(0)))
+            else:
+                raise Exception("Unknown declaration")
+                
+        self.should_compile = self.should_compile and self.otree_builder.should_compile
+        self.notes += self.otree_builder.notes
 
         config['model'].compute_overrides()
         
@@ -105,6 +114,4 @@ class FullRandomBuilder(object):
 /proc/main()
     return
 """
-        self.should_compile = self.toplevel.should_compile()
-        self.modified_validations = self.toplevel.modified_validations()
         return result

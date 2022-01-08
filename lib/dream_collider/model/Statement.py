@@ -12,3 +12,10 @@ class ProcVarDecl(object):
             path += flag + '/'
         path += self.var_name
         return path + ' = ' + str(self.initial)
+
+class ReturnStatement(object):
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __str__(self):
+        return "return " + str(self.expr)

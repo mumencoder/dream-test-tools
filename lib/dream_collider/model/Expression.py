@@ -77,10 +77,14 @@ class Identifier(object):
         return str(self)
 
     def is_const(self, config):
-        return self.decl.const_usage()
+        return "const" in self.decl.flags
 
     def eval(self, config):
-        return config['scope'].get_value( self.decl.name )
+        v = config['scope'].get_value( self.decl.name )
+        if v is None:
+            raise GenerationError()
+        else:
+            return v
 
 class CallExpression(object):
     def __init__(self, name, *args):

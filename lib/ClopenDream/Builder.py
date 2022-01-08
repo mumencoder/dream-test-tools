@@ -13,7 +13,7 @@ class Builder(object):
         config["dotnet.solution.path"] = config["clopendream.install_dir"]
 
         config = config.branch('build_clopen')
-        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config, {})
+        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config['dotnet.project.params'])
 
         Builder.prepare_commandline( config )
         process = await Shared.Dotnet.Project.build( config )

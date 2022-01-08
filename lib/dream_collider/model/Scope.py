@@ -13,7 +13,7 @@ class Scope(object):
         for decl in self.vars.values():
             if not decl.stdlib:
                 yield decl
-                
+
     def find_var(self, name):
         scope = self
         while scope is not None:

@@ -16,7 +16,7 @@ class Dotnet(object):
             return s
 
         @staticmethod
-        def default_params(config, params):
+        def default_params(params):
             if 'configuration' not in params:
                 params['configuration'] = "Debug"
             return params

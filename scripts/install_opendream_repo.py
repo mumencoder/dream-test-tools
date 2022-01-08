@@ -6,6 +6,7 @@ from DTT import App
 
 class Main(App):
     async def run(self):
+        self.config['dotnet.project.params'] = {'configuration':'Release'}
         await self.prepare_opendream_repo(self.config['opendream.build.id'])
         await OpenDream.Builder.build(self.config)
 

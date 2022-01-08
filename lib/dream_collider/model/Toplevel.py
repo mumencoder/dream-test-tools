@@ -5,19 +5,16 @@ from . import *
 
 class ValidationRandomizer(object):
     def __init__(self, pass_chance=None):
-        self.should_compile = True
-        self.modified_validations = []
         self.pass_chance = pass_chance
 
     def try_modify_validation(self, vname):
         if random.random() < self.pass_chance:
-            self.should_compile = False
-            self.modified_validations.append(vname)
-            return True
-        return False
+            return { "should_compile":False, "valid":True, "notes":[vname] }
+        return { "should_compile":False, "valid":False }
 
 class Toplevel(object):
-    def __init__(self):
+    def __init__(self, config):
+
         self.obj_tree = DMObjectTree()
         self.op_info = OpInfo()
 
@@ -28,8 +25,8 @@ class Toplevel(object):
 
         self.decl_deps = collections.defaultdict(set)
 
-        self.new_decl_vrandomizer = ValidationRandomizer(pass_chance=0.1)
-        self.use_decl_vrandomizer = ValidationRandomizer(pass_chance=0.001)
+        self.new_decl_vrandomizer = ValidationRandomizer(pass_chance=0.1 * config['test.error_factor'])
+        self.use_decl_vrandomizer = ValidationRandomizer(pass_chance=0.001 * config['test.error_factor'])
 
     def __str__(self):
         display = ""
@@ -38,16 +35,6 @@ class Toplevel(object):
             if s != "":
                 display += str(decl) + "\n"
         return display
-
-    def should_compile(self):
-        if self.new_decl_vrandomizer.should_compile is False:
-            return False
-        if self.use_decl_vrandomizer.should_compile is False:
-            return False
-        return True
-
-    def modified_validations(self):
-        return self.new_decl_vrandomizer.modified_validations + self.use_decl_vrandomizer.modified_validations
 
     def get_op(self, name):
         return self.op_info.ops[name]
@@ -63,39 +50,59 @@ class Toplevel(object):
             old_trunk.remove_child( leaf )
         leaf.new_parent( trunk )
 
+    def valid_override_flag_pairs(self, orig_decl, new_decl):
+        orig_set = set(orig_decl.flags)
+        new_set = set(new_decl.flags)
+
+        set_diff = list(orig_set.symmetric_difference(new_set))
+
+        if "const" in orig_set:
+            return False
+        if "static" in orig_set:
+            return False
+
+        return True
+
     # declarations
-    def can_add_decl(self, new_decl):
+    def can_add_decl(self, config, new_decl):
+        loc = f"{new_decl.path}/{new_decl.name}"
         if type(new_decl) is ObjectVarDecl:
             dmobj = self.obj_tree.ensure_object( new_decl.path )
             if type(dmobj) is DMObjectTree:
                 if new_decl.name in dmobj.scope.vars:
-                    return self.new_decl_vrandomizer.try_modify_validation("cannot override a global var")
+                    return self.new_decl_vrandomizer.try_modify_validation(f"cannot override a global var - {loc}")
 
-            for dmobj_leaf in dmobj.parent_chain():
-                for override_decl in dmobj_leaf.vars:
+            for dmobj_trunk in dmobj.parent_chain():
+                for override_decl in dmobj_trunk.vars:
                     if override_decl.name != new_decl.name:
                         continue
                     if override_decl.allow_override is False:
-                        return self.new_decl_vrandomizer.try_modify_validation("decl does not allow overrides")
+                        return self.new_decl_vrandomizer.try_modify_validation(f"decl does not allow overrides - {loc}")
                     if "const" in override_decl.flags or "static" in override_decl.flags:
-                        return self.new_decl_vrandomizer.try_modify_validation("cannot override const/static var")
+                        return self.new_decl_vrandomizer.try_modify_validation(f"cannot override const/static var - {loc}")
                     if override_decl.flags != new_decl.flags:
-                        return self.new_decl_vrandomizer.try_modify_validation("override flags must match")
+                        if not self.valid_override_flag_pairs( override_decl, new_decl ):
+                            return self.new_decl_vrandomizer.try_modify_validation(f"override flags must match - {loc}")
 
             for dmobj_leaf in dmobj.iter_leaves():
-                for decl in dmobj_leaf.vars:
-                    if decl.name != new_decl.name:
+                for override_decl in dmobj_leaf.vars:
+                    if override_decl.name != new_decl.name:
                         continue
-                    if decl.flags != new_decl.flags:
-                        return self.new_decl_vrandomizer.try_modify_validation("new trunk decl flags must match with any leaf decls")
+                    if override_decl.flags != new_decl.flags:
+                        if "static" not in new_decl.flags and "static" in override_decl.flags:
+                            if not override_decl.initial.is_const(config):
+                                return self.new_decl_vrandomizer.try_modify_validation(f"new trunk decl creates a const initialization condition - {loc}")
+
+                        if not self.valid_override_flag_pairs( new_decl, override_decl ):
+                            return self.new_decl_vrandomizer.try_modify_validation(f"new trunk decl flags must match with any leaf decls - {loc}")
 
         if type(new_decl) is ProcDecl:
             dmobj = self.obj_tree.ensure_object( new_decl.path )
             override_decl = dmobj.would_override_proc(new_decl.name)
             if override_decl:
                 if override_decl.allow_override is False:
-                    return self.new_decl_vrandomizer.try_modify_validation("decl does not allow overrides")
-        return True
+                    return self.new_decl_vrandomizer.try_modify_validation(f"decl does not allow overrides - {loc}")
+        return { "should_compile":True, "valid":True, "notes":[] }
 
     def add_decl(self, decl):
         dmobj = self.obj_tree.ensure_object( decl.path )
@@ -117,47 +124,53 @@ class Toplevel(object):
             self.usr_decls.append( decl )
 
     def can_use_decl(self, config, scope_decl, use_decl):
-        if "static" in scope_decl.flags and str(use_decl.path) != "/":
-            return self.use_decl_vrandomizer.try_modify_validation("implicit src not allowed in static var initializations")
-
+        loc = f"scope: {scope_decl.path}/{scope_decl.name} , use: {use_decl.path}/{use_decl.name}"
         # currently not allowing initializations with references to forward declarations
         if not scope_decl.has_prev_decl( use_decl ):
-            return False
+            return { "should_compile":None, "valid":False, "notes":None }
 
-        const_initial = scope_decl.const_initialization(config)
         dmobj = self.ensure_object(scope_decl.path)
         if type(use_decl) is ObjectVarDecl:
-            if scope_decl.name == use_decl.name:
-                return self.use_decl_vrandomizer.try_modify_validation("no self-reference in initialization")
-
-            if "static" in scope_decl.flags and use_decl.flags == []:
-                return self.use_decl_vrandomizer.try_modify_validation("static vars do not have global access")
-
             use_decl_scope = dmobj.scope.find_var(use_decl.name)
             if use_decl_scope is None:
-                return self.use_decl_vrandomizer.try_modify_validation("variable not in scope")
+                return self.use_decl_vrandomizer.try_modify_validation(f"variable not in scope - {loc}")
+            # variable is shadowed 
             if use_decl_scope.vars[use_decl.name] != use_decl:
-                return self.use_decl_vrandomizer.try_modify_validation("variable is shadowed")
-            if dmobj.scope.get_value(use_decl.name) is None:
-                return self.use_decl_vrandomizer.try_modify_validation("variable has not been initialized")
+                return self.can_use_decl(config, scope_decl, use_decl_scope.vars[use_decl.name])
 
-            const_usage = use_decl.const_usage()
-            if not const_usage and const_initial:
-                return self.use_decl_vrandomizer.try_modify_validation("a non-const usage in a const initialization")
+            if "const" in scope_decl.flags and "const" not in use_decl.flags:
+                return self.use_decl_vrandomizer.try_modify_validation(f"a non-const usage in a const initialization - {loc}")
+
+            if "static" not in scope_decl.flags and str(scope_decl.path) != "/" and "const" not in use_decl.flags:
+                return self.use_decl_vrandomizer.try_modify_validation(f"object var decls doesnt allow implicit const - {loc}")
+
+            if "static" in scope_decl.flags and str(use_decl.path) != "/" and "const" not in use_decl.flags:
+                return self.use_decl_vrandomizer.try_modify_validation(f"implicit src not allowed - {loc}")
+
+            if scope_decl.name == use_decl.name:
+                return self.use_decl_vrandomizer.try_modify_validation(f"no self-reference in initialization - {loc}")
+
+            if dmobj.scope.get_value(use_decl.name) is None:
+                return self.use_decl_vrandomizer.try_modify_validation(f"variable has not been initialized - {loc}")
+
+            if scope_decl.initialization_mode == "const" and not use_decl.initial.is_const():
+                return self.use_decl_vrandomizer.try_modify_validation(f"a non-const usage in a const initialization - {loc}")
             if self.dep_cycle_check( scope_decl, use_decl ) is True:
-                return self.use_decl_vrandomizer.try_modify_validation("this would create an initialization dependency cycle")
+                return self.use_decl_vrandomizer.try_modify_validation(f"this would create an initialization dependency cycle - {loc}")
         elif type(use_decl) is ProcDecl:
-            if const_initial:
-                return self.use_decl_vrandomizer.try_modify_validation("proc calls not allowed in const expressions")
             use_decl_scope = dmobj.scope.find_proc(use_decl.name)
             if use_decl_scope is None:
-                return self.use_decl_vrandomizer.try_modify_validation("proc not in scope")
+                return self.use_decl_vrandomizer.try_modify_validation(f"proc not in scope - {loc}")
+            # proc is shadowed
             if use_decl_scope.procs[use_decl.name] != use_decl:
-                return self.use_decl_vrandomizer.try_modify_validation("proc is shadowed")
+                return self.can_use_decl(config, scope_decl, use_decl_scope.procs[use_decl.name])
+
+            if str(scope_decl.path) != "/" and str(use_decl.path) != "/":
+                return self.use_decl_vrandomizer.try_modify_validation(f"implicit src for proc call - {loc}")
         else:
             raise Exception("unknown use_decl type")
 
-        return True
+        return { "should_compile":True, "valid":True, "notes":[] }
 
     # overrides
     def compute_overrides(self):
