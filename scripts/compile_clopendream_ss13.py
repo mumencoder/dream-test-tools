@@ -1,14 +1,14 @@
 
 import sys
 import asyncio
-import Byond, SS13, ClopenDream
+import Byond, SS13, ClopenDream, test_runner
 from DTT import App
 
 class Main(App):
     async def run(self):
         config = self.config
         Byond.Install.set_current(config, self.config['byond.version'])
-        ClopenDream.Install.set_current(config, self.config['opendream.build.id'])
+        ClopenDream.Install.set_current(config, self.config['clopendream.build.id'])
 
         async for config in SS13.Repos.iter_community_repos(config):
             if config['ss13.repo_info']['name'] not in self.config['ss13.repo_ids']:
@@ -16,14 +16,7 @@ class Main(App):
             SS13.Install.find_dme(config)
             config['clopendream.output.id'] = f"""ss13repo-{config['ss13.repo_info']['name']}"""
             config['clopendream.output.base_dir'] = config['clopendream.dirs.output'] / config['clopendream.output.id']
-
-            await Byond.Install.generate_empty_code_tree(config, config['clopendream.output.base_dir'])
-            Byond.Install.prepare_code_tree(config, config['clopendream.output.base_dir'] / 'codetree')
-            await Byond.Install.generate_code_tree(config, config['ss13.dme_file'], recompile=False)
-            #Byond.Install.prepare_obj_tree(config, config['clopendream.output.base_dir'] / 'objtree')
-            #await Byond.Install.generate_obj_tree(config, config['ss13.dme_file'], recompile=True)
-
-            process = await ClopenDream.Install.compile(config)
-            await asyncio.wait_for(process.wait(), timeout=None)
+            config['clopendream.input_dm'] = config['ss13.dme_file']
+            test_runner.clopendream.compile(config)
 
 asyncio.run( Main().run() )

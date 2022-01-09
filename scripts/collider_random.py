@@ -46,16 +46,25 @@ class Main(App):
         await config.send_event('test.generated', config)
 
     async def test_byond(self, test_config):
+        config['test.platform'] = 'byond'
         config = self.config.merge(test_config)
-        final_text = test_runner.test_prep.wrap_test(config, config['test.text'])
-        config = await test_runner.test_prep.write_test(config, final_text)
+        final_text = test_runner.wrap_test(config, config['test.text'])
+        config = await test_runner.write_test(config, final_text)
         await test_runner.byond.compile(config)
 
     async def test_opendream(self, test_config):
+        config['test.platform'] = 'opendream'
         config = self.config.merge(test_config)
-        final_text = test_runner.test_prep.wrap_test(config, config['test.text'])
-        config = await test_runner.test_prep.write_test(config, final_text)
+        final_text = test_runner.wrap_test(config, config['test.text'])
+        config = await test_runner.write_test(config, final_text)
         await test_runner.opendream.compile(config)
+
+    async def test_clopendream(self, test_config):
+        config['test.platform'] = 'clopendream'
+        config = self.config.merge(test_config)
+        final_text = test_runner.wrap_test(config, config['test.text'])
+        config = await test_runner.write_test(config, final_text)
+        await test_runner.clopendream.compare(config)
 
     async def compare_test(self, test_config):
         await self.test_byond(test_config, config['test.text'])
@@ -96,15 +105,15 @@ class Main(App):
         self.saved = 0
 
         async def handle_test(config):
-            config['test.platform'] = 'byond'
             await self.test_byond(config)
             retcode = self.byond_results['retcodes'][config['test.id']]
             byond_compiled = retcode == 0
 
-            config['test.platform'] = 'opendream'
             await self.test_opendream(config)
             retcode = self.opendream_results['retcodes'][config['test.id']]
             opendream_compiled = retcode == 0
+
+            await self.test_clopendream(config)
 
             self.stats['total'] += 1
             if config['test.builder'].should_compile:

@@ -27,7 +27,7 @@ class Install(object):
     async def compare(config):
         config = config.branch('compare')
         command = Install.command_line(config)
-        command += f" compare {config['byond.codetree.out']} {config['ss13.dme_file']}"
+        command += f" compare {config['byond.codetree.out']} {config['clopendream.input_dm']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
         print(command)
         process = await Shared.Process.shell(config, command)
@@ -37,7 +37,7 @@ class Install(object):
     async def object_hash(config):
         config = config.branch('object-hash')
         command = Install.command_line(config)
-        command += f" object-hash {config['byond.codetree.out']} {config['ss13.dme_file']}"
+        command += f" object-hash {config['byond.codetree.out']} {config['clopendream.input_dm']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
         print(command)
         process = await Shared.Process.shell(config, command)
