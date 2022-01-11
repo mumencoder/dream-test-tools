@@ -1,7 +1,7 @@
 
 import asyncio, time, shutil
 import collections
-import Shared, Byond, OpenDream
+import Shared, Byond, OpenDream, ClopenDream
 import dream_collider
 import test_runner
 from DTT import App
@@ -9,18 +9,14 @@ from DTT import App
 class Main(App):
     def __init__(self):
         super().__init__()
-        self.opendream_results = {"retcodes":{}}
-        self.byond_results = {"retcodes": {}}
 
+    def initialize(self):
         self.error_factor = 1.00
-
         self.stats = collections.defaultdict(int)
 
-    async def handle_opendream_compile(self, config, process):
-        self.opendream_results['retcodes'][config['test.id']] = process.returncode
-
-    async def handle_byond_compile(self, config, process):
-        self.byond_results['retcodes'][config['test.id']] = process.returncode
+        Byond.Install.set_current(self.config, self.config['byond.version'])
+        OpenDream.Install.set_current(self.config, self.config['opendream.build.id'])
+        ClopenDream.Install.set_current(self.config, self.config['clopendream.build.id'])
 
     async def collide(self, config):
         builder = dream_collider.builders.FullRandomBuilder(config)
@@ -45,52 +41,35 @@ class Main(App):
             config['test.text'] = f.read()
         await config.send_event('test.generated', config)
 
-    async def test_byond(self, test_config):
-        config['test.platform'] = 'byond'
-        config = self.config.merge(test_config)
-        final_text = test_runner.wrap_test(config, config['test.text'])
-        config = await test_runner.write_test(config, final_text)
-        await test_runner.byond.compile(config)
+    async def handle_test(self, config):
+        await test_runner.test_all_platforms(config)
 
-    async def test_opendream(self, test_config):
-        config['test.platform'] = 'opendream'
-        config = self.config.merge(test_config)
-        final_text = test_runner.wrap_test(config, config['test.text'])
-        config = await test_runner.write_test(config, final_text)
-        await test_runner.opendream.compile(config)
+        # broken until callbacks are fixed
+        return 
 
-    async def test_clopendream(self, test_config):
-        config['test.platform'] = 'clopendream'
-        config = self.config.merge(test_config)
-        final_text = test_runner.wrap_test(config, config['test.text'])
-        config = await test_runner.write_test(config, final_text)
-        await test_runner.clopendream.compare(config)
+        retcode = self.byond_results['retcodes'][config['test.id']]
+        byond_compiled = retcode == 0
+        retcode = self.opendream_results['retcodes'][config['test.id']]
+        opendream_compiled = retcode == 0
 
-    async def compare_test(self, test_config):
-        await self.test_byond(test_config, config['test.text'])
-        await self.test_opendream(test_config, config['test.text'])
+        self.stats['total'] += 1
+        if config['test.builder'].should_compile:
+            self.stats['should_compile'] += 1
+        if config['test.builder'].should_compile == byond_compiled:
+            self.stats['generator_agree'] += 1
+        if opendream_compiled == byond_compiled:
+            self.stats['opendream_agree'] += 1
 
-        if self.byond_results['retcodes'][config['test.id']] == 0:
-            byond_compile = True
+        if byond_compiled != opendream_compiled:
+            print( "---" )
+            print( f"{config['test.id']}" )
+            print( f"byond_compiled={byond_compiled}, should_compile={config['test.builder'].should_compile}" )
+            print( f"opendream_compiled={opendream_compiled}" )
+            print( f"{config['test.builder'].notes}" )
+            shutil.move( config['test.base_dir'], self.test_output_dir / 'saved' / config['test.id'] )
+            self.saved += 1
         else:
-            byond_compile = False
-
-        if self.opendream_results['retcodes'][config['test.id']] == 0:
-            opendream_compile = True
-        else:
-            opendream_compile = False
-
-        if byond_compile is False:
-            return 
-        if byond_compile is not opendream_compile:
-            print(config['test.id'])
-        
-    def initialize(self):
-        Byond.Install.set_current(self.config, self.config['byond.version'])
-        self.config.event_handlers['test.compile.byond.result'] = self.handle_byond_compile
-
-        OpenDream.Install.set_current(self.config, self.config['opendream.build.id'])
-        self.config.event_handlers['test.compile.opendream.result'] = self.handle_opendream_compile
+            shutil.rmtree( config['test.base_dir'] )
 
     def adjust_error_factor(self):
         should_compile_rate = self.stats['should_compile'] / max(1,self.stats['total'])
@@ -104,37 +83,7 @@ class Main(App):
         self.running = True
         self.saved = 0
 
-        async def handle_test(config):
-            await self.test_byond(config)
-            retcode = self.byond_results['retcodes'][config['test.id']]
-            byond_compiled = retcode == 0
-
-            await self.test_opendream(config)
-            retcode = self.opendream_results['retcodes'][config['test.id']]
-            opendream_compiled = retcode == 0
-
-            await self.test_clopendream(config)
-
-            self.stats['total'] += 1
-            if config['test.builder'].should_compile:
-                self.stats['should_compile'] += 1
-            if config['test.builder'].should_compile == byond_compiled:
-                self.stats['generator_agree'] += 1
-            if opendream_compiled == byond_compiled:
-                self.stats['opendream_agree'] += 1
-
-            if byond_compiled != opendream_compiled:
-                print("---")
-                print( f"{config['test.id']}" )
-                print( f"byond_compiled={byond_compiled}, should_compile={config['test.builder'].should_compile}")
-                print( f"opendream_compiled={opendream_compiled}")
-                print( f"{config['test.builder'].notes}")
-                shutil.move( config['test.base_dir'], self.test_output_dir / 'saved' / config['test.id'])
-                self.saved += 1
-            else:
-                shutil.rmtree( config['test.base_dir'] )
-
-        self.config.event_handlers['test.generated'] = handle_test
+        self.config.event_handlers['test.generated'] = self.handle_test
         tests = 0
         start_time = time.time()
         while True:

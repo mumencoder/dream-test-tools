@@ -75,47 +75,41 @@ class Install(object):
         config['byond.codetree.prefix'] = code_tree_prefix
         config['byond.codetree.out'] = code_tree_prefix.with_suffix('.out.txt')
         config['byond.codetree.err'] = code_tree_prefix.with_suffix(".err.txt")
+        config['byond.codetree.recompile'] = True
 
     @staticmethod 
     def prepare_obj_tree(config, obj_tree_prefix):
         config['byond.objtree.prefix'] = obj_tree_prefix
         config['byond.objtree.out'] = obj_tree_prefix.with_suffix('.out.txt')
         config['byond.objtree.err'] = obj_tree_prefix.with_suffix(".err.txt")
+        config['byond.codetree.recompile'] = True
 
     @staticmethod
-    async def generate_code_tree(config, dm_file_path, recompile=False):
-        config = config.branch('generate_code_tree')
-        if recompile is False and os.path.exists(config['byond.codetree.out']):
+    async def generate_code_tree(config, dm_file_path):
+        if config['byond.codetree.recompile'] is False and os.path.exists(config['byond.codetree.out']):
             return
-        config['process.stdout'] = open(config['byond.codetree.out'], "wb")
-        config['process.stderr'] = open(config['byond.codetree.err'], "wb")
         process = await Install.compile(config, dm_file_path, args={'code_tree':True})
         await asyncio.wait_for(process.wait(), timeout=None)
-        config['process.stdout'].close()
-        config['process.stderr'].close()
 
     @staticmethod
     async def generate_obj_tree(config, dm_file_path, recompile=False):
-        config = config.branch('generate_code_tree')
-        if recompile is False and os.path.exists(config['byond.objtree.out']):
+        if config['byond.objtree.recompile'] is False and os.path.exists(config['byond.objtree.out']):
             return
-        config['process.stdout'] = open(config['byond.objtree.out'], "wb")
-        config['process.stderr'] = open(config['byond.objtree.err'], "wb")
         process = await Install.compile(config, dm_file_path, args={'obj_tree':True})
         await asyncio.wait_for(process.wait(), timeout=None)
-        config['process.stdout'].close()
-        config['process.stderr'].close()
-
 
     @staticmethod
     async def generate_empty_code_tree(config, working_dir):
-        if not os.path.exists(working_dir / 'empty.dm'):
-            with open(working_dir / 'empty.dm', "w") as ef:
+        empty_file_path = working_dir / 'empty.dm'
+        if not os.path.exists(empty_file_path):
+            with open(empty_file_path, "w") as ef:
                 ef.write('\n')
 
         config = config.branch('generate_empty')
-        Install.prepare_code_tree(config, working_dir / 'empty')
-        if not os.path.exists(config['byond.codetree.out']):
-            await Install.generate_code_tree(config, working_dir / 'empty.dm')
-        config = config.pop()
+        Install.prepare_code_tree(config, empty_file_path)
+        config['process.stdout'] = open(config['byond.codetree.out'], "wb")
+        config['process.stderr'] = open(config['byond.codetree.err'], "wb")
+        await Install.generate_code_tree(config, empty_file_path)
+        config['process.stdout'].close()
+        config['process.stderr'].close()
 

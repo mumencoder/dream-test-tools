@@ -25,7 +25,6 @@ class Dotnet(object):
         async def build(config):
             params = config['dotnet.project.params']
             command = f"dotnet build -clp:ErrorsOnly {config['dotnet.project.path']} {Dotnet.Project.flatten_build_params(params)}"
-            print(command)
             process = await Shared.Process.shell(config, command)
             return process
 
@@ -33,6 +32,5 @@ class Dotnet(object):
         async def restore(config):
             params = config['dotnet.project.params']
             command = f"dotnet restore {config['dotnet.project.path']} {Dotnet.Project.flatten_build_params(params)}"
-            print(command)
             process = await Shared.Process.shell(config, command)
             return process

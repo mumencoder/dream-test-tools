@@ -19,7 +19,6 @@ class Install(object):
         command = Install.command_line(config)
         command += f" test-parse {config['byond.codetree.out']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
-        print(command)
         process = await Shared.Process.shell(config, command)
         return process
 
@@ -29,7 +28,6 @@ class Install(object):
         command = Install.command_line(config)
         command += f" compare {config['byond.codetree.out']} {config['clopendream.input_dm']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
-        print(command)
         process = await Shared.Process.shell(config, command)
         return process
 
@@ -39,7 +37,6 @@ class Install(object):
         command = Install.command_line(config)
         command += f" object-hash {config['byond.codetree.out']} {config['clopendream.input_dm']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
-        print(command)
         process = await Shared.Process.shell(config, command)
         return process
 
@@ -49,6 +46,5 @@ class Install(object):
         command = Install.command_line(config)
         command += f" compile {config['byond.codetree.out']}"
         command += f" --working_dir {config['clopendream.output.base_dir']}"
-        print(command)
         process = await Shared.Process.shell(config, command)
         return process

@@ -104,7 +104,6 @@ class DMObject(object):
         self.scope.procs[decl.name] = decl
 
     def add_var(self, decl):
-#        print("add_var", decl.path, decl.name)
         self.vars.append(decl)
         self.scope.vars[decl.name] = decl
 

@@ -11,7 +11,8 @@ class Main(App):
         OpenDream.Install.set_current(self.config, self.config['opendream.build.id'])
         ClopenDream.Install.set_current(self.config, self.config['clopendream.build.id'])
 
-        await test_runner.run_test(self.config, test_file, self.test_output_dir)
+        await test_runner.read_single_test(self.config, self.config['tests_dir'], test_file, self.test_output_dir)
+        await test_runner.test_all_platforms(self.config)
 
 main = Main()
 asyncio.run( main.run(main.config['tests_dir'] / 'dm' / 'testing.dm') )
