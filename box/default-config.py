@@ -45,12 +45,18 @@ def setup(config):
     return config
 
 def defaults(config):
-    config['byond.version'] = '514.1566'
+    config['byond.installs'] = { 'default':'514.1575' }
 
-    config['clopendream.build.id'] = 'default'
-    config['clopendream.repo_url'] = 'https://github.com/mumencoder/Clopendream-parser'
+    config['opendream.installs'] = {
+        'default' : {'type':'repo', 'url':'https://github.com/wixoaGit/OpenDream', 'branch':'master' }
+    }
 
-    config['opendream.build.id'] = 'default'
-    config['opendream.repo_url'] = 'https://github.com/wixoaGit/OpenDream'
+    config['clopendream.installs'] = {
+        'default' : {'type':'repo', 'url':'https://github.com/mumencoder/Clopendream-parser', 'branch':'main'}
+    }
+
+    config['byond.install.id'] = 'default'
+    config['opendream.install.id'] = 'default'
+    config['clopendream.install.id'] = 'default'
 
     config['ss13.repo_ids'] = ['NTStation-od1']

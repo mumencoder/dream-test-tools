@@ -4,7 +4,7 @@ import Byond, Shared
 import common, test_runner
 
 async def do_test(config):
-    config['test.platform'] = 'byond'
+    config['test.platform'] = f"byond.{config['byond.install.id']}"
     final_text = test_runner.TestWrapper(config, config['test.text']).wrapped_test(config)
     await test_runner.write_test(config, final_text)
 

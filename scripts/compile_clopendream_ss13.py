@@ -7,8 +7,8 @@ from DTT import App
 class Main(App):
     async def run(self):
         config = self.config
-        Byond.Install.set_current(config, self.config['byond.version'])
-        ClopenDream.Install.set_current(config, self.config['clopendream.build.id'])
+        Byond.Install.set_current(config, self.config['byond.install.id'])
+        ClopenDream.Install.set_current(config, self.config['clopendream.install.id'])
 
         async for config in SS13.Repos.iter_community_repos(config):
             if config['ss13.repo_info']['name'] not in self.config['ss13.repo_ids']:

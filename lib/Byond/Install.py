@@ -6,7 +6,7 @@ class Install(object):
     @staticmethod
     def set_current(config, _id):
         config['byond.install.id'] = _id
-        config["byond.install_dir"] = config['byond.dirs.installs'] / config['byond.install.id']
+        config["byond.install.dir"] = config['byond.dirs.installs'] / config['byond.install.id']
 
     @staticmethod
     def parse_byond_version(version):
@@ -24,13 +24,13 @@ class Install(object):
 
     @staticmethod
     def download(config, version):
-        config['byond.install_dir'] = config['byond.dirs.installs'] / f"{version}"
+        config['byond.install.dir'] = config['byond.dirs.installs'] / f"{version}"
         zipfile = f"{version}_byond_linux.zip"
         save_path = config['tmp_dir'] / zipfile
         url = f'https://www.byond.com/download/build/{version.split(".")[0]}/{zipfile}'
-        if not os.path.exists(config['byond.install_dir']):
+        if not os.path.exists(config['byond.install.dir']):
             os.system(f"wget {url} -O {save_path}")
-            os.system(f"unzip -qq {save_path} -d {config['byond.install_dir']}")
+            os.system(f"unzip -qq {save_path} -d {config['byond.install.dir']}")
 
     @staticmethod
     def get_compile_args(args={}):
@@ -54,7 +54,7 @@ class Install(object):
     async def compile(config, file, args={}):
         config = config.branch('byond_compile')
         preargs, postargs = Install.get_compile_args(args)
-        install_dir = config['byond.install_dir']
+        install_dir = config['byond.install.dir']
 
         config['process.env'] = {'LD_LIBRARY_PATH':f"{install_dir}/byond/bin"}
         command = f"{install_dir}/byond/bin/DreamMaker {preargs} {file} {postargs}"
@@ -64,7 +64,7 @@ class Install(object):
     async def run(config, file, args={}):
         config = config.branch('byond_run')
         preargs, postargs = Install.get_run_args(args)
-        install_dir = config['byond.install_dir']
+        install_dir = config['byond.install.dir']
 
         config['process.env'] = {'LD_LIBRARY_PATH':f"{install_dir}/byond/bin"}
         command = f"{install_dir}/byond/bin/DreamDaemon {preargs} {file} {postargs}"

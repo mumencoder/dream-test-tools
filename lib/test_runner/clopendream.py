@@ -16,7 +16,7 @@ async def prep_tree(config):
     config['process.stderr'].close()
 
 async def do_test(config):
-    config['test.platform'] = 'clopendream'
+    config['test.platform'] = f"clopendream.{config['clopendream.install.id']}"
     final_text = test_runner.TestWrapper(config, config['test.text']).wrapped_test(config)
     await test_runner.write_test(config, final_text)
 

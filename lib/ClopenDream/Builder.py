@@ -10,7 +10,7 @@ class Builder(object):
 
     @staticmethod
     async def build(config):
-        config["dotnet.solution.path"] = config["clopendream.install_dir"]
+        config["dotnet.solution.path"] = config["clopendream.install.dir"]
 
         config = config.branch('build_clopen')
         if not config.exists('dotnet.project.params'):
@@ -21,8 +21,8 @@ class Builder(object):
         process = await Shared.Dotnet.Project.build( config )
         await asyncio.wait_for(process.wait(), timeout=None)
 
-        dmstandard_from_path = config["clopendream.install_dir"] / 'OpenDream' / 'DMCompiler' / 'DMStandard'
-        dmstandard_to_path = config["clopendream.install_dir"] / 'ClopenDreamCommandLine' / 'bin'
+        dmstandard_from_path = config["clopendream.install.dir"] / 'OpenDream' / 'DMCompiler' / 'DMStandard'
+        dmstandard_to_path = config["clopendream.install.dir"] / 'ClopenDreamCommandLine' / 'bin'
         dmstandard_to_path = dmstandard_to_path / config["dotnet.project.params"]['configuration'] / 'net6.0' / "DMStandard"
         shutil.rmtree(dmstandard_to_path)
         shutil.copytree(dmstandard_from_path, dmstandard_to_path)

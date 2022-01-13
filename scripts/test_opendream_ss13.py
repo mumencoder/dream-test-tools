@@ -6,7 +6,7 @@ from DTT import App
 
 class Main(App):
     async def run(self):
-        OpenDream.Install.set_current(self.config, self.config['opendream.build.id'])
+        OpenDream.Install.set_current(self.config, self.config['opendream.install.id'])
         async for config in SS13.Repos.iter_community_repos(self.config):
             if config['ss13.repo_info']['name'] not in self.config['ss13.repo_ids']:
                 continue

@@ -4,7 +4,7 @@ import Shared, OpenDream
 import common, test_runner
 
 async def do_test(config):
-    config['test.platform'] = 'opendream'
+    config['test.platform'] = f"opendream.{config['opendream.install.id']}"
     final_text = test_runner.TestWrapper(config, config['test.text']).wrapped_test(config)
     await test_runner.write_test(config, final_text)
 

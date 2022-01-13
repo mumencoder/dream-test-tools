@@ -6,12 +6,12 @@ import Shared, Byond
 class Install(object):
     @staticmethod
     def set_current(config, _id):
-        config['clopendream.build.id'] = _id
-        config["clopendream.install_dir"] = config['clopendream.dirs.builds'] / config['clopendream.build.id']
+        config['clopendream.install.id'] = _id
+        config["clopendream.install.dir"] = config['clopendream.dirs.builds'] / config['clopendream.install.id']
 
     @staticmethod
     def command_line(config):
-        return f"{config['clopendream.install_dir']}/ClopenDreamCommandLine/bin/Debug/net6.0/ClopenDreamCommandLine"
+        return f"{config['clopendream.install.dir']}/ClopenDreamCommandLine/bin/Debug/net6.0/ClopenDreamCommandLine"
 
     @staticmethod
     async def test_parse(config):

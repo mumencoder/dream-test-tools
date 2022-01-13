@@ -17,11 +17,12 @@ class Builder(object):
 
     @staticmethod
     async def build(config):
+        config['dotnet.project.params'] = {}
         Builder.prepare_compiler_build( config )
         process = await Shared.Dotnet.Project.restore( config )
         await asyncio.wait_for(process.wait(), timeout=None)
 
-        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config['dotnet.project.params'])
+        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config['opendream.build.params'])
         process = await Shared.Dotnet.Project.build( config )
         await asyncio.wait_for(process.wait(), timeout=None)
 

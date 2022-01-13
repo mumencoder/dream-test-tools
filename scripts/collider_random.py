@@ -14,9 +14,9 @@ class Main(App):
         self.error_factor = 1.00
         self.stats = collections.defaultdict(int)
 
-        Byond.Install.set_current(self.config, self.config['byond.version'])
-        OpenDream.Install.set_current(self.config, self.config['opendream.build.id'])
-        ClopenDream.Install.set_current(self.config, self.config['clopendream.build.id'])
+        Byond.Install.set_current(self.config, self.config['byond.install.id'])
+        OpenDream.Install.set_current(self.config, self.config['opendream.install.id'])
+        ClopenDream.Install.set_current(self.config, self.config['clopendream.install.id'])
 
     async def collide(self, config):
         builder = dream_collider.builders.FullRandomBuilder(config)

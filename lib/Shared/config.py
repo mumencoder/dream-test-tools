@@ -79,6 +79,12 @@ class Config(object):
                 return False
         return True
 
+    def get(self, value, default=None):
+        if self.exists(value):
+            return self[value]
+        else:
+            return default
+
     def __getitem__(self, value):
         while value not in self.properties:
             self = self.parent
