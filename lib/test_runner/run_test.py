@@ -11,3 +11,4 @@ async def test_install(config, install):
         await test_runner.opendream.do_test( config.branch('opendream') )
     else:
         raise Exception(f"unknown platform {install['platform']}")
+

@@ -10,9 +10,9 @@ class TestWrapper(object):
         self.files = {}
 
     def wrapped_test(self, config):
-        self.files["log"] = f"_log.{config['test.platform']}.out"
-        self.files["mismatch"] = f"_mismatch.{config['test.platform']}.out"
-        self.files["fin"] = f"fin.{config['test.platform']}.out"
+        self.files["log"] = f"{config['test.platform']}.run_log.out"
+        self.files["mismatch"] = f"{config['test.platform']}.run_unexpected.out"
+        self.files["fin"] = f"{config['test.platform']}.fin.out"
         text = f"""
 
 #include "map.dmm"
@@ -33,6 +33,9 @@ var/list/_mismatch = new
 /world/New()
     main()
 
+    fdel("{self.files["log"]}")
+    fdel("{self.files["mismatch"]}")
+    fdel("{self.files["fin"]}")
     text2file("[json_encode(_log)]", "{self.files["log"]}")
     text2file("[json_encode(_mismatch)]", "{self.files["mismatch"]}")
     text2file("FIN", "{self.files["fin"]}")

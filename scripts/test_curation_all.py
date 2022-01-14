@@ -10,10 +10,11 @@ class Main(App):
         installs = [ {'platform':'byond','install_id':'default'}, {'platform':'opendream','install_id':'default'} ]
 
         for test_file_path in test_runner.list_all_tests(self.config, test_dir):
+            print(test_file_path)
             config = self.config.branch("test")
-            await test_runner.read_single_test(self.config, self.config['tests_dir'], test_file_path, self.test_output_dir)
+            await test_runner.read_single_test(config, config['tests_dir'], test_file_path, self.test_output_dir)
             for install in installs:
-                await test_runner.test_install(self.config, install)
+                await test_runner.test_install(config, install)
 
 main = Main()
 asyncio.run( main.run(main.config['tests_dir'] / 'dm') )

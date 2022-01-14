@@ -24,7 +24,6 @@ class Install(object):
 
     @staticmethod
     def download(config, version):
-        config['byond.install.dir'] = config['byond.dirs.installs'] / f"{version}"
         zipfile = f"{version}_byond_linux.zip"
         save_path = config['tmp_dir'] / zipfile
         url = f'https://www.byond.com/download/build/{version.split(".")[0]}/{zipfile}'
