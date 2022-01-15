@@ -13,4 +13,4 @@ var/datum/later/later
     //var/datum/laterrr/aa = new(0)
 
 /proc/main()
-    shutdown() 
+    return 0

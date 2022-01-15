@@ -45,8 +45,3 @@ var/count = 0
 
     ASSERT(v1 == null && v2 == null && v3 == null && v4 == null)
     ASSERT(count == 4) 
-
-/world/New()
-    main()
-    text2file("logical_assign", "testfile.out")
-    shutdown()

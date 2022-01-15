@@ -6,9 +6,9 @@ var/gvar = 3
 
 /proc/sproc()
     var/static/psvar = gvar
-    LOG("psvar", psvar, 3)
+    LOG("psvar", psvar)
 
 /proc/main()
     var/obj/o = new
-    LOG("osvar", o.osvar, 3)
+    LOG("osvar", o.osvar)
     return

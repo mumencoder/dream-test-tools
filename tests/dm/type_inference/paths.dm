@@ -17,7 +17,7 @@ mob
         red_snek
             species_alignment = .dragon:redder
 
-/world/New()
+/proc/main()
     var/mob/snake/red_snek/snek = new /mob:pit_viper
     world.log << json_encode( typesof(snek) )
     world.log << snek.species_alignment

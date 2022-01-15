@@ -26,4 +26,3 @@
 
     world.log << EASE_IN
     world.log << EASE_OUT
-    shutdown()

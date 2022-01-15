@@ -7,8 +7,8 @@ obj
 
 var/obj/o = new
 
-var/static/g = o.hi + gvar
 var/static/gvar = 10
+var/static/g = o.hi + gvar
 
 /proc/main()
     world.log << g

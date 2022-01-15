@@ -12,3 +12,12 @@
     var/static/obj/se = new
     var/const/a = 7
     var/const/b = 8
+
+/proc/main()
+    var/obj/o = new
+    LOG("c1", o.c1)
+    LOG("c2", o.c2)
+    LOG("c3", o.c3)
+
+    LOG("a", o.a)
+    LOG("b", o.b)
