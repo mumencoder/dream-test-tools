@@ -23,6 +23,8 @@ class App(object):
             await self.install_byond(self.config, install_id, self.config['byond.installs'][install_id])
         elif platform == "opendream":
             await self.install_opendream( self.config, install_id, self.config['opendream.installs'][install_id] )
+        elif platform == "clopendream":
+            await self.install_clopendream( self.config, install_id, self.config['clopendream.installs'][install_id] )
         else:
             raise Exception("unknown install")
 
@@ -43,6 +45,17 @@ class App(object):
             await self.prepare_repo(config, config['opendream.install.dir'])
         config['opendream.build.params'] = {'configuration':'Release'}
         await OpenDream.Builder.build(config)
+
+    async def install_clopendream(self, config, install_id, install_info):
+        ClopenDream.Install.set_current(config, install_id)
+        if install_info["type"] == "filesystem":
+            Shared.Path.sync_folders( install_info["dir"], config['clopendream.install.dir'] )
+        if install_info["type"] == "repo":
+            config['git.repo.url'] = install_info["url"]
+            config['git.branch'] = install_info["branch"]
+            await self.prepare_repo(config, config['clopendream.install.dir'])
+        config['clopendream.build.params'] = {'configuration':'Release'}
+        await ClopenDream.Builder.build(config)
 
     async def prepare_repo(self, config, local_dir):
         config['git.local_dir'] = local_dir

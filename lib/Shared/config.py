@@ -38,6 +38,13 @@ class Config(object):
             l.append(cnode[value])
         return l
 
+    def copy(self):
+        nnode = Config()
+        for node in reversed(list(self.parent_chain())):
+            nnode.properties.update( node.properties )
+            nnode.event_handlers.update( node.event_handlers )
+        return nnode
+
     def fullname(self):
         if self.parent is not None:
             return self.parent.fullname() + "/" + self.name 

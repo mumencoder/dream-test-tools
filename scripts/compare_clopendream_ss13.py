@@ -17,6 +17,6 @@ class Main(App):
             config['clopendream.output.id'] = f"""ss13repo-{config['ss13.repo_info']['name']}"""
             config['clopendream.output.base_dir'] = config['clopendream.dirs.output'] / config['clopendream.output.id']
             config['clopendream.input_dm'] = config['ss13.dme_file']
-            test_runner.clopendream.compare(config)
+            await test_runner.clopendream.compare(config)
 
 asyncio.run( Main().run() )

@@ -10,9 +10,9 @@ class TestWrapper(object):
         self.files = {}
 
     def wrapped_test(self, config):
-        self.files["log"] = f"{config['test.platform']}.run_log.out"
-        self.files["mismatch"] = f"{config['test.platform']}.run_unexpected.out"
-        self.files["fin"] = f"{config['test.platform']}.fin.out"
+        self.files["log"] = f"run_log.out"
+        self.files["mismatch"] = f"run_unexpected.out"
+        self.files["fin"] = f"fin.out"
         text = f"""
 
 #include "map.dmm"
