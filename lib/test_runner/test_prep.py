@@ -44,12 +44,17 @@ var/list/_mismatch = new
 
         return text
 
-def copy_resources(config):
-    Shared.File.refresh(config['tests_dir.resources'] / 'map.dmm', config['test.base_dir'] / 'map.dmm')
-    Shared.File.refresh(config['tests_dir.resources'] / 'interface.dmf', config['test.base_dir'] / 'interface.dmf')
+def get_test_info(config):
+    relpath = os.path.relpath(config['test.source_file'].parent, config['tests.dirs.input']).split("/")
+    config['test.id'] = "curation-" + "-".join( relpath ) + "-" + config['test.source_file'] .with_suffix("").name
+    config['test.base_dir'] = config['tests.dirs.output'] / 'curated' / config['test.id'] / f"{config['test.platform']}.{config['test.install_id']}"
+    with open(config['test.source_file'], "r") as f:
+        config['test.text'] = f.read() + '\n'
 
-async def write_test(config, test_text):
+def copy_test(config):
     config['test.dm_file_path'] = config['test.base_dir'] / 'test.dm'
+    Shared.File.refresh(config['tests.dirs.resources'] / 'map.dmm', config['test.base_dir'] / 'map.dmm')
+    Shared.File.refresh(config['tests.dirs.resources'] / 'interface.dmf', config['test.base_dir'] / 'interface.dmf')
+    final_text = TestWrapper(config, config['test.text']).wrapped_test(config)
     with open(config['test.dm_file_path'], "w") as o:
-        o.write( test_text )
-    copy_resources(config)
+        o.write( final_text )

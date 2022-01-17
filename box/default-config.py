@@ -7,8 +7,9 @@ def setup(config):
     config['source_dir'] = Shared.Path( os.path.expanduser('~/dream-storage/source/dream-test-tools') )
     config['tmp_dir'] = Shared.Path( '/tmp/dream' ) 
 
-    config['tests_dir'] = config['source_dir'] / "tests"
-    config['tests_dir.resources'] = config['source_dir'] / "tests" / "resources"
+    config['tests.dirs.input'] = config['source_dir'] / "tests"
+    config['tests.dirs.output'] = config['storage_dir'] / 'tests'
+    config['tests.dirs.resources'] = config['source_dir'] / "tests" / "resources"
 
     base_dir = config['storage_dir'] / 'byond'
     config['byond.dirs.downloads'] = base_dir / 'downloads'

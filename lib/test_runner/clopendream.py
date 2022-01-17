@@ -16,9 +16,6 @@ async def prep_tree(config):
     config['process.stderr'].close()
 
 async def do_test(config):
-    final_text = test_runner.TestWrapper(config, config['test.text']).wrapped_test(config)
-    await test_runner.write_test(config, final_text)
-
     config['clopendream.input_dm'] = config['test.dm_file_path']
     config['clopendream.output.base_dir'] = config['test.base_dir']
     await test_runner.clopendream.compare(config)

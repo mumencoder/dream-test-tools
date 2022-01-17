@@ -5,7 +5,6 @@ import Shared, Byond, ClopenDream, OpenDream
 class App(object):
     def __init__(self):
         self.load_configs()
-        self.test_output_dir = self.config['storage_dir'] / 'tests' 
 
     def load_configs(self):
         self.config = Shared.Config()

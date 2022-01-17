@@ -15,13 +15,12 @@ class Main(App):
 
         start_time = time.time()
         pending_tasks = []
-        for test_file_path in test_runner.list_all_tests(self.config, test_dir):
-            print(test_file_path)
-            config = self.config.branch("test")
+        for config in test_runner.list_all_tests(self.config, test_dir):
             for install in installs:
                 config['test.platform'] = install['platform']
                 config['test.install_id'] = install['install_id']
-                test_runner.read_single_test(config, config['tests_dir'], test_file_path, self.test_output_dir)
+                test_runner.get_test_info(config)
+                test_runner.copy_test(config)
                 pending_tasks.append( asyncio.create_task( test_runner.test_install(config.copy(), install) ) )
                 if len(pending_tasks) > 16:
                     await asyncio.gather( *pending_tasks )
@@ -31,4 +30,4 @@ class Main(App):
         os.system('stty sane')
 
 main = Main()
-asyncio.run( main.run(main.config['tests_dir'] / 'dm') )
+asyncio.run( main.run(main.config['tests.dirs.input'] / 'dm') )

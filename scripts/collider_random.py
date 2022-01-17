@@ -22,7 +22,7 @@ class Main(App):
         builder = dream_collider.builders.FullRandomBuilder(config)
         test_id = f'gentest-{Shared.Random.generate_string(8)}'
         config['test.id'] = test_id
-        config['test.base_dir'] = self.test_output_dir / 'brrr' / config['test.id']
+        config['test.base_dir'] = config['tests.dirs.output'] / 'brrr' / config['test.id']
         config['test.text'] = str(builder.test(config, 8))
         config['test.builder'] = builder
 
@@ -36,7 +36,7 @@ class Main(App):
     async def redo_test(self, test_id):
         config = self.config.branch(test_id)
         config['test.id'] = test_id
-        config['test.base_dir'] = self.test_output_dir / 'saved' / config['test.id']
+        config['test.base_dir'] = config['tests.dirs.output'] / 'saved' / config['test.id']
         with open(config['test.base_dir'] / 'base_test.dm', "r") as f:
             config['test.text'] = f.read()
         await config.send_event('test.generated', config)
@@ -66,7 +66,7 @@ class Main(App):
             print( f"byond_compiled={byond_compiled}, should_compile={config['test.builder'].should_compile}" )
             print( f"opendream_compiled={opendream_compiled}" )
             print( f"{config['test.builder'].notes}" )
-            shutil.move( config['test.base_dir'], self.test_output_dir / 'saved' / config['test.id'] )
+            shutil.move( config['test.base_dir'], config['tests.dirs.output']/ 'saved' / config['test.id'] )
             self.saved += 1
         else:
             shutil.rmtree( config['test.base_dir'] )
