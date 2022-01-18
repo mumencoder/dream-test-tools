@@ -37,7 +37,7 @@ class App(object):
     async def install_opendream(self, config, install_id, install_info):
         OpenDream.Install.set_current(config, install_id)
         if install_info["type"] == "filesystem":
-            Shared.Path.sync_folders( install_info["dir"], config['opendream.install.dir'] )
+            Shared.Path.sync_folders( install_info["location"], config['opendream.install.dir'] )
         if install_info["type"] == "repo":
             config['git.repo.url'] = install_info["url"]
             config['git.branch'] = install_info["branch"]
@@ -48,7 +48,7 @@ class App(object):
     async def install_clopendream(self, config, install_id, install_info):
         ClopenDream.Install.set_current(config, install_id)
         if install_info["type"] == "filesystem":
-            Shared.Path.sync_folders( install_info["dir"], config['clopendream.install.dir'] )
+            Shared.Path.sync_folders( install_info["location"], config['clopendream.install.dir'] )
         if install_info["type"] == "repo":
             config['git.repo.url'] = install_info["url"]
             config['git.branch'] = install_info["branch"]

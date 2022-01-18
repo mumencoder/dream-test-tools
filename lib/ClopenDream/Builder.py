@@ -13,9 +13,9 @@ class Builder(object):
         config["dotnet.solution.path"] = config["clopendream.install.dir"]
 
         config = config.branch('build_clopen')
-        if not config.exists('dotnet.project.params'):
-            config['dotnet.project.params'] = {}
-        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config['dotnet.project.params'])
+        if not config.exists('clopendream.build.params'):
+            config['clopendream.build.params'] = {}
+        config['dotnet.project.params'] = Shared.Dotnet.Project.default_params(config['clopendream.build.params'])
 
         Builder.prepare_commandline( config )
         process = await Shared.Dotnet.Project.build( config )
@@ -24,6 +24,7 @@ class Builder(object):
         dmstandard_from_path = config["clopendream.install.dir"] / 'OpenDream' / 'DMCompiler' / 'DMStandard'
         dmstandard_to_path = config["clopendream.install.dir"] / 'ClopenDreamCommandLine' / 'bin'
         dmstandard_to_path = dmstandard_to_path / config["dotnet.project.params"]['configuration'] / 'net6.0' / "DMStandard"
-        shutil.rmtree(dmstandard_to_path)
+        if os.path.exists(dmstandard_to_path):
+            shutil.rmtree(dmstandard_to_path)
         shutil.copytree(dmstandard_from_path, dmstandard_to_path)
     

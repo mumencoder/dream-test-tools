@@ -7,10 +7,14 @@ import test_runner
 
 class Main(App):
     async def run(self, test_file):
-        installs = [ {'platform':'byond','install_id':'default'}, {'platform':'opendream','install_id':'default'} ]
+        installs = [ 
+            {'platform':'byond','install_id':'default'}, 
+            {'platform':'opendream','install_id':'default'},
+            {'platform':'clopendream','install_id':'currentdev', 'byond_install_id':'default'} 
+        ]
         config = self.config
         config['test.source_file'] = test_file 
-        test_runner.get_test_info(config)
+        test_runner.get_test_info(config, 'curated')
         test_runner.copy_test(config)
         for install in installs:
             await test_runner.test_install(self.config, install)

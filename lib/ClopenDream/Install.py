@@ -11,7 +11,7 @@ class Install(object):
 
     @staticmethod
     def command_line(config):
-        return f"{config['clopendream.install.dir']}/ClopenDreamCommandLine/bin/Debug/net6.0/ClopenDreamCommandLine"
+        return f"{config['clopendream.install.dir']}/ClopenDreamCommandLine/bin/Release/net6.0/ClopenDreamCommandLine"
 
     @staticmethod
     async def test_parse(config):

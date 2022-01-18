@@ -36,7 +36,6 @@ async def compare(config):
         with open(config['test.base_dir'] / f"compare.returncode.txt", "w") as f_rt:
             f_rt.write(str(process.returncode))
 
-
 async def compile(config):
     await prep_tree(config)
     process = await ClopenDream.Install.compile(config)

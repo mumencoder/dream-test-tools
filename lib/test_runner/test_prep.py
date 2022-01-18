@@ -44,10 +44,10 @@ var/list/_mismatch = new
 
         return text
 
-def get_test_info(config):
+def get_test_info(config, folder_name):
     relpath = os.path.relpath(config['test.source_file'].parent, config['tests.dirs.input']).split("/")
     config['test.id'] = "curation-" + "-".join( relpath ) + "-" + config['test.source_file'] .with_suffix("").name
-    config['test.base_dir'] = config['tests.dirs.output'] / 'curated' / config['test.id'] / f"{config['test.platform']}.{config['test.install_id']}"
+    config['test.base_dir'] = config['tests.dirs.output'] / folder_name / config['test.id'] / f"{config['test.platform']}.{config['test.install_id']}"
     with open(config['test.source_file'], "r") as f:
         config['test.text'] = f.read() + '\n'
 
