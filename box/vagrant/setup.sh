@@ -21,6 +21,7 @@ sudo ln -s /usr/local/bin/python3.8 /bin/python3.8
 sudo python3.8 -m pip install --upgrade pip
 sudo python3.8 -m pip install GitPython
 
+sudo yum -y remove git
 sudo yum -y install git222
 
 sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm

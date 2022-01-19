@@ -46,8 +46,10 @@ def setup(config):
     return config
 
 def defaults(config):
-    config['byond.installs'] = { 'default':'514.1575' }
-
+    config['byond.installs'] = {
+        'default': {'type':'web_official', 'version':'514.1575' }
+    }
+    
     config['opendream.installs'] = {
         'default' : {'type':'repo', 'url':'https://github.com/wixoaGit/OpenDream', 'branch':'master' }
     }
