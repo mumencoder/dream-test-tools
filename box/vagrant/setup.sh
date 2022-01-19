@@ -27,10 +27,10 @@ sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-
 sudo yum -y install dotnet-sdk-6.0
 
 cd $BASE_DIR
-vagrant mkdir dream-storage
+mkdir dream-storage
 cd dream-storage
-vagrant mkdir source
-vagrant mkdir config
+mkdir source
+mkdir config
 cd source
 git clone https://github.com/mumencoder/dream-test-tools
 pushd dream-test-tools/scripts
