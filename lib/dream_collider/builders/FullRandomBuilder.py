@@ -40,7 +40,7 @@ class FullRandomBuilder(object):
                     self.should_compile = self.should_compile and result["should_compile"]
                     self.notes += result["notes"]
 
-                expr = decl.usage(config)
+                expr = result["decl"].usage(config)
                 return expr
         elif expr_ty == "int":
             return DefaultBuilder.const_int(config)
@@ -79,6 +79,7 @@ class FullRandomBuilder(object):
             decl = self.otree_builder.decl(config) 
             config['model'].add_decl( decl )
 
+        for decl in config['model'].usr_decls:
             config['scope_decl'] = decl
             if type(decl) is ObjectVarDecl:
                 dmobj = config['model'].ensure_object(decl.path)
@@ -90,17 +91,36 @@ class FullRandomBuilder(object):
                     self.should_compile = should_compile
                     self.notes = notes
                     decl.initial = self.expr(config, depth=4)
+                    try:
+                        decl.initial = decl.initial.simplify(config)
+                    except GenerationError:
+                        self.should_compile = should_compile
+                        self.notes = notes
+                        retain_error = config['model'].initial_vrandomizer.try_modify_validation({}, f"generationerror - {decl.path}/{decl.name}")
+                        if retain_error["valid"] is False:
+                            decl.initial = None
+                            continue
+                        else:
+                            self.should_compile = self.should_compile and retain_error["should_compile"]
+                            self.notes += retain_error["notes"]
+                        decl.initial = None
+                        continue
                     if decl.initial.is_const(config):
                         try:
-                            result = decl.initial.eval(config)
-                            dmobj.scope.set_value( decl.name, result )
+                            decl.value = decl.initial.eval(config)
                         except GenerationError:
-                            decl.initial = None
-                    elif decl.initialization_mode(config) == "const":
-                        decl.initial = None
+                            self.should_compile = should_compile
+                            self.notes = notes
+                            retain_error = config['model'].initial_vrandomizer.try_modify_validation({}, f"generationerror - {decl.path}/{decl.name}")
+                            if retain_error["valid"] is False:
+                                decl.initial = None
+                                continue
+                            else:
+                                self.should_compile = self.should_compile and retain_error["should_compile"]
+                                self.notes += retain_error["notes"]
                 del config['scope']
             elif type(decl) is ProcDecl:
-                decl.statements.append( ReturnStatement(ConstExpression(0)))
+                decl.statements.append( ReturnStatement(ConstExpression(1)))
             else:
                 raise Exception("Unknown declaration")
                 

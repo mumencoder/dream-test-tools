@@ -76,30 +76,33 @@ class Main(App):
         else:
             self.error_factor *= 1.05
 
+    def print_progress(self):
+        print("===============================")
+        print(f"{self.tests} tests in {time.time() - self.start_time} secs")
+        pct_stats = {k:v / self.stats['total'] for k,v in self.stats.items()}
+        print(pct_stats)
+
     async def run(self):
         self.initialize()
         self.running = True
         self.saved = 0
 
         self.config.event_handlers['test.generated'] = self.handle_test
-        tests = 0
-        start_time = time.time()
+        self.tests = 0
+        self.start_time = time.time()
         while True:
             if self.saved >= 10:
+                self.print_progress()
                 break
-            tests += 1
-            if tests in [10, 100, 1000]:
-                print("===============================")
-                print(f"{tests} tests in {time.time() - start_time} secs")
-                pct_stats = {k:v / self.stats['total'] for k,v in self.stats.items()}
-                print(pct_stats)
+            self.tests += 1
+            if self.tests in [10, 100, 1000, 10000]:
+                self.print_progress()
             config = self.config.branch("!")
             self.adjust_error_factor()
             self.config['test.error_factor'] = self.error_factor
             await self.generate_test()
             config = config.pop()
         os.system('stty sane')
-
 
 try:
     asyncio.run( Main().run() )

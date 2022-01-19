@@ -10,6 +10,7 @@ class ObjectVarDecl(object):
         self.name = None
         self.flags = []
         self.initial = None
+        self.value = None
 
         self.stdlib = False
         self.allow_override = True
@@ -37,6 +38,7 @@ class ObjectVarDecl(object):
 
     def initialization_mode(self, config):
         dmobj = config['model'].ensure_object(self.path)
+
         for o in dmobj.parent_chain(include_self=False):
             if self.name in o.scope.vars:
                 override_decl = o.scope.vars[self.name]
@@ -90,6 +92,12 @@ class DMObject(object):
             yield cnode
             cnode = cnode.obj_trunk
 
+    def topmost_var_decl(self, name):
+        for node in reversed(list(self.parent_chain())):
+            if name in node.scope.vars:
+                return node
+        return None
+
     def new_parent(self, obj_trunk):
         self.obj_trunk = obj_trunk
         obj_trunk.obj_leaves.append( self )
@@ -105,7 +113,7 @@ class DMObject(object):
 
     def add_var(self, decl):
         self.vars.append(decl)
-        self.scope.vars[decl.name] = decl
+        self.scope.def_var(decl.name, decl)
 
     def would_override_var(self, name):
         for dmobj in self.parent_chain():

@@ -14,6 +14,9 @@ class ConstExpression(object):
     def is_const(self, config):
         return True
 
+    def simplify(self, config):
+        return self
+
     def eval(self, config):
         return self.value
 
@@ -53,6 +56,25 @@ class OpExpression(object):
                 return False
         return True
 
+    def simplify(self, config):
+        for i, leaf in enumerate(self.leaves):
+            self.leaves[i] = leaf.simplify(config)
+        for i, leaf in enumerate(self.leaves):
+            if type(leaf) is not ConstExpression:
+                return self
+
+        if self.op.display == "+":
+            return ConstExpression(self.leaves[0].value + self.leaves[1].value)
+        if self.op.display== "-":
+            return ConstExpression(self.leaves[0].value - self.leaves[1].value)
+        if self.op.display == "*":
+            return ConstExpression(self.leaves[0].value * self.leaves[1].value)
+        if self.op.display == "/":
+            if self.leaves[1].value == 0:
+                raise GenerationError()
+            return ConstExpression(self.leaves[0].value / self.leaves[1].value)
+        raise Exception("cannot evaluate")
+
     def eval(self, config):
         if self.op.display == "+":
             return self.leaves[0].eval(config) + self.leaves[1].eval(config)
@@ -79,12 +101,14 @@ class Identifier(object):
     def is_const(self, config):
         return "const" in self.decl.flags
 
+    def simplify(self, config):
+        return self
+
     def eval(self, config):
-        v = config['scope'].get_value( self.decl.name )
-        if v is None:
+        if self.decl.value is None:
             raise GenerationError()
         else:
-            return v
+            return self.decl.value
 
 class CallExpression(object):
     def __init__(self, name, *args):
@@ -102,3 +126,9 @@ class CallExpression(object):
 
     def is_const(self, config):
         return False
+
+    def simplify(self, config):
+        return self
+
+    def eval(self, config):
+        return 1
