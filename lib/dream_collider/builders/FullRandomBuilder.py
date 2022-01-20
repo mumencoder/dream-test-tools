@@ -83,6 +83,11 @@ class FullRandomBuilder(object):
             config['scope_decl'] = decl
             if type(decl) is ObjectVarDecl:
                 dmobj = config['model'].ensure_object(decl.path)
+                if type(dmobj) is DMObjectTree:
+                    topmost_def = dmobj
+                else:
+                    topmost_def = dmobj.topmost_var_decl(decl.name)
+                topmost_def_decl = topmost_def.scope.first_vars[decl.name]
                 config['scope'] = dmobj.scope
                 decl.initial = None
                 should_compile = self.should_compile
@@ -105,6 +110,16 @@ class FullRandomBuilder(object):
                             self.notes += retain_error["notes"]
                         decl.initial = None
                         continue
+                    if topmost_def_decl.initialization_mode(config) == "const" and not decl.initial.is_const(config):
+                        self.should_compile = should_compile
+                        self.notes = notes
+                        retain_error = config['model'].initial_vrandomizer.try_modify_validation({}, f"generationerror - {decl.path}/{decl.name}")
+                        if retain_error["valid"] is False:
+                            decl.initial = None
+                            continue
+                        else:
+                            self.should_compile = self.should_compile and retain_error["should_compile"]
+                            self.notes += retain_error["notes"]
                     if decl.initial.is_const(config):
                         try:
                             decl.value = decl.initial.eval(config)

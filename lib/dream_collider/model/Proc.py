@@ -28,12 +28,16 @@ class ProcDecl(object):
     def __str__(self):
         if self.stdlib:
             return ""
-        if len(self.path.segments) != 0:
-            path = str(self.path) + '/'
+        if len(self.path.segments) == 0:
+            if self.is_override:
+                path = ""
+            else:
+                path = "/proc/"
         else:
-            path = "/"
-        if not self.is_override:
-            path += f'proc/'
+            if self.is_override:
+                path = str(self.path) + "/"
+            else:
+                path = str(self.path) + "/proc/"
         path += f'{self.name}'
         display = path + "("
         has_arg = False

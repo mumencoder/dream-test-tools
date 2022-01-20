@@ -25,7 +25,7 @@ class Main(App):
         test_id = f'gentest-{Shared.Random.generate_string(8)}'
         config['test.id'] = test_id
         config['test.source_file'] = config['tests.dirs.output'] / 'brrr' / config['test.id'] / 'test.dm'
-        config['test.text'] = str(builder.test(config, 8))
+        config['test.text'] = str(builder.test(config, 32))
         config['test.builder'] = builder
 
     async def generate_test(self):
