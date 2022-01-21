@@ -1,18 +1,20 @@
 
 /proc/main()
-    var/i
+    var/list/forvals = list()
 
     for (var/datum/D)
-        i += 1
+        forvals += D
     for (var/atom/A)
-        i += 1
+        forvals += A
     for (var/area/A)
-        i += 1
+        forvals += A
     for (var/turf/T)
-        i += 1
+        forvals += T
     for (var/mob/M)
-        i += 1
+        forvals += M
     for (var/obj/O)
-        i += 1
+        forvals += O
     for (var/atom/movable/AM)
-        i += 1
+        forvals += AM
+
+    LOG("forvals", forvals)

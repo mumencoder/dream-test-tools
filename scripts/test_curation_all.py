@@ -22,7 +22,7 @@ class Main(App):
                 test_runner.get_test_info(config, 'curated')
                 test_runner.copy_test(config)
                 pending_tasks.append( asyncio.create_task( test_runner.test_install(config.copy(), install) ) )
-                if len(pending_tasks) > 16:
+                if len(pending_tasks) > 0:
                     await asyncio.gather( *pending_tasks )
                     pending_tasks = []
         await asyncio.gather( *pending_tasks )

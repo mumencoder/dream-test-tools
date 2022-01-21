@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /turf/C = 4
 /datum/var/const/C = 5
 

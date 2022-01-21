@@ -7,5 +7,5 @@ C()
 /var/z = 5
 
 /proc/main()
-    world.log << global.C()
-    world.log << global.z
+    LOG("global.C()", global.C())
+    LOG("global.z", global.z)

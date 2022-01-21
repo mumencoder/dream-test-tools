@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /datum
     var/const/idx = 0
     var/c = 0

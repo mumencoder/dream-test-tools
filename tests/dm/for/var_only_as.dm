@@ -1,17 +1,18 @@
 
 /proc/main()
-    var/i
+    var/list/forvals = list()
 
     for (var/X as anything)
-        i += 1
+        forvals += X
     for (var/X as area)
-        i += 1
+        forvals += X
     for (var/X as turf)
-        i += 1
+        forvals += X
     for (var/X as obj)
-        i += 1
+        forvals += X
     for (var/X as mob)
-        i += 1
+        forvals += X
     for (var/X as num)
-        i += 1
+        forvals += X
 
+    LOG("forvals", forvals)

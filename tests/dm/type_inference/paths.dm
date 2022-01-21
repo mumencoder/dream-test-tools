@@ -19,5 +19,6 @@ mob
 
 /proc/main()
     var/mob/snake/red_snek/snek = new /mob:pit_viper
-    world.log << json_encode( typesof(snek) )
-    world.log << snek.species_alignment
+
+    LOG("typesof(snek)", typesof(snek) )
+    LOG("snek.species_alignment", snek.species_alignment)

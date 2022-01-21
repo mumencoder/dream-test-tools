@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 var/const/a = 0
 var/b = 1 / a
 

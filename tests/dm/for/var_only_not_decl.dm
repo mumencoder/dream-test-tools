@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /proc/main()
     var/i
 

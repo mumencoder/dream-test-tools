@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /proc/somered()
     return 127
 

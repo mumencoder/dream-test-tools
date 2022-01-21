@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /proc/_input(...)
     return input(arglist(args))
 

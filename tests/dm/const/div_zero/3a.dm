@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 var/static/a = 1 / 0
 
 /proc/main()

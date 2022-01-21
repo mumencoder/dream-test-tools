@@ -33,16 +33,14 @@ var/c = 999
     var/obj/subobj1/o2 = new
     var/obj/subobj2/o3 = new
 
-    //world.log << "[static_proc()]"
-    //world.log << "[static_proc_shadowed()]"
-    //world.log << "[o1.s] [o1.g] [o1.c]"
-    //o1.s -= 90
-    //world.log << "[o2.s] [o2.g]"
-    //world.log << "[o3.s] [o3.g]"
 
-    ASSERT(static_proc() == 1003)
-    ASSERT(static_proc_shadowed() == 700)
-    ASSERT(o1.s == 997 && o1.g == 996 && o1.c == 5)
+    LOG("static_proc()", static_proc() == 1003)
+    LOG("static_proc_shadowed()", static_proc_shadowed() == 700)
+    LOG("o1.s", o1.s, 997)
+    LOG("o1.g", o1.g, 996)
+    LOG("o1.c", o1.c, 5)
     o1.s -= 90
-    ASSERT(o2.s == 907 && o2.g == 996)
-    ASSERT(o3.s == 995 && o3.g == 994) 
+    LOG("o2.s", o2.s, 907)
+    LOG("o2.g", o2.g, 996)
+    LOG("o3.s", o3.s, 995)
+    LOG("o3.g", o3.g, 994) 

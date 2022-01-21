@@ -10,5 +10,5 @@ var/gvar = 3
 
 /proc/main()
     var/obj/o = new
+    sproc()
     LOG("osvar", o.osvar)
-    return

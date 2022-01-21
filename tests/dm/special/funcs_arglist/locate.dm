@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /proc/_locate(...)
     return locate(arglist(args))
 

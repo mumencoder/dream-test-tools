@@ -1,11 +1,12 @@
 
 /proc/main()
+    var/list/forvals = list()
+
     var a = 1
+    for (a && a, a < 2, a++)
+        forvals += a
 
-    for (a && a, a < 6, a++)
-        a += 1
+    for (a *= 3, a < 10, a++)
+        forvals += a
 
-    for (a *= 5, a < 6, a++)
-        a += 1
-
-    LOG("a", a)
+    LOG("forvals", forvals)

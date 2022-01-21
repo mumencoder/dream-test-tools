@@ -21,9 +21,10 @@ var/count = 0
     v3 = (o_and.t &&= side_effect())
     v4 = (o_and.f &&= side_effect())
 
-    ASSERT(v1 == 1 && v2 == 5 && v3 == 5 && v4 == 0)
-    ASSERT(o_or.t == v1 && o_or.f == v2 && o_and.t == v3 && o_and.f == v4)
-    ASSERT(count == 2)
+    LOG("vs1", list(v1,v2,v3,v4), list(1,5,5,0))
+    LOG("o_ors1", list(o_or.t, o_or.f), list(v1, v2) )
+    LOG("o_ands1", list(o_and.t, o_and.f), list(v3, v4) )
+    LOG("count1", count, 2)
 
     o_and = new
     o_or = new
@@ -33,9 +34,10 @@ var/count = 0
     v3 = (o_and?.t &&= side_effect())
     v4 = (o_and?.f &&= side_effect())
 
-    ASSERT(v1 == 1 && v2 == 5 && v3 == 5 && v4 == 0)
-    ASSERT(o_or.t == v1 && o_or.f == v2 && o_and.t == v3 && o_and.f == v4)
-    ASSERT(count == 4)
+    LOG("vs2", list(v1,v2,v3,v4), list(1,5,5,0))
+    LOG("o_ors2", list(o_or.t, o_or.f), list(v1, v2) )
+    LOG("o_ands2", list(o_and.t, o_and.f), list(v3, v4) )
+    LOG("count2", count, 4)
 
     v1 = v2 = v3 = v4 = 5
     v1 = (on_or?.t ||= side_effect())
@@ -43,5 +45,5 @@ var/count = 0
     v3 = (on_and?.t &&= side_effect())
     v4 = (on_and?.f &&= side_effect())
 
-    ASSERT(v1 == null && v2 == null && v3 == null && v4 == null)
-    ASSERT(count == 4) 
+    LOG("vs2", list(v1,v2,v3,v4), list(null,null,null,null))
+    LOG("count3", count, 4)

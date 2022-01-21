@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /datum/a
     // this is specific to parent_type
     parent_type = /datum/b

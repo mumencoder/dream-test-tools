@@ -3,4 +3,4 @@
 #define FILE_DIR icons
 
 /proc/main()
-    world.log << FILE_DIR
+    LOG("FILE_DIR", FILE_DIR)

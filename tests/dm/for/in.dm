@@ -1,10 +1,11 @@
 
 /proc/main()
+    var/list/forvals = list()
+
     for (var/a in 2 to 8 step 3)
-        world.log << "1 [a++]"
+        forvals += a
 
     for (var/a = 1 in 2 to 8 step 3)
-        world.log << "2 [a++]"
+        forvals += a
 
-    for (var/a = 1 in 2 to 8 step 3)
-        world.log << "3 [a++]"
+    LOG("forvals", forvals)

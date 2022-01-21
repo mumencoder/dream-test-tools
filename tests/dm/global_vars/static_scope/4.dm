@@ -11,4 +11,4 @@ var/static/gvar = 10
 var/static/g = o.hi + gvar
 
 /proc/main()
-    world.log << g
+    LOG("g", g)

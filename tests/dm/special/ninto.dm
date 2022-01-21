@@ -1,4 +1,4 @@
 
 /proc/main()
-    world.log << "[5 in 1 to 10]"
+    LOG("expr1", 5 in 1 to 10)
  

@@ -2,7 +2,9 @@
 /obj
     var/a = 5
     proc/a()
+        LOG("src.a", a)
         return 5
 
 /proc/main()
-    return 0
+    var/obj/o = new
+    LOG("o.a()", o.a())

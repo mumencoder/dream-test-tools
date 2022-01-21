@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /obj
     /var/const/a = 5
 

@@ -1,9 +1,9 @@
 
 /obj
     proc/TheCall()
-        return 0
+        return 7
 
 var/obj/i = new
 
 /proc/main()
-    world.log << global.i.TheCall()
+    LOG("thecall", global.i.TheCall())

@@ -4,4 +4,4 @@
 var/icon/floors = 'floors.dmi'
 
 /proc/main()
-    world.log << FILE_DIR
+    LOG("FILE_DIR", FILE_DIR)

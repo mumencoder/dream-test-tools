@@ -4,7 +4,7 @@
 
 /proc/aproc()
     var/static/a = bproc()
-    world.log << a
+    LOG("a", a)
     if (veryfalse())
         return a
     else
@@ -12,12 +12,12 @@
 
 /proc/bproc()
     var/static/b = aproc()
-    world.log << b
+    LOG("b", b)
     if (veryfalse())
         return b
     else
         return 5
 
 /proc/main()
-    world.log << aproc()
-    world.log << bproc()
+    LOG("aproc", aproc())
+    LOG("aproc", bproc())

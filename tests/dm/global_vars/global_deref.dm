@@ -12,25 +12,13 @@ var/static/b = "b"
     var/a = "aloc"
     var/b = "bloc"
 
-    world.log << "[a]"
-    world.log << "[global.a]"
-    world.log << "[b]"
-    world.log << "[global.b]"
-    world.log << "[fn()]"
-    world.log << "[global.fn()]"
-    world.log << "[abs(-1)]"
-
-    ASSERT(a == "aloc")
-    ASSERT(global.a == "a")
-    ASSERT(b == "bloc")
-    ASSERT(global.b == "b")
-    ASSERT(fn() == "datumfn")
-    ASSERT(global.fn() == "fn")
-    ASSERT(abs(-1) == 1)
-
-    world.log << world.timeofday
-    sleep(3.0)
-    world.log << world.timeofday
+    LOG("a", a == "aloc")
+    LOG("global.a", global.a == "a")
+    LOG("bloc", b == "bloc")
+    LOG("global.b", global.b == "b")
+    LOG("fn()", fn() == "datumfn")
+    LOG("global.fn()", global.fn() == "fn")
+    LOG("abs", abs(-1) == 1)
 
 /proc/main()
     var/datum/d = new

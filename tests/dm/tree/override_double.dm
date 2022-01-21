@@ -11,4 +11,4 @@
 var/obj/a = new
 
 /proc/main()
-    return a.A()
+    LOG("a.A()", a.A())

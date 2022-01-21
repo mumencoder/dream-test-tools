@@ -1,3 +1,3 @@
 
 /proc/main()
-    world.log << "[json_encode(typesof("/"))]"
+    LOG("typesof/", typesof("/"))

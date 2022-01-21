@@ -1,6 +1,6 @@
 
 /proc/main()
     var/list/forvals = list()
-    for (var/i, i < 5; i++)
-        forvals += i
+    for (var/a && var/b, a < (b + 10), a += 2)
+        forvals += a
     LOG("forvals", forvals)

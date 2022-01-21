@@ -3,4 +3,7 @@
 /datum/var/v = 6
 
 /proc/main()
-    return 0
+    var/obj/o = new
+    var/datum/da = new
+    LOG("o.v", o.v)
+    LOG("da.v", da.v)

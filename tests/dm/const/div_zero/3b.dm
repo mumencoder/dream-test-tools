@@ -1,4 +1,6 @@
 
+//# COMPILE False
+
 /proc/one()
     return 1
 

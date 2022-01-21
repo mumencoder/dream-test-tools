@@ -6,4 +6,4 @@ C()
     return 2
 
 /proc/main()
-    return global.C()
+    LOG("global.C()", global.C())

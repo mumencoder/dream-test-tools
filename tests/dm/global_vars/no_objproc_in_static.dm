@@ -9,10 +9,9 @@ proc/test_inner1()
     return inner1
 
 /proc/main()
-    world.log << outer1
-    world.log << test_inner1()
-    world.log << outer1
-
+    LOG("outer1", outer1)
+    LOG("test_inner1()", test_inner1())
+    LOG("outer1", outer1)
 
 /mob
     var/static/outer2 = "A"
@@ -28,6 +27,6 @@ proc/test_inner1()
     verb/test()
         main()
         
-        world.log << outer2
-        world.log << test_inner2()
-        world.log << outer2
+        LOG("outer2", outer2)
+        LOG("test_inner2()", test_inner2())
+        LOG("outer2", outer2)

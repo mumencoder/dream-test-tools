@@ -9,8 +9,6 @@ var/datum/later/later
 
 /datum/later
     var/datum/later/a = new(0)
-    // not allowed
-    //var/datum/laterrr/aa = new(0)
 
 /proc/main()
     return 0
