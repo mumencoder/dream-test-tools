@@ -1,6 +1,9 @@
 
 import html, os, json
+import collections
 import test_runner
+
+import Shared
 
 class CompileReport(object):
     def __init__(self, install1, install2):
@@ -13,89 +16,123 @@ class CompileReport(object):
     def string(self, s): 
         return html.escape(s)
 
+    def load_result(self, config, install):
+        result = {}
+        result['config'] = config = config.branch("result").copy()
+        config['test.platform'] = install['platform']
+        config['test.install_id'] = install['install_id']
+        result["install_id"] = f"{install['platform']}.{install['install_id']}"
+        test_runner.get_test_info(config, 'curated')
+        result["ccode"] = int(Shared.File.read_if_exists(config['test.base_dir'] / "compile.returncode.txt"))
+        result["ctext"] = Shared.File.read_if_exists( config['test.base_dir'] / "compile.txt")
+        if result["ccode"] == 0:
+            runlog_path = config['test.base_dir'] / "run_log.out"
+            result["runlog"] = Shared.File.read_if_exists(runlog_path, lambda s: json.loads(s) )
+        return result
+
     def add_result(self, config):
         result = {}
-        result['config1'] = config1 = config.branch("1")
-        result['config2'] = config2 = config.branch("2")
-
-        config1['test.platform'] = self.install1['platform']
-        config1['test.install_id'] = self.install1['install_id']
-        test_runner.get_test_info(config1, 'curated')
-        code1_path = config1['test.base_dir'] / "compile.returncode.txt"
-
-        config2['test.platform'] = self.install2['platform']
-        config2['test.install_id'] = self.install2['install_id']
-        test_runner.get_test_info(config2, 'curated')
-        code2_path = config2['test.base_dir'] / "compile.returncode.txt"
-
-        if os.path.exists(code1_path):
-            with open(code1_path) as f:
-                result["code1"] = int(f.read())
-        else:
-            result["code1"] = None
-        if os.path.exists(code2_path):
-            with open(code2_path) as f:
-                result["code2"] = int(f.read())
-        else:
-            result["code2"] = None
+        result["1"] = self.load_result(config, self.install1)
+        result["2"] = self.load_result(config, self.install2)
         self.results.append( result )
+        
+    def result_compiled(self, result):
+        return (result["1"]["ccode"] == 0) and (result["2"]["ccode"] == 0)
+
+    def result_runlog(self, result):
+        return True
+        if result["1"]["runlog"] == []:
+            return result["1"]['runlog'] == result["2"]['runlog']
+        elif type(result["1"]["runlog"]) is dict:
+            for k,v in result["1"]["runlog"]:
+                if k not in result["2"]["runlog"]:
+                    result["run_compare"] = 0
+
+    def process_results(self):
+        self.category_rows = collections.defaultdict(list)
+        for result in self.results:
+            result["note"] = ""
+            if self.result_compiled(result):
+                if self.result_runlog(result):
+                    result["category"] = "same"
+                else:
+                    result["category"] = "runlog mismatch"
+            else:
+                result["category"] = "compile code mismatch"
+
+            self.category_rows[result["category"]].append( result )
+
+    def display_result(self, result):
+        return f"""
+<tr>
+    <td>{result["1"]["config"]["test.id"]}</td>
+    <td>{result["note"]}</td>
+    <td><a href="#{result["1"]["config"]["test.id"]}">View</a></td>
+</tr>
+"""
 
     def get_report(self):
-        diff_total = 0
-        diff_result_rows = ""
-        match_total = 0
-        match_result_rows = ""
+        self.process_results()
+        self.row_tables = collections.defaultdict(str)
+
         result_output = ""
         for result in self.results:
-            if (result["code1"] == 0) != (result["code2"] == 0):
-                diff_total += 1
-                diff_result_rows += f"""
-<tr>
-    <td>{result["config1"]["test.id"]}</td>
-    <td>{result["code1"]}</td>
-    <td>{result["code2"]}</td>
-    <td><a href="#{result["config1"]["test.id"]}">View</a>
-</tr>
-"""
-            else:
-                match_total += 1
-                match_result_rows += f"""
-<tr>
-    <td>{result["config1"]["test.id"]}</td>
-    <td>{result["code1"]}</td>
-    <td>{result["code2"]}</td>
-    <td><a href="#{result["config1"]["test.id"]}">View</a>
-</tr>
-"""
             result_output += f"""
-<hr id="{result["config1"]["test.id"]}">
-<pre><code>{self.string(result["config1"]['test.text'])}</code></pre>
+<hr size=5 noshade id="{result["1"]["config"]["test.id"]}">
+{self.string(result["1"]["config"]['test.id'])}<br>
+<pre><code>{self.string(result["1"]["config"]['test.text'])}</code></pre>
+<hr>
 """
+            if result["1"]["ccode"] == 0:
+                result_output += f"{result['1']['install_id']}: No errors<br><hr>"                
+            else:
+                result_output += f"""
+<pre>{self.string(result["1"]["ctext"])}<code></pre>
+<hr>
+"""
+            if result["2"]["ccode"] == 0:
+                result_output += f"{result['2']['install_id']}: No errors<br><hr>"                
+            else:
+                result_output += f"""
+<pre>{self.string(result["2"]["ctext"])}<code></pre>
+<hr>
+"""
+
+        for category in self.category_rows.keys():
+            for result in self.category_rows[category]:
+                self.row_tables[category] += self.display_result(result)
 
         s = f"""
 <html>
     <head></head>
     <body>
     <table border=1px>
-        <caption>{diff_total} mismatch rows</caption>
+        <caption>{len(self.category_rows["compile code mismatch"])} compile returncode mismatch</caption>
         <tr>
             <th>Test ID</th>
-            <th>{self.id1}</th>
-            <th>{self.id2}</th>
+            <th>Info</th>
             <th>Output</th>
         </tr>
-        {diff_result_rows}
+        {self.row_tables["compile code mismatch"]}
+    </table>
+    <table border=1px>
+        <caption>{len(self.category_rows["runlog mismatch"])} runlog mismatch</caption>
+        <tr>
+            <th>Test ID</th>
+            <th>Info</th>
+            <th>Output</th>
+        </tr>
+        {self.row_tables["runlog mismatch"]}
     </table>
     <hr>
     <table border=1px>
-        <caption>{match_total} matched rows</caption>
+        <caption>{len(self.category_rows["same"])} matched</caption>
         <tr>
             <th>Test ID</th>
-            <th>{self.id1}</th>
-            <th>{self.id2}</th>
+            <th>Info</th>
             <th>Output</th>
         </tr>
-        {match_result_rows}
+        {self.row_tables["same"]}
     </table>
     {result_output}
     </body>
