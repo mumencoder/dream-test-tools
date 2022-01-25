@@ -17,8 +17,7 @@ class Main(App):
         pending_tasks = []
         for config in test_runner.list_all_tests(self.config, test_dir):
             for install in installs:
-                config['test.platform'] = install['platform']
-                config['test.install_id'] = install['install_id']
+                config['test.install'] = install
                 test_runner.get_test_info(config, 'curated')
                 test_runner.copy_test(config)
                 pending_tasks.append( asyncio.create_task( test_runner.test_install(config.copy(), install) ) )

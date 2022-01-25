@@ -9,8 +9,6 @@ class CompileReport(object):
     def __init__(self, install1, install2):
         self.install1 = install1
         self.install2 = install2
-        self.id1 = f"{install1['platform']}.{install1['install_id']}"
-        self.id2 = f"{install2['platform']}.{install2['install_id']}"
         self.results = []
 
     def string(self, s): 
@@ -19,9 +17,7 @@ class CompileReport(object):
     def load_result(self, config, install):
         result = {}
         result['config'] = config = config.branch("result").copy()
-        config['test.platform'] = install['platform']
-        config['test.install_id'] = install['install_id']
-        result["install_id"] = f"{install['platform']}.{install['install_id']}"
+        config['test.install'] = install
         test_runner.get_test_info(config, 'curated')
         result["ccode"] = int(Shared.File.read_if_exists(config['test.base_dir'] / "compile.returncode.txt"))
         result["ctext"] = Shared.File.read_if_exists( config['test.base_dir'] / "compile.txt")
@@ -40,20 +36,23 @@ class CompileReport(object):
         return (result["1"]["ccode"] == 0) and (result["2"]["ccode"] == 0)
 
     def result_runlog(self, result):
-        return True
-        if result["1"]["runlog"] == []:
-            return result["1"]['runlog'] == result["2"]['runlog']
-        elif type(result["1"]["runlog"]) is dict:
-            for k,v in result["1"]["runlog"]:
-                if k not in result["2"]["runlog"]:
-                    result["run_compare"] = 0
+        return Shared.match(result["1"]["runlog"], result["2"]["runlog"])
+
+    def get_result_summary(self):
+        summ = {}
+        for result in self.results:
+            summ_result = {}
+            summ[result["1"]['config']['test.id']] = summ_result
+            summ_result["category"] = result["category"]
+        return summ
 
     def process_results(self):
         self.category_rows = collections.defaultdict(list)
         for result in self.results:
             result["note"] = ""
             if self.result_compiled(result):
-                if self.result_runlog(result):
+                result["runlog_match"] = self.result_runlog(result)
+                if self.result_runlog(result) is None:
                     result["category"] = "same"
                 else:
                     result["category"] = "runlog mismatch"
@@ -83,19 +82,27 @@ class CompileReport(object):
 <pre><code>{self.string(result["1"]["config"]['test.text'])}</code></pre>
 <hr>
 """
-            if result["1"]["ccode"] == 0:
-                result_output += f"{result['1']['install_id']}: No errors<br><hr>"                
-            else:
-                result_output += f"""
-<pre>{self.string(result["1"]["ctext"])}<code></pre>
+            if result["category"] == "compile code mismatch":
+                if result["1"]["ccode"] == 0:
+                    result_output += f"{self.install1['install_id']}: No errors<br><hr>"                
+                else:
+                    result_output += f"""
+<pre><code>{self.string(result["1"]["ctext"])}</code></pre>
 <hr>
 """
-            if result["2"]["ccode"] == 0:
-                result_output += f"{result['2']['install_id']}: No errors<br><hr>"                
-            else:
-                result_output += f"""
-<pre>{self.string(result["2"]["ctext"])}<code></pre>
+                if result["2"]["ccode"] == 0:
+                    result_output += f"{self.install2['install_id']}: No errors<br><hr>"                
+                else:
+                    result_output += f"""
+<pre><code>{self.string(result["2"]["ctext"])}</code></pre>
 <hr>
+"""
+            if result["category"] == "runlog mismatch":
+                result_output += f"""
+<pre><code>{self.string(json.dumps(result["1"]["runlog"]))}</code></pre>
+"""
+                result_output += f"""
+<pre><code>{self.string(json.dumps(result["2"]["runlog"]))}</code></pre>
 """
 
         for category in self.category_rows.keys():
@@ -144,7 +151,6 @@ class CompileReport(object):
 class CompareReport(object):
     def __init__(self, install):
         self.install = install
-        self.id = f"{install['platform']}.{install['install_id']}"
         self.results = []
 
     def string(self, s): 
@@ -154,8 +160,7 @@ class CompareReport(object):
         result = {}
         result['config'] = config = config.branch("1")
 
-        config['test.platform'] = self.install['platform']
-        config['test.install_id'] = self.install['install_id']
+        config['test.install'] = self.install
         test_runner.get_test_info(config, 'curated')
         json_path = config['test.base_dir'] / "clopen_result.json"
 

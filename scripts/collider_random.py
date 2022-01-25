@@ -39,15 +39,13 @@ class Main(App):
         self.stats['total'] += 1
         for install in self.installs:
             start_time = time.time()
-            config['test.platform'] = install['platform']
-            config['test.install_id'] = install['install_id']
-            config['test.test_runner'] = f"{config['test.platform']}.{config['test.install_id']}"
-            config['test.base_dir'] = config['tests.dirs.output'] / 'brrr' / config['test.id'] / config['test.test_runner']
+            config['test.install'] = test_runner.load_install(config, install)
+            config['test.base_dir'] = config['tests.dirs.output'] / 'brrr' / config['test.id'] / config['test.install']["id"]
             test_runner.copy_test(config)
             await test_runner.test_install(config.copy(), install)
-            self.install_time[config['test.test_runner']] += time.time() - start_time
+            self.install_time[config['test.install']['id']] += time.time() - start_time
 
-            if config['test.platform'] == 'byond':
+            if config['test.install']["platform"] == 'byond':
                 rcode_path = config['test.base_dir'] / "compile.returncode.txt"
                 if os.path.exists(rcode_path):
                     with open(rcode_path) as f:
