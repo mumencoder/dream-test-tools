@@ -15,6 +15,20 @@ class Git(object):
         return [max(commits, key=lambda c: c.committed_date) for commits in nights.values()]
 
     class Repo(object):
+        @staticmethod 
+        def commit_history(config, commit, depth=32):
+            q = []
+            seen = set()
+            i = 0
+            while i < depth:
+                yield commit
+                for c in commit.parents:
+                    if c not in seen:
+                        seen.add(c)
+                        i += 1
+                        q.append(c)
+                commit = q.pop(0)
+
         @staticmethod
         async def command(config, command):
             with Shared.folder.Push(config['git.local_dir']):

@@ -1,17 +1,22 @@
 
-import asyncio, time, os
+import asyncio, time, os, sys
 import Byond, OpenDream, ClopenDream
 
 from DTT import App
 import test_runner
 
+# python3.8 test_curation_all.py byond.default opendream.default clopendream.default
+# python3.8 test_curation_all.py opendream.default opendream.currentdev
+
 class Main(App):
     async def run(self, test_dir):
-        installs = [ 
-            {'platform':'byond','install_id':'default'}, 
-            {'platform':'opendream','install_id':'default'},
-            {'platform':'clopendream','install_id':'currentdev', 'byond_install_id':'default'} 
-        ]
+        installs = []
+        for arg in sys.argv[1:]:
+            parsed_arg = arg.split(".")
+            install = {'platform':parsed_arg[0], 'install_id':parsed_arg[1]}
+            if install['platform'] == 'clopendream':
+                install['byond_install_id'] = 'default'
+            installs.append( test_runner.load_install(self.config, install) )
 
         start_time = time.time()
         pending_tasks = []
