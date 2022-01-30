@@ -2,19 +2,37 @@
 /proc/main()
     var/list/forvals = list()
 
-    for (var/datum/D)
-        forvals += D
-    for (var/atom/A)
-        forvals += A
-    for (var/area/A)
-        forvals += A
-    for (var/turf/T)
-        forvals += T
-    for (var/mob/M)
-        forvals += M
-    for (var/obj/O)
-        forvals += O
-    for (var/atom/movable/AM)
-        forvals += AM
+    forvals = list()
+    for (var/datum/X)
+        forvals += X
+    LOG("datum", forvals)
 
-    LOG("forvals", forvals)
+    forvals = list()
+    for (var/atom/X)
+        forvals += X
+    LOG("atom", forvals)
+
+    forvals = list()
+    for (var/area/X)
+        forvals += X
+    LOG("area", forvals)
+
+    forvals = list()
+    for (var/turf/X)
+        forvals += X
+    LOG("turf", forvals)
+
+    forvals = list()
+    for (var/mob/X)
+        forvals += X
+    LOG("mob", forvals)
+
+    forvals = list()
+    for (var/obj/X)
+        forvals += X
+    LOG("obj", forvals)
+
+    forvals = list()
+    for (var/atom/movable/X)
+        forvals += X
+    LOG("atom/movable", forvals)

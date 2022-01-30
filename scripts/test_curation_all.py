@@ -6,7 +6,7 @@ from DTT import App
 import test_runner
 
 # python3.8 test_curation_all.py byond.default opendream.default clopendream.default
-# python3.8 test_curation_all.py opendream.default opendream.currentdev
+# python3.8 test_curation_all.py opendream.default opendream.local-currentdev
 
 class Main(App):
     async def run(self, test_dir):

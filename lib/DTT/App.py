@@ -38,6 +38,7 @@ class App(object):
         OpenDream.Install.set_current(config, install_id)
         if install_info["type"] == "filesystem":
             Shared.Path.sync_folders( install_info["location"], config['opendream.install.dir'] )
+            config["dotnet.solution.path"] = config['opendream.install.dir']
         if install_info["type"] == "repo":
             config['git.repo.url'] = install_info["url"]
             config['git.branch'] = install_info["branch"]

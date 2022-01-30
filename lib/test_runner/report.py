@@ -57,7 +57,10 @@ class CompileReport(object):
                 else:
                     result["category"] = "runlog mismatch"
             else:
-                result["category"] = "compile code mismatch"
+                if (result["1"]["ccode"] != 0) and (result["2"]["ccode"] != 0):
+                    result["category"] = "same"
+                else:
+                    result["category"] = "compile code mismatch"
 
             self.category_rows[result["category"]].append( result )
 
@@ -84,14 +87,14 @@ class CompileReport(object):
 """
             if result["category"] == "compile code mismatch":
                 if result["1"]["ccode"] == 0:
-                    result_output += f"{self.install1['install_id']}: No errors<br><hr>"                
+                    result_output += f'<pre><code>{self.string(json.dumps(result["1"]["runlog"]))}</code></pre><hr>'                
                 else:
                     result_output += f"""
 <pre><code>{self.string(result["1"]["ctext"])}</code></pre>
 <hr>
 """
                 if result["2"]["ccode"] == 0:
-                    result_output += f"{self.install2['install_id']}: No errors<br><hr>"                
+                    result_output += f'<pre><code>{self.string(json.dumps(result["2"]["runlog"]))}</code></pre><hr>'                
                 else:
                     result_output += f"""
 <pre><code>{self.string(result["2"]["ctext"])}</code></pre>
@@ -99,10 +102,10 @@ class CompileReport(object):
 """
             if result["category"] == "runlog mismatch":
                 result_output += f"""
-<pre><code>{self.string(json.dumps(result["1"]["runlog"]))}</code></pre>
+<pre><code>{self.string(json.dumps(result["1"]["runlog"]))}</code></pre><hr>
 """
                 result_output += f"""
-<pre><code>{self.string(json.dumps(result["2"]["runlog"]))}</code></pre>
+<pre><code>{self.string(json.dumps(result["2"]["runlog"]))}</code></pre><hr>
 """
 
         for category in self.category_rows.keys():
