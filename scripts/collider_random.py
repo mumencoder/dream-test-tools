@@ -1,5 +1,5 @@
 
-import asyncio, time, shutil, os
+import asyncio, time, shutil, os, json
 import collections
 import Shared, Byond, OpenDream, ClopenDream
 import dream_collider
@@ -57,11 +57,15 @@ class Main(App):
                 self.stats['should_compile'] += 1
 
             if byond_compiled != config['test.builder'].should_compile:
-                print( "---" )
-                print( f"{config['test.id']}" )
-                print( f"byond_compiled={byond_compiled}, should_compile={config['test.builder'].should_compile}" )
-                print( f"{config['test.builder'].notes}" )
-                shutil.move( config['tests.dirs.output'] / 'brrr' / config['test.id'], config['tests.dirs.output']/ 'saved' / config['test.id'] )
+                summary = {'byond_compiled':byond_compiled, 'should_compile':config['test.builder'].should_compile, 'notes':config['test.builder'].notes }
+                print(summary)
+
+                save_dir = config['tests.dirs.output']/ 'saved' / config['test.id']
+                shutil.move( str(config['tests.dirs.output'] / 'brrr' / config['test.id']), save_dir )
+
+                with open(save_dir / 'notes.json', "w") as f:
+                    json.dump( summary, f )
+
                 self.saved += 1
             else:
                 self.stats['generator_agree'] += 1
@@ -94,6 +98,8 @@ class Main(App):
                 break
             self.tests += 1
             if self.tests in [10, 100, 1000, 10000]:
+                self.print_progress()
+            if self.tests > 10000 and self.tests % 10000 == 0:
                 self.print_progress()
             config = self.config.branch("!")
             self.adjust_error_factor()

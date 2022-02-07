@@ -14,7 +14,6 @@ class FullRandomBuilder(object):
       
         self.toplevel = Toplevel(config)
 
-        self.const_builder = ConstExprBuilder()
         self.ops = ["+", "-", "*", "/"]
 
         self.expr_ty = Shared.Random.to_choices( {"var":0.5, "int":0.5 } )
@@ -139,6 +138,11 @@ class FullRandomBuilder(object):
             else:
                 raise Exception("Unknown declaration")
                 
+        for decl in config['model'].usr_decls:
+            result = config['model'].validate_decl(config, decl)
+            self.should_compile = self.should_compile and result["should_compile"]
+            self.notes += result['notes']
+
         self.should_compile = self.should_compile and self.otree_builder.should_compile
         self.notes += self.otree_builder.notes
 

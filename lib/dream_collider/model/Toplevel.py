@@ -12,7 +12,7 @@ class ValidationRandomizer(object):
             result.update( { "should_compile":False, "valid":True, "notes":[vname] } )
             return result
 
-        result.update( { "should_compile":False, "valid":False } )
+        result.update( { "should_compile":False, "valid":False, "notes":[vname] } )
         return result
 
 class Toplevel(object):
@@ -71,7 +71,7 @@ class Toplevel(object):
 
     # declarations
     def can_add_decl(self, config, new_decl):
-        result = {}
+        result = {'notes':[]}
         loc = f"{new_decl.path}/{new_decl.name}"
         if type(new_decl) is ObjectVarDecl:
             dmobj = self.obj_tree.ensure_object( new_decl.path )
@@ -80,42 +80,7 @@ class Toplevel(object):
                 if type(dmobj) is DMObjectTree:
                     return self.new_decl_vrandomizer.try_modify_validation(result, f"cannot override a global var - {loc}")
 
-            if "static" in new_decl.flags or "const" in new_decl.flags:
-                for dmobj_leaf in dmobj.iter_leaves():
-                    for leaf_decl in dmobj_leaf.vars:
-                        if leaf_decl.name != new_decl.name:
-                            continue
-                        return self.new_decl_vrandomizer.try_modify_validation(result, f"redefinition of global var - {new_decl.flags} {loc}")
-                
-            topmost_decl = dmobj.topmost_var_decl(new_decl.name)
-            if type(dmobj) is not DMObjectTree and topmost_decl is not None:
-                topmost_dmobj = self.obj_tree.ensure_object( topmost_decl.path )
-                if dmobj in topmost_dmobj.parent_chain(): 
-                    topmost_decl = new_decl
-                    topmost_dmobj = self.obj_tree.ensure_object( new_decl.path )
-
-                topmost_def_decl = topmost_dmobj.scope.first_vars[new_decl.name]
-
-                if "static" in topmost_def_decl.flags:
-                    return self.new_decl_vrandomizer.try_modify_validation(result, f"redefinition of global var - static {loc}")
-                if "const" in topmost_def_decl.flags:
-                    return self.new_decl_vrandomizer.try_modify_validation(result, f"redefinition of global var - const {loc}")
-
-                for dmobj_leaf in dmobj.iter_leaves():
-                    for leaf_decl in dmobj_leaf.vars:
-                        if leaf_decl.name != new_decl.name:
-                            continue
-                        if "const" in topmost_def_decl.flags or "static" in topmost_def_decl.flags:
-                            return self.new_decl_vrandomizer.try_modify_validation(result, f"cannot override const/static var - {loc}")
-                        if topmost_def_decl.flags != leaf_decl.flags:
-                            if not self.valid_override_flag_pairs( topmost_def_decl, leaf_decl ):
-                                return self.new_decl_vrandomizer.try_modify_validation(result, f"override flags must match - {loc}")
-                if "const" in topmost_def_decl.flags or "static" in topmost_def_decl.flags:
-                    return self.new_decl_vrandomizer.try_modify_validation(result, f"cannot override const/static var - {loc}")
-                if topmost_def_decl.flags != new_decl.flags:
-                    if not self.valid_override_flag_pairs( topmost_def_decl, new_decl ):
-                        return self.new_decl_vrandomizer.try_modify_validation(result, f"override flags must match - {loc}")
-
+               
             for dmobj_trunk in dmobj.parent_chain():
                 for override_decl in dmobj_trunk.vars:
                     if override_decl.name != new_decl.name:
@@ -137,6 +102,52 @@ class Toplevel(object):
             if override_decl:
                 if override_decl.allow_override is False:
                     return self.new_decl_vrandomizer.try_modify_validation(result, f"decl does not allow overrides - {loc}")
+
+        result.update( { "should_compile":True, "valid":True, "notes":[] } )
+        return result
+
+    def validate_decl(self, config, decl):
+        result = {'notes':[]}
+        loc = f"{decl.path}/{decl.name}"
+        dmobj = self.obj_tree.ensure_object( decl.path )
+        if type(decl) is ObjectVarDecl:
+            topmost_decl = dmobj.topmost_var_decl(decl.name)
+
+            if type(dmobj) is not DMObjectTree and topmost_decl is not None:
+                topmost_dmobj = self.obj_tree.ensure_object( topmost_decl.path )
+                if dmobj in topmost_dmobj.parent_chain(): 
+                    topmost_decl = decl
+                    topmost_dmobj = self.obj_tree.ensure_object( decl.path )
+
+                topmost_def_decl = topmost_dmobj.scope.first_vars[decl.name]
+
+                if topmost_def_decl != decl and decl.stdlib is False:
+                    if "static" in topmost_def_decl.flags:
+                        return self.new_decl_vrandomizer.try_modify_validation(result, f"redefinition of global var - static {loc}")
+                    if "const" in topmost_def_decl.flags:
+                        return self.new_decl_vrandomizer.try_modify_validation(result, f"redefinition of global var - const {loc}")
+
+                    for dmobj_leaf in dmobj.iter_leaves():
+                        for leaf_decl in dmobj_leaf.vars:
+                            if leaf_decl.name != decl.name:
+                                continue
+                            if "const" in topmost_def_decl.flags or "static" in topmost_def_decl.flags:
+                                return self.new_decl_vrandomizer.try_modify_validation(result, f"cannot override const/static var - {loc}")
+                            if topmost_def_decl.flags != leaf_decl.flags:
+                                if not self.valid_override_flag_pairs( topmost_def_decl, leaf_decl ):
+                                    return self.new_decl_vrandomizer.try_modify_validation(result, f"override flags must match - {loc}")
+                    if "const" in topmost_def_decl.flags or "static" in topmost_def_decl.flags:
+                        return self.new_decl_vrandomizer.try_modify_validation(result, f"cannot override const/static var - {loc}")
+                    if topmost_def_decl.flags != decl.flags:
+                        if not self.valid_override_flag_pairs( topmost_def_decl, decl ):
+                            return self.new_decl_vrandomizer.try_modify_validation(result, f"override flags must match - {loc}")
+
+        elif type(decl) is ProcDecl:
+            # NOTE: this is not understood, byond bug maybe?
+            if type(dmobj) is DMObjectTree:
+                datum_dmobj = self.obj_tree.ensure_object( Path(["datum"]) )
+                if decl.name in datum_dmobj.scope.procs and dmobj.scope.first_procs[decl.name] != decl:
+                    return self.new_decl_vrandomizer.try_modify_validation(result, f"bad proc override - {loc}")
 
         result.update( { "should_compile":True, "valid":True, "notes":[] } )
         return result

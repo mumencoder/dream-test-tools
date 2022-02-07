@@ -109,7 +109,7 @@ class DMObject(object):
 
     def add_proc(self, decl):
         self.procs.append(decl)
-        self.scope.procs[decl.name] = decl
+        self.scope.def_proc(decl.name, decl)
 
     def add_var(self, decl):
         self.vars.append(decl)

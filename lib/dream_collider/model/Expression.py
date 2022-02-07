@@ -60,7 +60,7 @@ class OpExpression(object):
         for i, leaf in enumerate(self.leaves):
             self.leaves[i] = leaf.simplify(config)
 
-        if self.op.display == "/" and type(self.leaves[1]) is ConstExpression and self.leaves[1].value in [0, -0, 0.0, -0.0]:
+        if self.op.display == "/" and self.leaves[1].is_const(config) and self.leaves[1].eval(config) in [0, -0, 0.0, -0.0]:
             raise GenerationError()
 
         for i, leaf in enumerate(self.leaves):

@@ -20,6 +20,11 @@ class Scope(object):
             self.first_vars[name] = decl
         self.vars[name] = decl
 
+    def def_proc(self, name, decl):
+        if name not in self.first_procs:
+            self.first_procs[name] = decl
+        self.procs[name] = decl
+
     def find_var(self, name):
         scope = self
         while scope is not None:
