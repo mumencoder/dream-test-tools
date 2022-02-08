@@ -26,6 +26,7 @@ sudo yum -y install git222
 
 sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
 sudo yum -y install dotnet-sdk-6.0
+sudo ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet # .NET 6 bug workaround (see https://github.com/dotnet/runtime/issues/62208)
 
 cd $BASE_DIR
 mkdir dream-storage
