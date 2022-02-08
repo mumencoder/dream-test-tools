@@ -117,7 +117,7 @@ class CompileReport(object):
     <head></head>
     <body>
     <table border=1px>
-        <caption>{len(self.category_rows["compile code mismatch"])} compile returncode mismatch</caption>
+        <caption>{len(self.category_rows["compile code mismatch"])} Compiler Mismatches</caption>
         <tr>
             <th>Test ID</th>
             <th>Info</th>
@@ -126,7 +126,7 @@ class CompileReport(object):
         {self.row_tables["compile code mismatch"]}
     </table>
     <table border=1px>
-        <caption>{len(self.category_rows["runlog mismatch"])} runlog mismatch</caption>
+        <caption>{len(self.category_rows["runlog mismatch"])} Runtime Mismatches</caption>
         <tr>
             <th>Test ID</th>
             <th>Info</th>
@@ -136,7 +136,7 @@ class CompileReport(object):
     </table>
     <hr>
     <table border=1px>
-        <caption>{len(self.category_rows["same"])} matched</caption>
+        <caption>{len(self.category_rows["same"])} Passing Parity Tests</caption>
         <tr>
             <th>Test ID</th>
             <th>Info</th>
