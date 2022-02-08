@@ -40,4 +40,3 @@ popd
 pushd dream-test-tools/lib
 sudo python3.8 setup.py develop
 popd
-git clone https://github.com/mumencoder/Clopendream-parser
