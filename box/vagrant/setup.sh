@@ -18,6 +18,8 @@ cd Python-3.8*
 ./configure --enable-optimizations
 sudo make altinstall
 sudo ln -s /usr/local/bin/python3.8 /bin/python3.8
+sudo alternatives --install /bin/python_alt python /usr/bin/python 98
+sudo alternatives --install /bin/python_alt python /usr/local/bin/python3.8 99
 sudo python3.8 -m pip install --upgrade pip
 sudo python3.8 -m pip install GitPython
 
