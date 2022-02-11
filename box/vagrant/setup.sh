@@ -9,7 +9,8 @@ for f in ${!osInfo[@]}
 do
     if [[ -f $f ]];then
         echo Package manager: ${osInfo[$f]}
-		packMan=${osInfo[$f]}
+	packMan=${osInfo[$f]}
+	break
     fi
 done
 
