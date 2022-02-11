@@ -1,0 +1,42 @@
+
+name: Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Main
+      uses: actions/checkout@v2
+      with:
+        path: main
+    - name: Setup
+      run: |
+        cd main/box/vagrant/
+        chmod +x setup.sh
+        ./setup.sh
+        cd ../../scripts/
+        python3.8 install.py byond default
+        python3.8 install.py opendream default
+    - name: Run All Curated Tests
+      run: |
+        cd main/scripts/
+        python3.8 test_curation_all.py byond.default opendream.default
+    - name: Create Test Report
+      run: |
+        cd main/scripts/
+        python3.8 test_curation_report.py compile byond.default opendream.default
+    - name: Upload Report
+      uses: actions/upload-artifact@v2
+      with:
+        name: byond-opendream-report
+        path: ~/dream-storage/tests/reports/byond.default-opendream.default-full.html
