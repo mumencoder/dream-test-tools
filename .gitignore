@@ -1,4 +1,5 @@
 **/.vs/*
+**/.vagrant/*
 **/obj/*
 **/bin/*
 **/__pycache__/*
