@@ -2,14 +2,12 @@
 import os
 import Shared
 
-
-### tests
 class TestWrapper(object):
-    def __init__(self, config, test_text):
+    def __init__(self, test_text):
         self.test_text = test_text
         self.files = {}
 
-    def wrapped_test(self, config):
+    def wrapped_test(self):
         self.files["log"] = f"run_log.out"
         self.files["mismatch"] = f"run_unexpected.out"
         self.files["fin"] = f"fin.out"
@@ -44,21 +42,10 @@ var/list/_mismatch = new
 
         return text
 
-def load_install(config, install):
-    install["id"] = f"{install['platform']}.{install['install_id']}"
-    return install
-
-def get_test_info(config, folder_name):
-    relpath = os.path.relpath(config['test.source_file'].parent, config['tests.dirs.input']).split("/")
-    config['test.id'] = "curation-" + "-".join( relpath ) + "-" + config['test.source_file'] .with_suffix("").name
-    config['test.base_dir'] = config['tests.dirs.output'] / folder_name / config['test.id'] / config["test.install"]["id"]
-    with open(config['test.source_file'], "r") as f:
-        config['test.text'] = f.read() + '\n'
-
-def copy_test(config):
-    config['test.dm_file_path'] = config['test.base_dir'] / 'test.dm'
-    Shared.File.refresh(config['tests.dirs.resources'] / 'map.dmm', config['test.base_dir'] / 'map.dmm')
-    Shared.File.refresh(config['tests.dirs.resources'] / 'interface.dmf', config['test.base_dir'] / 'interface.dmf')
-    final_text = TestWrapper(config, config['test.text']).wrapped_test(config)
-    with open(config['test.dm_file_path'], "w") as o:
+def generate_test(env):
+    env.attr.test.dm_file_path = env.attr.test.base_dir / 'test.dm' 
+    Shared.File.refresh(env.attr.tests.dirs.resources / 'map.dmm', env.attr.test.base_dir / 'map.dmm')
+    Shared.File.refresh(env.attr.tests.dirs.resources / 'interface.dmf', env.attr.test.base_dir / 'interface.dmf')
+    final_text = TestWrapper(env.attr.test.text).wrapped_test()
+    with open(env.attr.test.dm_file_path, "w") as o:
         o.write( final_text )

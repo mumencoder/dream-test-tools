@@ -6,6 +6,13 @@ import git
 import Shared
 
 class Git(object):
+    class AutoStash(object):
+        async def __enter__(self):
+            await Git.Repo.command(env, "git stash")
+
+        async def __exit__(self, exc_type, exc_value, exc_traceback):
+            await Git.Repo.command(env, "git stash pop")
+
     @staticmethod
     def nightly_builds(commits):
         nights = collections.defaultdict(list)
@@ -16,7 +23,7 @@ class Git(object):
 
     class Repo(object):
         @staticmethod 
-        def commit_history(config, commit, depth=32):
+        def commit_history(commit, depth=32):
             q = []
             seen = set()
             i = 0
@@ -30,16 +37,17 @@ class Git(object):
                 commit = q.pop(0)
 
         @staticmethod
-        async def command(config, command):
-            with Shared.folder.Push(config['git.local_dir']):
-                process = await Shared.Process.shell(config, command)
-                await asyncio.wait_for(process.wait(), timeout=None)
+        async def command(env, command):
+            env = env.branch()
+            env.attr.shell.dir = env.attr.git.repo.local_dir
+            env.attr.shell.command = command
+            await Shared.Process.shell(env)
 
         @staticmethod
-        def exists(config):
-            if not os.path.exists(config['git.local_dir']):
-                os.mkdir( config['git.local_dir'] )
-            with Shared.folder.Push(config['git.local_dir']):
+        def exists(env):
+            if not os.path.exists(env.attr.git.repo.local_dir):
+                os.mkdir( env.attr.git.repo.local_dir )
+            with Shared.folder.Push(env.attr.git.repo.local_dir):
                 process = subprocess.run('git status', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
                 if process.returncode == 0:
                     return True
@@ -47,27 +55,60 @@ class Git(object):
                     return False
 
         @staticmethod
-        def ensure_repo(config, url):
-            if not Git.Repo.exists(config):
-                subprocess.run(f"git clone --depth 32 --no-single-branch {url} {config['git.local_dir']}", shell=True)
-            try:
-                config['git.repo'] = git.Repo( config['git.local_dir'] )
-            except Exception as e:
-                print(e)
+        async def ensure(env):
+            if not Git.Repo.exists(env):
+                with Shared.Workflow.status(env, "waiting git"):
+                    try:
+                        await env.attr.resources.git.acquire(env)
+                        env.attr.shell.command = f"git clone --depth {env.attr.git.repo.clone_depth} --branch {env.attr.git.repo.branch['name']} {env.attr.git.repo.url} {env.attr.git.repo.local_dir}"
+                        env.attr.wf.status[-1] = "git clone"
+                        await Shared.Process.shell(env)
+                    finally:
+                        env.attr.resources.git.release(env)
+            env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
+            await Git.Repo.ensure_branch(env)
 
         @staticmethod
-        def ensure_branch(config, remote_name, branch_name):
-            repo = config['git.repo']
-            remote = repo.remote( remote_name )
-            if branch_name not in repo.refs:
-                branch = repo.create_head(branch_name)
-                branch.set_tracking_branch( remote.refs[branch_name] )
-                branch.set_commit( remote.refs[branch_name] )
-            repo.refs[branch_name].checkout()
-            repo.head.reset( remote.refs[branch_name], working_tree=True )
+        async def init_all_submodules(env):
+            try:
+                env = env.branch()
+                await env.attr.resources.git.acquire(env)
+                await Git.Repo.command(env, "git submodule update --init --recursive")
+            finally:
+                env.attr.resources.git.release(env)
 
-        @staticmethod 
-        def reset(config, remote_name):
-            repo = config['git.repo']
-            remote = repo.remote( remote_name )
-            repo.head.reset( remote.refs.HEAD, working_tree=True )
+        @staticmethod
+        async def pull(env):
+            with Git.AutoStash():
+                env.attr.git.api.repo.remote('origin').pull(depth=config.get('git.depth', default=32), r=True, f=True)
+
+        @staticmethod
+        async def ensure_branch(env):
+            if not env.attr_exists(".git.repo.branch"):
+                return
+
+            repo = env.attr.git.api.repo
+            branch_info = env.attr.git.repo.branch
+
+            if branch_info["name"] not in repo.heads:
+                branch = repo.create_head(branch_info["name"])
+            else:
+                branch = repo.heads[branch_info["name"]]
+
+            if 'remote' in branch_info:
+                remote = repo.remote( branch_info['remote'] )
+                branch.set_tracking_branch( remote.refs[branch_info["name"]] )
+                branch.set_commit( remote.refs[branch_info["name"]] )
+
+            repo.head.reset( branch, working_tree=True )
+
+            if 'remote' in branch_info:
+                if repo.head.commit != remote.refs[branch_info["name"]].commit:
+                    raise Exception("repo head mismatch")
+
+
+        @staticmethod
+        async def prepare_info(env, repo_info):
+            env.attr.git.repo.url = repo_info['url']
+            if 'branch' in repo_info:
+                env.attr.git.branch = repo_info['branch']

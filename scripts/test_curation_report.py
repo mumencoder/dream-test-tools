@@ -1,43 +1,51 @@
 
-import asyncio, sys, json
+import collections
+import asyncio, time, os, sys
+import Byond, OpenDream, ClopenDream, Shared
 
 from DTT import App
 import test_runner
 
-# python3.8 test_curation_report.py compile byond.default opendream.default
-# python3.8 test_curation_report.py compare clopendream.currentdev
-
 class Main(App):
-    async def run(self, test_dir):
-        installs = []
-        for arg in sys.argv[2:]:
-            parsed_arg = arg.split(".")
-            install = {'platform':parsed_arg[0], 'install_id':parsed_arg[1]}
-            if install['platform'] == 'clopendream':
-                install['byond_install_id'] = 'default'
-            installs.append( test_runner.load_install(self.config, install) )
+    async def run(self):
+        env = self.env.branch()
 
-        if sys.argv[1] == 'compile':
-            install1 = test_runner.load_install(self.config, installs[0])
-            install2 = test_runner.load_install(self.config, installs[1])
-            test_report = test_runner.CompileReport(installs[0],installs[1])
-            for i, config in enumerate(test_runner.list_all_tests(self.config, test_dir)):
-                test_report.add_result( config.branch(str(i)) )
-            with open( config['tests.dirs.output'] / 'reports' / f"{test_report.install1['id']}-{test_report.install2['id']}-full.html", "w") as f:
-                f.write( test_report.get_report() )
-            with open( config['tests.dirs.output'] / 'reports' / f"{test_report.install1['id']}-{test_report.install2['id']}-summary.json", "w") as f:
-                json.dump( test_report.get_result_summary(), f )
+        results = collections.defaultdict(list)
 
-        elif sys.argv[1] == 'compare':
-            install1 = test_runner.load_install(self.config, {'platform':'clopendream','install_id':'currentdev'})
-            test_report = test_runner.CompareReport(installs[0])
-            for i, config in enumerate(test_runner.list_all_tests(self.config, test_dir)):
-                test_report2.add_result( config.branch(str(i)) )
-            with open( config['tests.dirs.output'] / 'reports' / f"{test_report.install['id']}.html", "w") as f:
-                f.write( test_report.get_report() )
+        for tenv in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+            benv = tenv.branch()
+            benv.attr.install.platform = 'byond'
+            benv.attr.install.id = 'default'
+            test_runner.Curated.load_test( benv )
+            test_runner.Report.load_result( benv )
+            
+            oenv = tenv.branch()
+            oenv.attr.install.platform = 'opendream'
+            oenv.attr.install.id = 'default'
+            test_runner.Curated.load_test( oenv )
+            test_runner.Report.load_result( oenv )
 
-        else:
-            raise Exception("unknown command")
+            for pr in env.attr.state['github_prs']['data']:
+                repo_name = pr["head"]["repo"]["full_name"].replace("/", ".")
+                pr_sha = pr["head"]["sha"]
+                install_id = f'github.{repo_name}.{pr_sha}'
+
+                penv = tenv.branch()
+                penv.attr.install.platform = 'opendream'
+                penv.attr.install.id = install_id
+                test_runner.Curated.load_test( penv )
+
+                if not os.path.exists(penv.attr.test.base_dir / "compile.returncode.log"):
+                    continue
+                test_runner.Report.load_result( penv )
+                result = test_runner.Report.compare_results(benv, oenv, penv)
+
+                if result in ["breaking", "fixing"]:
+                    results[pr["title"]].append( (penv.attr.test.id, result) )
+
+        for title, result in results.items():
+            print(title)
+            print(result)
 
 main = Main()
-asyncio.run( main.run(main.config['tests.dirs.input'] / 'dm') )
+asyncio.run( main.start() )

@@ -2,64 +2,74 @@
 import os, sys
 import Shared
 
-def setup(config):
-    config['storage_dir'] = Shared.Path( os.path.expanduser('~/dream-storage') )
-    config['source_dir'] = Shared.Path( os.path.expanduser('~/dream-storage/source/dream-test-tools') )
-    config['tmp_dir'] = Shared.Path( '/tmp/dream' ) 
+def setup_roots(env):
+    env.attr.dirs.root = Shared.Path( os.path.expanduser('~/dream-storage') )
+    env.attr.dirs.source = Shared.Path( os.path.expanduser('~/dream-storage/source/dream-test-tools') )
+    env.attr.dirs.ramdisc = Shared.Path( '/media/ramdisk/dream-test-tools' ) 
+    env.attr.dirs.tmp = Shared.Path( '/tmp/dream-test-tools' )
+    
+    env.attr.dirs.state = env.attr.dirs.root / 'state'
 
-    config['tests.dirs.input'] = config['source_dir'] / "tests"
-    config['tests.dirs.output'] = config['storage_dir'] / 'tests'
-    config['tests.dirs.resources'] = config['source_dir'] / "tests" / "resources"
+    env.attr.process.stdout = sys.stdout
+    env.attr.process.stderr = sys.stderr
+    env.attr.process.tag = False
 
-    base_dir = config['storage_dir'] / 'byond'
-    config['byond.dirs.downloads'] = base_dir / 'downloads'
-    config['byond.dirs.installs'] = base_dir / 'installs'
+def setup_tests(env):
+    env.attr.tests.dirs.dm_files = env.attr.dirs.source / "tests" / "dm"
+    env.attr.tests.dirs.resources = env.attr.dirs.source / "tests" / "resources"
+    env.attr.tests.dirs.output = env.attr.dirs.root / "tests"
 
-    base_dir = config['storage_dir'] / 'opendream'
-    config['opendream.dirs.builds'] = base_dir / 'builds'
+def setup_byond(env):
+    root_dir = env.attr.byond.dirs.root = env.attr.dirs.root / 'byond'
+    env.attr.byond.dirs.downloads = root_dir / 'downloads'
+    env.attr.byond.dirs.installs = root_dir / 'installs'
 
-    base_dir = config['storage_dir'] / 'clopendream'
-    config['clopendream.dirs.builds'] = base_dir / 'builds'
-    config['clopendream.dirs.output'] = base_dir / 'output'
+def setup_opendream(env):
+    root_dir = env.attr.opendream.dirs.root = env.attr.dirs.root / 'opendream'
+    env.attr.opendream.dirs.sources = root_dir / 'sources'
+    env.attr.opendream.dirs.installs = root_dir / 'installs'
 
-    base_dir = config['storage_dir'] / 'SS13'
-    config['ss13.dirs.repos'] = base_dir / 'repos'
-    config['ss13.repo_infos'] = [
-        {'name':'tgstation-OD', 'url':'https://github.com/wixoaGit/tgstation'},
-        {'name':'Baystation12', 'url':'https://github.com/Baystation12/Baystation12'},
-        {'name':'BeeStation', 'url':'https://github.com/BeeStation/BeeStation-Hornet'}, 
-        {'name':'goonstation', 'url':'https://github.com/goonstation/goonstation'},
-        {'name':'Hippiestation', 'url':'https://github.com/HippieStation/HippieStation', 'major':'511', 'dme':'hippiestation.dme'},
-        {'name':'NTStation', 'url':'https://github.com/NTStation/NTstation13'},
-        {'name':'NTStation-od1', 'url':'https://github.com/ike709/NTstation13', 'branch':'od_minimalmods'},
-        {'name':'Paradise', 'url':'https://github.com/ParadiseSS13/Paradise'},
-        {'name':'Paradise-od1', 'url':'https://github.com/ike709/Paradise', 'branch':'od_yeet_just_compile'},
-        {'name':'tgstation', 'url':'https://github.com/tgstation/tgstation'},
-        {'name':'vgstation', 'url':'https://github.com/vgstation-coders/vgstation13'},
-        {'name':'Yogstation', 'url':'https://github.com/yogstation13/Yogstation'}
-    ]
+def setup_clopendream(env):
+    root_dir = env.attr.clopendream.dirs.root = env.attr.dirs.root / 'clopendream'
+    env.attr.clopendream.dirs.sources = root_dir / 'sources'
+    env.attr.clopendream.dirs.installs = root_dir / 'installs'
 
-    config['process.stdout'] = sys.stdout
-    config['process.stderr'] = sys.stderr
-    config['process.tag'] = False
+def setup_ss13(env):
+    root_dir = env.attr.ss13.dirs.root = env.attr.dirs.root / 'SS13'
+    env.attr.ss13.dirs.installs = root_dir / 'installs'
 
-    return config
-
-def defaults(config):
-    config['byond.installs'] = {
+def setup_defaults(env):
+    env.attr.byond.installs = {
         'default': {'type':'web_official', 'version':'514.1575' }
     }
     
-    config['opendream.installs'] = {
-        'default' : {'type':'repo', 'url':'https://github.com/wixoaGit/OpenDream', 'branch':'master' }
+    env.attr.opendream.sources = {
+        'default' : {'type':'repo', 'url':'https://github.com/wixoaGit/OpenDream', 
+            'branch': {'remote':'origin', 'name':'master'} 
+        }
     }
 
-    config['clopendream.installs'] = {
-        'default' : {'type':'repo', 'url':'https://github.com/mumencoder/Clopendream-parser', 'branch':'main'}
+    env.attr.clopendream.sources = {
+        'default' : {'type':'repo', 'url':'https://github.com/mumencoder/Clopendream-parser', 
+            'branch': {'remote':'origin', 'name':'master'},
+            'opendream_version':'default', 'byond_version':'default'
+        }
     }
 
-    config['byond.install.id'] = 'default'
-    config['opendream.install.id'] = 'default'
-    config['clopendream.install.id'] = 'default'
-
-    config['ss13.repo_ids'] = ['NTStation-od1']
+    env.attr.ss13.sources = {
+        'tgstation-OD': {'type':'repo', 'url':'https://github.com/wixoaGit/tgstation'},
+        'Baystation12': {'type':'repo', 'url':'https://github.com/Baystation12/Baystation12'},
+        'BeeStation': {'type':'repo', 'url':'https://github.com/BeeStation/BeeStation-Hornet'}, 
+        'goonstation': {'type':'repo', 'url':'https://github.com/goonstation/goonstation'},
+        'Hippiestation': {'type':'repo', 'url':'https://github.com/HippieStation/HippieStation', 
+            'byond_version':'511', 'dme':'hippiestation.dme'},
+        'NTStation': {'type':'repo', 'url':'https://github.com/NTStation/NTstation13'},
+        'NTStation-od1': {'type':'repo', 'url':'https://github.com/ike709/NTstation13', 
+            'branch':{'remote':'origin', 'name':'od_minimalmods'}},
+        'Paradise': {'type':'repo', 'url':'https://github.com/ParadiseSS13/Paradise'},
+        'Paradise-od1': {'type':'repo', 'url':'https://github.com/ike709/Paradise', 
+            'branch':{'remote':'origin', 'name':'od_yeet_just_compile'}},
+        'tgstation': {'type':'repo', 'url':'https://github.com/tgstation/tgstation'},
+        'vgstation': {'type':'repo', 'url':'https://github.com/vgstation-coders/vgstation13'},
+        'Yogstation': {'type':'repo', 'url':'https://github.com/yogstation13/Yogstation'}
+    }

@@ -1,37 +1,78 @@
 
 import asyncio, time, os, sys
-import Byond, OpenDream, ClopenDream
+import Byond, OpenDream, ClopenDream, Shared
 
 from DTT import App
 import test_runner
 
-# python3.8 test_curation_all.py byond.default opendream.default clopendream.default
-# python3.8 test_curation_all.py opendream.default opendream.local-currentdev
-
 class Main(App):
-    async def run(self, test_dir):
-        installs = []
-        for arg in sys.argv[1:]:
-            parsed_arg = arg.split(".")
-            install = {'platform':parsed_arg[0], 'install_id':parsed_arg[1]}
-            if install['platform'] == 'clopendream':
-                install['byond_install_id'] = 'default'
-            installs.append( test_runner.load_install(self.config, install) )
+    async def run(self):
+        env = self.env.branch()
 
-        start_time = time.time()
-        pending_tasks = []
-        for config in test_runner.list_all_tests(self.config, test_dir):
-            for install in installs:
-                config['test.install'] = install
-                test_runner.get_test_info(config, 'curated')
-                test_runner.copy_test(config)
-                pending_tasks.append( asyncio.create_task( test_runner.test_install(config.copy(), install) ) )
-                if len(pending_tasks) > 0:
-                    await asyncio.gather( *pending_tasks )
-                    pending_tasks = []
-        await asyncio.gather( *pending_tasks )
-        print(f"{time.time()-start_time}")
+        report_env = env.branch()
+        Shared.Workflow.open(report_env, "report")
+        Shared.Workflow.set_task(report_env, self.update_report_loop())
+        report_env.attr.wf.background = True
+
+        env = self.env.branch()
+        Byond.Install.load(env, 'default')
+        for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+            env.attr.install = env.attr.byond.install
+            env.attr.install.platform = "byond"
+            test_runner.Curated.load_test( env )
+            test_runner.Curated.prepare_test( env )
+            test_runner.generate_test( env )
+            Shared.Workflow.open(env, f"test.byond.{env.attr.test.id}")
+            Shared.Workflow.set_task(env, test_runner.byond.do_test(env) )
+
+        env = self.env.branch()
+        OpenDream.Source.load(env, 'default')
+        env.attr.opendream.install.id = 'default'
+        env.attr.opendream.install.dir = env.attr.opendream.source.dir
+        env.attr.install = env.attr.opendream.install
+        env.attr.install.platform = "opendream"
+        for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+            test_runner.Curated.load_test( env )
+            test_runner.Curated.prepare_test( env )
+            test_runner.generate_test( env )
+            Shared.Workflow.open(env, f"test.opendream.{env.attr.test.id}")
+            Shared.Workflow.set_task(env, test_runner.opendream.do_test(env) )
+
+        await Shared.Workflow.run_all(self.env)
+        await self.update_report()
+
+        i = 0
+        base_env = self.env.branch()
+        for pr in env.attr.state['github_prs']['data']:
+            env = base_env.branch()
+            repo_name = pr["head"]["repo"]["full_name"].replace("/", ".")
+            pr_sha = pr["head"]["sha"]
+            install_id = f'github.{repo_name}.{pr_sha}'
+            info = Shared.Github.pull_request_to_install(pr)
+            env.attr.opendream.sources[install_id] = info
+            OpenDream.Source.load(env, install_id)
+            env.attr.opendream.install.id = install_id
+            env.attr.opendream.install.dir = env.attr.opendream.source.dir
+            env.attr.install = env.attr.opendream.install
+            env.attr.install.platform = "opendream"
+
+            if not os.path.exists( OpenDream.Compilation.get_exe_path(env) ):
+                print("skip", install_id)
+                continue
+
+            for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+                test_runner.Curated.load_test( env )
+                test_runner.Curated.prepare_test( env )
+                test_runner.generate_test( env )
+                Shared.Workflow.open(env, f"test.opendream.{env.attr.test.id}.{i}")
+                Shared.Workflow.set_task(env, test_runner.opendream.do_test(env) )
+                i += 1
+
+        await Shared.Workflow.run_all(self.env)
+        await self.update_report()
+
+        self.running = False
         os.system('stty sane')
 
 main = Main()
-asyncio.run( main.run(main.config['tests.dirs.input'] / 'dm') )
+asyncio.run( main.start() )

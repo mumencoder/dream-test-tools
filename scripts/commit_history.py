@@ -23,7 +23,5 @@ class Main(App):
             repo.head.reference = repo.head.reference = c
             repo.head.reset(index=True, working_tree=True)
 
-
-
 main = Main()
 asyncio.run( main.run(main.config['tests.dirs.input'] / 'dm') )

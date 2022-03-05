@@ -1,13 +1,48 @@
 
+import random
 import types
 
-class Config(object):
+class Prefix(object):
+    def __init__(self, root, path):
+        object.__setattr__(self, 'root', root)
+        object.__setattr__(self, 'path', path)
+
+    def __getattribute__(self, attr):
+        cnode = object.__getattribute__(self, 'root')
+        path = object.__getattribute__(self,'path') + "." + attr
+        while path not in cnode.properties:
+            cnode = cnode.parent
+            if cnode is None:
+                return Prefix(object.__getattribute__(self, 'root'), path)
+        return cnode.properties[path]
+
+    def __hasattribute__(self, attr):
+        cnode = object.__getattribute__(self, 'root')
+        path = object.__getattribute__(self,'path') + "." + attr
+        while path not in cnode.properties:
+            cnode = cnode.parent
+            if cnode is None:
+                return False
+        return True
+
+    def __setattr__(self, attr, value):
+        cnode = object.__getattribute__(self, 'root')
+        path = object.__getattribute__(self, 'path') + "." + attr
+        object.__getattribute__(self, 'root').properties[path] = value
+
+    def __delattr__(self, attr):
+        cnode = object.__getattribute__(self, 'root')
+        path = object.__getattribute__(self, 'path') + "." + attr
+        del object.__getattribute__(self, 'root').properties[path]
+
+class Environment(object):
     def __init__(self, parent=None):
         self.properties = {}
         self.branches = {}
         self.event_handlers = {}
         self.parent = parent
         self.name = ""
+        self.attr = Prefix(self, "")
 
     def parent_chain(self):
         cnode = self
@@ -15,20 +50,29 @@ class Config(object):
             yield cnode
             cnode = cnode.parent
 
+    def event_defined(self, event_name):
+        for cnode in self.parent_chain():
+            if event_name in cnode.event_handlers:
+                return True
+        return False
+
     async def send_event(self, event_name, *args, **kwargs):
         for cnode in self.parent_chain():
             if event_name in cnode.event_handlers:
                 await cnode.event_handlers[event_name](*args, **kwargs)
             
-    def get_dict(self, value):
+    def get_dict(self, path):
         d = {}
         for cnode in self.parent_chain():
-            if value not in cnode.properties:
+            if path not in cnode.properties:
                 continue
-            if type(cnode[value]) is not dict:
+            if type(cnode.properties[path]) is not dict:
                 continue
-            d.update(cnode[value])
+            d.update(cnode.properties[path])
         return d
+
+    def prefix(self, path):
+        return Prefix(self, path)
 
     def get_list(self, value):
         l = []
@@ -79,37 +123,25 @@ class Config(object):
             for p_name, p_value in branch.properties.items():
                 yield branch, p_name, p_value
 
-    def exists(self, value):
-        while value not in self.properties:
+    def get_attr(self, path):
+        while path not in self.properties:
+            self = self.parent
+            if self is None:
+                return None
+        return self.properties[path]
+
+    def attr_exists(self, path):
+        while path not in self.properties:
             self = self.parent
             if self is None:
                 return False
         return True
 
-    def get(self, value, default=None):
-        if self.exists(value):
-            return self[value]
+    def get(self, path, default=None):
+        if self.attr_exists(path):
+            return self.get_attr(path)
         else:
             return default
-
-    def __getitem__(self, value):
-        while value not in self.properties:
-            self = self.parent
-            if self is None:
-                raise Exception(f"unable to locate {value}")
-        return self.properties[value]
-
-    def __setitem__(self, attr, value):
-        self.properties[attr] = value
-
-    def __delitem__(self, attr):
-        del self.properties[attr]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, _1, _2, _3):
-        return 
 
     def upwards(self, name):
         while self.name != name:
@@ -125,17 +157,21 @@ class Config(object):
             
     def branch_segment(self, segment):
         if segment not in self.branches:
-            self.branches[segment] = Config(parent=self)
+            self.branches[segment] = Environment(parent=self)
             self.branches[segment].name = segment
         return self.branches[segment]
 
     def merge(self, config):
-        new_config = self.branch("merge")
-        new_config.properties.update(config.properties)
-        new_config.event_handlers.update(config.event_handlers)
-        return new_config
+        new_env = self.branch()
+        new_env.properties.update(config.properties)
+        new_env.event_handlers.update(config.event_handlers)
+        return new_env
 
-    def branch(self, path="branch"):
+    def branch(self, path=None):
+        if path is None:
+            path = ''.join(random.choice("012345679") for i in range(12))
+        if path in self.branches:
+            raise Exception("branch exists")
         here = self
         path_segments = list(self.parse_path(path))
         if path_segments[0] == "/":

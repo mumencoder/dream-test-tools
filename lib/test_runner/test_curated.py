@@ -3,10 +3,22 @@ import os
 
 import Shared
 
-def list_all_tests(base_config, input_dir):
-    for root_dir, dirnames, filenames in os.walk( input_dir ):
-        for filename in filenames:
-            if filename.endswith('.dm') or filename.endswith('.dme'):
-                config = base_config.branch('test')
-                config['test.source_file'] = Shared.Path( root_dir ) / filename
-                yield config
+class Curated(object):
+    @staticmethod
+    def load_test(env):
+        relpath = os.path.relpath(env.attr.test.source_file.parent, env.attr.tests.dirs.root)
+        if relpath == ".":
+            groups = ["curation"]
+        else:
+            groups = ["curation"] + relpath.split("/")
+
+        groups += [env.attr.test.source_file.with_suffix("").name]
+        env.attr.test.id = "-".join(groups) 
+        env.attr.test.root_dir = env.attr.tests.dirs.output / env.attr.test.id
+        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
+
+    @staticmethod
+    def prepare_test(env):
+        with open(env.attr.test.source_file, "r") as f:
+            env.attr.test.text = f.read() + '\n'
+

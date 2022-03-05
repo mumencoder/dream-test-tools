@@ -84,11 +84,9 @@ async def opendream_main():
     async for od_install in iter_od_builds():
         for benchmark in [BinaryTree, FannkuchRedux, Fasta, Mandlebrot, SpectralNorm]:
             start_time = time.time()
-            print( f"{od_install.name} {benchmark.name} start" )
             benchmark.args = ""
             benchmark.install = od_install
             await run_calibration( benchmark(), OpenDream.Compilation )
-            print( f"{time.time() - start_time}" )
         return
 
 async def byond_main():
@@ -97,11 +95,9 @@ async def byond_main():
     install = dream_config.byond_installs['514.1566']
     for benchmark in [BinaryTree, FannkuchRedux, Fasta, Mandlebrot, SpectralNorm]:
         start_time = time.time()
-        print( f"{install.name} {benchmark.name} start" )
         benchmark.install = install
         benchmark.install.postargs = "-trusted"
         await run_calibration( benchmark(), Byond.Compilation )
-        print( f"{time.time() - start_time}" )
 
 async def main():
     config = Common.Config(os.path.expanduser("~/dream/config/default.py"))
@@ -112,4 +108,3 @@ async def main():
         async for dme_result in get_dme_files(config):
             log_filename = config.dirs.app.logs.dm_compiles / f"{opendream_result['name']}-{dme_result['name']}.txt"
             compile_result = await Common.opendream_compile_dme( opendream_result["install"], dme_result["dme"], log_filename )
-            print(opendream_result['commit'].authored_datetime, compile_result['monitor'].max_memory_usage / 1024**2)

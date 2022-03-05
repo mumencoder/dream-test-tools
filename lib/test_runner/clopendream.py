@@ -4,13 +4,13 @@ import glob, shutil
 import common, test_runner
 import Byond, ClopenDream
 
-async def prep_tree(config):
+async def prep_tree(env):
     await Byond.Install.generate_empty_code_tree(config, config['clopendream.output.base_dir'])
-    Byond.Install.prepare_code_tree(config, config['clopendream.output.base_dir'] / 'codetree')
+    run.out, run.err = Shared.Process.split_stream_filename(config['clopendream.output.base_dir'] / 'codetree')
     config['byond.codetree.recompile'] = True
 
-    config['process.stdout'] = open(config['byond.codetree.out'], "wb")
-    config['process.stderr'] = open(config['byond.codetree.err'], "wb")
+    config['process.stdout'] = open(run.out, "wb")
+    config['process.stderr'] = open(run.err, "wb")
     await Byond.Install.generate_code_tree(config, config['clopendream.input_dm'] )
     config['process.stdout'].close()
     config['process.stderr'].close()

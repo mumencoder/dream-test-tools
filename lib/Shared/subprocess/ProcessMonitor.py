@@ -36,7 +36,7 @@ class ProcessManager(object):
         try:
             if self.memory_limit is not None and pinfo.memory_full_info().uss > self.memory_limit:
                 process.state = "kill"
-                print("warning: memory limit reached")
+                env.attr.wf.write( "warning: memory limit reached\n" )
                 return
             self.max_memory_usage = max( self.max_memory_usage, pinfo.memory_full_info().uss)
         except psutil.NoSuchProcess:

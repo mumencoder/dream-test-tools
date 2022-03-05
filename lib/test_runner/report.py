@@ -5,65 +5,42 @@ import test_runner
 
 import Shared
 
-class CompileReport(object):
-    def __init__(self, install1, install2):
-        self.install1 = install1
-        self.install2 = install2
-        self.results = []
+class Report(object):
+    def load_result(env):
+        env.attr.result.ccode = int(Shared.File.read_if_exists(env.attr.test.base_dir / "compile.returncode.log"))
+        #print( env.attr.test.base_dir / "compile.returncode.log", env.attr.result.ccode )
+        if env.attr.result.ccode == 0:
+            runlog_path = env.attr.test.base_dir / "run_log.out"
+            env.attr.result.runlog = Shared.File.read_if_exists(runlog_path, lambda s: json.loads(s) )
 
-    def string(self, s): 
-        return html.escape(s)
+    def match_ccode(env1, env2):
+        return (env1.attr.result.ccode == 0) and (env2.attr.result.ccode == 0)
 
-    def load_result(self, config, install):
-        result = {}
-        result['config'] = config = config.branch("result").copy()
-        config['test.install'] = install
-        test_runner.get_test_info(config, 'curated')
-        result["ccode"] = int(Shared.File.read_if_exists(config['test.base_dir'] / "compile.returncode.txt"))
-        result["ctext"] = Shared.File.read_if_exists( config['test.base_dir'] / "compile.txt")
-        if result["ccode"] == 0:
-            runlog_path = config['test.base_dir'] / "run_log.out"
-            result["runlog"] = Shared.File.read_if_exists(runlog_path, lambda s: json.loads(s) )
+    def match_runlog(env1, env2):
+        return Shared.match(env1.attr.result.runlog, env2.attr.result.runlog) is None
+
+    def match_test(env1, env2):
+        ccode_compare = Report.match_ccode(env1, env2) 
+        if env1.attr.result.ccode == 0 and ccode_compare is True: 
+            return Report.match_runlog(env1, env2)
+        return ccode_compare
+
+    def compare_results(benv, oenv, nenv):
+        o_compare = Report.match_test(benv, oenv)
+        n_compare = Report.match_test(benv, nenv)
+
+        if o_compare is True and n_compare is False:
+            result = "breaking"
+        elif o_compare is False and n_compare is True:
+            result = "fixing"
+        elif o_compare is False and n_compare is False:
+            result = "mismatch"
+        elif o_compare is True and n_compare is True:
+            result = "match"
+
         return result
 
-    def add_result(self, config):
-        result = {}
-        result["1"] = self.load_result(config, self.install1)
-        result["2"] = self.load_result(config, self.install2)
-        self.results.append( result )
-        
-    def result_compiled(self, result):
-        return (result["1"]["ccode"] == 0) and (result["2"]["ccode"] == 0)
-
-    def result_runlog(self, result):
-        return Shared.match(result["1"]["runlog"], result["2"]["runlog"])
-
-    def get_result_summary(self):
-        summ = {}
-        for result in self.results:
-            summ_result = {}
-            summ[result["1"]['config']['test.id']] = summ_result
-            summ_result["category"] = result["category"]
-        return summ
-
-    def process_results(self):
-        self.category_rows = collections.defaultdict(list)
-        for result in self.results:
-            result["note"] = ""
-            if self.result_compiled(result):
-                result["runlog_match"] = self.result_runlog(result)
-                if self.result_runlog(result) is None:
-                    result["category"] = "same"
-                else:
-                    result["category"] = "runlog mismatch"
-            else:
-                if (result["1"]["ccode"] != 0) and (result["2"]["ccode"] != 0):
-                    result["category"] = "same"
-                else:
-                    result["category"] = "compile code mismatch"
-
-            self.category_rows[result["category"]].append( result )
-
+class CompileReport(object):
     def display_result(self, result):
         return f"""
 <tr>

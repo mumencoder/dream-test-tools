@@ -22,15 +22,16 @@ class Dotnet(object):
             return params
             
         @staticmethod
-        async def build(config):
-            params = config['dotnet.project.params']
-            command = f"dotnet build -clp:ErrorsOnly {config['dotnet.project.path']} {Dotnet.Project.flatten_build_params(params)}"
-            process = await Shared.Process.shell(config, command)
-            return process
-
+        @Shared.wf_tag('dotnet.restore')
+        async def restore(env):
+            params = env.get('.dotnet.restore.params', {})
+            env.attr.shell.command = f"dotnet restore {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
+            await Shared.Process.shell(env)
+            
         @staticmethod
-        async def restore(config):
-            params = config['dotnet.project.params']
-            command = f"dotnet restore {config['dotnet.project.path']} {Dotnet.Project.flatten_build_params(params)}"
-            process = await Shared.Process.shell(config, command)
-            return process
+        @Shared.wf_tag('dotnet.build')
+        async def build(env):
+            params = env.get('.dotnet.build.params', {})
+            env.attr.shell.command = f"dotnet build -clp:ErrorsOnly {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
+            await Shared.Process.shell(env)
+
