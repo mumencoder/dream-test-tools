@@ -41,9 +41,10 @@ class Workflow(object):
     @staticmethod
     async def handle_process_complete(env):
         wf = env.prefix('.wf')
+        process = env.prefix('.process')
 
         tags = Workflow.flatten_tags(wf.tags)
-        if env.attr_exists('.process.auto_log'):
+        if process.log_mode == "auto":
             branch = wf.tree.get_branch(tags)
             if not hasattr(branch, 'auto_logs'):
                 branch.auto_logs = []
@@ -51,8 +52,6 @@ class Workflow(object):
 
     @staticmethod
     def open(env, name, log=None):
-        if name in env.attr.workflows:
-            raise Exception("workflow exists")
         env.event_handlers['process.complete'] = Workflow.handle_process_complete
 
         wf = env.prefix('.wf')
@@ -70,9 +69,6 @@ class Workflow(object):
 
     @staticmethod
     def set_task(env, task):
-        if env.attr_exists(".wf.task"):
-            raise Exception("task already exists")
-
         async def t():
             try:
                 await task
@@ -165,8 +161,8 @@ horiz_list {
                         pre(code( "shell command: " + penv.attr.shell.command ) )
                         if penv.attr_exists(".shell.dir"):
                             pre(code( "working dir: " + str(penv.attr.shell.dir) ) )
-                        if penv.attr_exists(".process.auto_log"):
-                            a( "<Log>", href=f'file://{penv.attr.process.auto_log["path"]}')
+                        if penv.attr_exists(".process.log_path"):
+                            a( "<Log>", href=f'file://{penv.attr.process.log_path}')
                         br()
                         if penv.attr_exists('.process.p'):
                             pre(code( "result: " + str(penv.attr.process.p.returncode) ))

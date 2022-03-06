@@ -22,9 +22,9 @@ class Process(object):
             shell = env.prefix('.shell')
 
             if process.log_mode == "auto":
-                process.auto_log = {"path": env.attr.dirs.ramdisc / "auto_process_logs" / Shared.Random.generate_string(16)}
-                process.auto_log["f"] = open(process.auto_log["path"], "w")
-                process.stdout = process.stderr = process.auto_log["f"]
+                process.log_path = env.attr.dirs.ramdisc / "auto_process_logs" / Shared.Random.generate_string(16)
+            if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
+                process.stdout = process.stderr = open(process.log_path, "w")
 
             with Shared.Workflow.status(env, "launching process"):
                 shell_env = dict(os.environ)
@@ -48,8 +48,8 @@ class Process(object):
                     else:
                         await asyncio.wait_for(process.p.wait(), timeout=None)
 
-                if process.log_mode == "auto":
-                    process.auto_log["f"].close()
+                if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
+                    process.stdout.close()
 
                 await env.send_event("process.complete", env)
         finally:

@@ -26,8 +26,9 @@ class Main(App):
             Shared.Workflow.set_task(env, test_runner.byond.do_test(env) )
 
         env = self.env.branch()
-        OpenDream.Source.load(env, 'default')
-        env.attr.opendream.install.id = 'default'
+        env.attr.opendream.sources['default_full'] = env.attr.opendream.sources['default']
+        OpenDream.Source.load(env, 'default_full')
+        env.attr.opendream.install.id = 'default_full'
         env.attr.opendream.install.dir = env.attr.opendream.source.dir
         env.attr.install = env.attr.opendream.install
         env.attr.install.platform = "opendream"
@@ -40,6 +41,8 @@ class Main(App):
 
         await Shared.Workflow.run_all(self.env)
         await self.update_report()
+
+        return
 
         i = 0
         base_env = self.env.branch()

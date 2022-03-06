@@ -7,11 +7,17 @@ import Shared
 
 class Report(object):
     def load_result(env):
-        env.attr.result.ccode = int(Shared.File.read_if_exists(env.attr.test.base_dir / "compile.returncode.log"))
+        env.attr.result.ccode = Shared.File.read_if_exists(env.attr.test.base_dir / "compile.returncode.log")
+        if env.attr.result.ccode is None:
+            return False
+
+        env.attr.result.ccode = int(env.attr.result.ccode)
+        
         #print( env.attr.test.base_dir / "compile.returncode.log", env.attr.result.ccode )
         if env.attr.result.ccode == 0:
             runlog_path = env.attr.test.base_dir / "run_log.out"
             env.attr.result.runlog = Shared.File.read_if_exists(runlog_path, lambda s: json.loads(s) )
+        return True
 
     def match_ccode(env1, env2):
         return (env1.attr.result.ccode == 0) and (env2.attr.result.ccode == 0)

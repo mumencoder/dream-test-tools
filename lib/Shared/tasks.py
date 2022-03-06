@@ -10,7 +10,7 @@ class CountedResource(object):
     
     async def acquire(self, env):
         while len(self.counts) >= self.n:
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(1.0)
         self.counts.add( env.attr.wf.name )
 
     def release(self, env):
