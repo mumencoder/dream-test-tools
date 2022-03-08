@@ -11,7 +11,7 @@ class Main(App):
         env = self.env.branch()
 
         results = collections.defaultdict(list)
-        mm_results = collections.defaultdict(list)
+        mm_results = set()
 
         for tenv in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
             benv = tenv.branch()
@@ -30,6 +30,9 @@ class Main(App):
             exists = test_runner.Report.load_result( oenv )
             if not exists:
                 continue
+
+            if test_runner.Report.match_ccode( benv, oenv ) is False:
+                mm_results.add( benv.attr.test.id )
 
             for pr in env.attr.state['github_prs']['data']:
                 repo_name = pr["head"]["repo"]["full_name"].replace("/", ".")
@@ -51,16 +54,13 @@ class Main(App):
                 if result in ["breaking", "fixing"]:
                     results[pr["title"]].append( (penv.attr.test.id, result) )
 
-                if result in ["mismatch"]:
-                    mm_results[pr["title"]].append( penv.attr.test.id )
-
+        print("=== PR Changes ===")
         for title, result in results.items():
             print(title)
             print(result)
 
-        for title, result in mm_results.items():
-            print(title)
-            print(result)
+        print("=== Mismatch ===")
+        print(mm_results)
 
 main = Main()
 asyncio.run( main.start() )
