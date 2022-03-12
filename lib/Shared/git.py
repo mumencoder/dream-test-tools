@@ -60,7 +60,12 @@ class Git(object):
                 with Shared.Workflow.status(env, "waiting git"):
                     try:
                         await env.attr.resources.git.acquire(env)
-                        env.attr.shell.command = f"git clone --depth {env.attr.git.repo.clone_depth} --branch {env.attr.git.repo.branch['name']} {env.attr.git.repo.url} {env.attr.git.repo.local_dir}"
+                        cmd = "git clone "
+                        cmd += f"--depth {env.attr.git.repo.clone_depth} "
+                        if env.attr_exists('.git.repo.branch'):
+                            cmd += f"--branch {env.attr.git.repo.branch['name']} "
+                        cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
+                        env.attr.shell.command = cmd
                         env.attr.wf.status[-1] = "git clone"
                         await Shared.Process.shell(env)
                     finally:

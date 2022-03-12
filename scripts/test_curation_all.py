@@ -8,15 +8,11 @@ import test_runner
 class Main(App):
     async def run(self):
         env = self.env.branch()
-
-        report_env = env.branch()
-        Shared.Workflow.open(report_env, "report")
-        Shared.Workflow.set_task(report_env, self.update_report_loop())
-        report_env.attr.wf.background = True
+        self.setup_report_task(env)
 
         env = self.env.branch()
         Byond.Install.load(env, 'default')
-        for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+        for env in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
             env.attr.install = env.attr.byond.install
             env.attr.install.platform = "byond"
             test_runner.Curated.load_test( env )
@@ -32,7 +28,7 @@ class Main(App):
         env.attr.opendream.install.dir = env.attr.opendream.source.dir
         env.attr.install = env.attr.opendream.install
         env.attr.install.platform = "opendream"
-        for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+        for env in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
             test_runner.Curated.load_test( env )
             test_runner.Curated.prepare_test( env )
             test_runner.generate_test( env )
@@ -41,8 +37,6 @@ class Main(App):
 
         await Shared.Workflow.run_all(self.env)
         await self.update_report()
-
-        return
 
         i = 0
         base_env = self.env.branch()
@@ -63,7 +57,7 @@ class Main(App):
                 print("skip", install_id)
                 continue
 
-            for env in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
+            for env in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
                 test_runner.Curated.load_test( env )
                 test_runner.Curated.prepare_test( env )
                 test_runner.generate_test( env )

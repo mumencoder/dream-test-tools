@@ -48,7 +48,7 @@ class App(object):
 
     def load_configs(self):
         config_dir = os.path.abspath( os.path.expanduser("~/dream-storage/config") )
-        for file_path in os.listdir( config_dir ):
+        for file_path in sorted(os.listdir( config_dir )):
             config_path = os.path.join(config_dir, file_path)
             config_obj = Shared.Object.import_file( config_path )
             for name, attr in vars(config_obj).items():
@@ -83,3 +83,9 @@ class App(object):
             await ClopenDream.Install.ensure(env)
         else:
             raise Exception("unknown install")
+
+    def setup_report_task(self, env):
+        env = env.branch()
+        Shared.Workflow.open(env, "report")
+        Shared.Workflow.set_task(env, self.update_report_loop())
+        env.attr.wf.background = True

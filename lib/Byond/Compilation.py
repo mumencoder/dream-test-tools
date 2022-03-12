@@ -33,12 +33,15 @@ class Compilation(object):
         compilation = env.attr.byond.compilation
         if compilation.flags.recompile is False and os.path.exists(compilation.out):
             return
-        await Install.compile(config, compilation, args={'code_tree':True})
+        compilation.args = {'code_tree':True}
+        env.attr.process.log_mode = None
+        env.attr.process.log_path = compilation.out
+        await Compilation.compile(env)
 
     @staticmethod
-    async def generate_obj_tree(config, dm_file_path, recompile=False):
+    async def generate_obj_tree(env):
         compilation = env.attr.byond.compilation
         if compilation.flags.recompile is False and os.path.exists(compilation.out):
             return
-        await Install.compile(config, dm_file_path, args={'obj_tree':True})
-         
+        compilation.args = {'obj_tree':True}
+        await Compilation.compile(env)

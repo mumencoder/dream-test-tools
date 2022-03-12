@@ -8,11 +8,7 @@ import test_runner
 class Main(App):
     async def run(self):
         env = self.env.branch()
-
-        report_env = env.branch()
-        Shared.Workflow.open(report_env, "report")
-        Shared.Workflow.set_task(report_env, self.update_report_loop())
-        report_env.attr.wf.background = True
+        self.setup_report_task(env)
 
         env = self.env.branch()
         env.attr.opendream.sources['default_full'] = env.attr.opendream.sources['default']
@@ -66,8 +62,8 @@ class Main(App):
             Shared.Workflow.open(env2, f"opendream.build.{i}")
             Shared.Workflow.set_task(env2, OpenDream.Builder.build(env2) )
             i += 1
-        await Shared.Workflow.run_all(self.env)
 
+        await Shared.Workflow.run_all(self.env)
         self.running = False
         await self.update_report()
 

@@ -5,7 +5,10 @@ class Compilation(object):
 
     @staticmethod
     def convert_args(args):
-        return ""
+        s = ""
+        for flag in args["flags"]:
+            s += f"--{flag} "
+        return s
 
     @staticmethod
     def get_exe_path(env):
@@ -19,6 +22,10 @@ class Compilation(object):
 
         install = env.attr.opendream.install
         compilation = env.attr.opendream.compilation
+
+        if not env.attr_exists('.opendream.compilation.args'):
+            compilation.args = {}
+            
         env = env.branch()
         env.attr.shell.command = f"{Compilation.get_exe_path(env)} {Compilation.convert_args(compilation.args)} {compilation.dm_file}"
         env.event_handlers['process.complete'] = log_returncode

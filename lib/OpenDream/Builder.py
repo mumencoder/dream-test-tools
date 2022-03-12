@@ -25,7 +25,8 @@ class Source(object):
                 with Shared.Workflow.status(env, "sync folders"):
                     Shared.Path.sync_folders( source.info["location"], source.dir )
                 env.attr.git.repo.local_dir = source.dir
-                await Shared.Git.Repo.ensure(env)
+                if source.info.get("is_repo", False):
+                    await Shared.Git.Repo.ensure(env)
             if source.info["type"] == "pr":
                 with Shared.Workflow.status(env, "sync folders"):
                     Shared.Path.sync_folders( source.info["base_location"], source.dir )
@@ -65,8 +66,6 @@ class Builder(object):
             env.attr.dotnet.build.params = Shared.Dotnet.Project.default_params(env.attr.opendream.build.params)
         else:
             env.attr.dotnet.build.params = {}
-
-        #env.attr.dotnet.build.params['output'] = source.install_dir
 
         env2 = env.branch()
         Builder.prepare_compiler_build( env2 )

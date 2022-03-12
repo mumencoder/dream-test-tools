@@ -16,6 +16,11 @@ async def compile(env):
     env.attr.byond.compilation.args = {}
     await Byond.Compilation.compile(env)
 
+async def codetree(env):
+    env.attr.byond.compilation.file_path = env.attr.test.dm_file_path
+    env.attr.byond.compilation.out = env.attr.test.base_dir / 'test.codetree'
+    await Byond.Compilation.generate_code_tree(env)
+
 async def run(env):
     env.attr.process.log_mode = None
     env.attr.process.log_path = env.attr.test.base_dir / 'run.log'
