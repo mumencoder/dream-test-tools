@@ -13,6 +13,8 @@ class App(object):
 
         Shared.Workflow.init(self.env)
 
+        self.env.attr.test_mode = "all"
+
         self.env.attr.process.log_mode = "auto"
         self.env.attr.task_config.log_dir = self.env.attr.dirs.ramdisc / "task_logs"
         self.env.attr.git.repo.clone_depth = 1

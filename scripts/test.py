@@ -15,7 +15,7 @@ class Main(App):
         self.setup_report_task(env)
 
         env2 = env.branch()
-        OpenDream.Source.load(env2, 'currentdev')
+        OpenDream.Source.load(env2, 'clopendream')
         env2.attr.git.local_dir = env2.attr.opendream.source.dir
         Shared.Workflow.open(env2, f"opendream.source")
         Shared.Workflow.set_task(env2, self.do(env2) )
@@ -23,8 +23,8 @@ class Main(App):
         await Shared.Workflow.run_all(self.env)
 
         env2 = env.branch()
-        OpenDream.Source.load(env2, 'currentdev')
-        env2.attr.opendream.install.id = 'currentdev'
+        OpenDream.Source.load(env2, 'clopendream')
+        env2.attr.opendream.install.id = 'clopendream'
         env2.attr.opendream.install.dir = env2.attr.opendream.source.dir
         env2.attr.install = env2.attr.opendream.install
         env2.attr.install.platform = "opendream"

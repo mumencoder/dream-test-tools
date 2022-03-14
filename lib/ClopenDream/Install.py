@@ -23,3 +23,13 @@ class Install(object):
         command += f"--working_dir {env.attr.clopendream.install.working_dir} "
         env.attr.shell.command = command
         await Shared.Process.shell(env)
+
+    @staticmethod
+    async def compare(clenv, oenv):
+        env = clenv.branch()
+        command = f"{Install.get_exe_path(env)} compare "
+        command += f"{clenv.attr.clopendream.ast1} "
+        command += f"{clenv.attr.clopendream.ast2} "
+        command += f"--working_dir {env.attr.clopendream.install.working_dir} "
+        env.attr.shell.command = command
+        await Shared.Process.shell(env)
