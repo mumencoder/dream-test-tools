@@ -22,7 +22,7 @@ class Process(object):
             shell = env.prefix('.shell')
 
             if process.log_mode == "auto":
-                process.log_path = env.attr.dirs.ramdisc / "auto_process_logs" / Shared.Random.generate_string(16)
+                process.log_path = process.auto_log_path / Shared.Random.generate_string(16)
             if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
                 process.stdout = process.stderr = open(process.log_path, "w")
 

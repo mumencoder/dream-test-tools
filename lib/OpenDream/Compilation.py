@@ -6,8 +6,9 @@ class Compilation(object):
     @staticmethod
     def convert_args(args):
         s = ""
-        for flag in args["flags"]:
-            s += f"--{flag} "
+        if "flags" in args:
+            for flag in args["flags"]:
+                s += f"--{flag} "
         return s
 
     @staticmethod

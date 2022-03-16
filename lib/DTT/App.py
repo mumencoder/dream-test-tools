@@ -12,11 +12,13 @@ class App(object):
         self.load_configs()
 
         Shared.Workflow.init(self.env)
-
+        self.env.attr.wf.id = Shared.Random.generate_string(8)
+        self.env.attr.wf.root_dir = self.env.attr.dirs.ramdisc / "workflows" / self.env.attr.wf.id 
         self.env.attr.test_mode = "all"
 
         self.env.attr.process.log_mode = "auto"
-        self.env.attr.task_config.log_dir = self.env.attr.dirs.ramdisc / "task_logs"
+        self.env.attr.process.auto_log_path = self.env.attr.wf.root_dir / "auto_process_logs"
+
         self.env.attr.git.repo.clone_depth = 1
         
         self.env.attr.resources.git = Shared.CountedResource(2)
@@ -72,19 +74,6 @@ class App(object):
     def parse_install_arg(s):
         s = s.split(".")
         return {'platform':s[0], 'install_id':s[1]}
-
-    async def install(self, env, platform, install_id):
-        if platform == "byond":
-            Byond.Install.load(env, install_id)
-            await Byond.Install.ensure(env)
-        elif platform == "opendream":
-            OpenDream.Install.load(env, install_id)
-            await OpenDream.Install.ensure(env)
-        elif platform == "clopendream":
-            ClopenDream.Install.load(env, install_id)
-            await ClopenDream.Install.ensure(env)
-        else:
-            raise Exception("unknown install")
 
     def setup_report_task(self, env):
         env = env.branch()
