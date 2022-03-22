@@ -12,11 +12,10 @@ class Run(object):
 
     @staticmethod
     def get_exe_path(env):
-        return f"{env.attr.opendream.install.dir}/bin/Content.Server/OpenDreamServer"
+        return f"{env.attr.opendream.install.dir}/OpenDreamServer"
 
     @staticmethod 
     async def run(env):
-        install = env.attr.opendream.install
         run = env.attr.opendream.run
         env = env.branch()
         try:

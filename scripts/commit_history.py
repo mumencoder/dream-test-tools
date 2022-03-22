@@ -13,7 +13,6 @@ class Main(App):
         oenv = self.env
 
         oenv.attr.opendream.sources['default_full_history'] = oenv.attr.opendream.sources['default']
-        oenv.attr.install.platform = "opendream"
         oenv.attr.git.repo.clone_depth = 512
         OpenDream.Source.load(oenv, 'default_full_history')
         oenv.attr.opendream.install.dir = oenv.attr.opendream.source.dir
@@ -26,7 +25,7 @@ class Main(App):
         repo = git.Repo( oenv.attr.opendream.source.dir )
         repo.remote('origin').pull(depth=512)
 
-        commit = repo.commit('HEAD~0')
+        commit = repo.commit('origin/HEAD~0')
         oenv.attr.git.repo = repo
 
         commits = Shared.Git.Repo.commit_history(commit, depth=16)
@@ -35,7 +34,6 @@ class Main(App):
             repo.head.reset(index=True, working_tree=True)
 
             build_env = oenv.branch()
-            build_env.attr.install.id = f'github.main.{str(c)}'
             Shared.Workflow.open(build_env, f"opendream.build.{str(c)}")
             Shared.Workflow.set_task(build_env, OpenDream.Builder.build(build_env) )
 

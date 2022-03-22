@@ -35,3 +35,16 @@ class Dotnet(object):
             env.attr.shell.command = f"dotnet build -clp:ErrorsOnly {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
             await Shared.Process.shell(env)
 
+        @staticmethod
+        @Shared.wf_tag('dotnet.publish')
+        async def publish(env):
+            params = env.get('.dotnet.build.params', {})
+            cmd = f"dotnet publish " 
+            if env.attr_exists('.dotnet.build.output_dir'):
+                cmd += f"-o {env.attr.dotnet.build.output_dir} "
+            cmd += "-c Release --runtime linux-x64 "
+            cmd += "-clp:ErrorsOnly -p:ErrorOnDuplicatePublishOutputFiles=false -p:ValidateExecutableReferencesMatchSelfContained=false "
+            cmd += "-p:PublishReadyToRun=true "
+            cmd += f"{env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
+            env.attr.shell.command = cmd
+            await Shared.Process.shell(env)

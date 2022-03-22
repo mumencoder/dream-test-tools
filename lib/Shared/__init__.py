@@ -9,5 +9,6 @@ from .github import *
 from .json import *
 from .object import *
 from .random import *
+from .scheduler import *
 from .tree import *
 from .tasks import *

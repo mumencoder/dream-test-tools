@@ -8,7 +8,6 @@ import test_runner
 class Main(App):
     async def run(self):
         env = self.env.branch()
-        self.setup_report_task(env)
 
         for repo_name, repo in env.attr.ss13.sources.items():
             env = self.env.branch()

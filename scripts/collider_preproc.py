@@ -50,9 +50,6 @@ class Main(App):
         env = self.env.branch()
 
         Byond.Install.load(env, 'default')
-        env.attr.install = env.attr.byond.install
-        env.attr.install.platform = "byond"
-        env.attr.install.id = "default"
 
         while True:
             try:

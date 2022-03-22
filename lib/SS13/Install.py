@@ -22,7 +22,7 @@ class Install(object):
     def find_dme(env):
         base_dir = env.attr.ss13.base_dir
         if not os.path.exists(base_dir):
-            return
+            raise Exception("DME directory does not exist")
             
         dme_list = [entry for entry in os.listdir(base_dir) if Install.is_dme(entry)]
         if len(dme_list) == 1:

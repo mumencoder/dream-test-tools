@@ -11,6 +11,9 @@ class Source(object):
         source.info = env.attr.clopendream.sources[_id]
         source.dir = env.attr.clopendream.dirs.sources / source.id
         source.install_dir = env.attr.clopendream.dirs.installs / source.id
+        source.platform = 'clopendream'
+
+        env.attr.install = source
 
     @staticmethod
     @Shared.wf_tag('source.ensure')

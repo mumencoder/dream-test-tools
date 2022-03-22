@@ -11,7 +11,7 @@ async def do_test(env):
 
 async def compile(env):
     env.attr.process.log_mode = None
-    env.attr.process.log_path = env.attr.test.base_dir / 'compile.log'
+    env.attr.process.log_path = env.attr.test.base_dir / 'compile.log.txt'
     env.attr.byond.compilation.file_path = env.attr.test.dm_file_path
     env.attr.byond.compilation.args = {}
     await Byond.Compilation.compile(env)

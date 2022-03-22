@@ -15,14 +15,17 @@ class Push(object):
 
 class Path(type(pathlib.Path())):
     def __init__(self, path):
-        self.ensure_folder()
+        self.ensure_parent_folder()
 
     def __truediv__(self, path):
         newpath = Path( super().__truediv__(path) )
-        newpath.ensure_folder()
         return newpath
 
     def ensure_folder(self):
+        if not self.exists():
+            self.mkdir(parents=True, exist_ok=True)
+
+    def ensure_parent_folder(self):
         if not self.exists():
             self.parent.mkdir(parents=True, exist_ok=True)
 

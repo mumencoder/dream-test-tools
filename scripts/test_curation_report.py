@@ -15,8 +15,6 @@ class Main(App):
 
         for tenv in test_runner.list_all_tests(env, main.env.attr.tests.dirs.dm_files):
             benv = tenv.branch()
-            benv.attr.install.platform = 'byond'
-            benv.attr.install.id = 'default'
             test_runner.Curated.load_test( benv )
             exists = test_runner.Report.load_result( benv )
             if not exists:
@@ -24,8 +22,6 @@ class Main(App):
             
             oenv = tenv.branch()
             oenv.attr.opendream.sources['default_full'] = env.attr.opendream.sources['default']
-            oenv.attr.install.platform = 'opendream'
-            oenv.attr.install.id = 'default_full'
             test_runner.Curated.load_test( oenv )
             exists = test_runner.Report.load_result( oenv )
             if not exists:
@@ -40,8 +36,6 @@ class Main(App):
                 install_id = f'github.{repo_name}.{pr_sha}'
 
                 penv = tenv.branch()
-                penv.attr.install.platform = 'opendream'
-                penv.attr.install.id = install_id
                 test_runner.Curated.load_test( penv )
 
                 if not os.path.exists(penv.attr.test.base_dir / "compile.returncode.log"):

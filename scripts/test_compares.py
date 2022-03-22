@@ -6,37 +6,12 @@ from DTT import App
 import test_runner
 
 class Main(App):
-    async def clopen_source(self, env):
-        await ClopenDream.Source.ensure(env)
-        await Shared.Git.Repo.init_all_submodules(env)
-
     async def run(self):
-        env = self.env.branch()
-        self.setup_report_task(env)
-
-        clenv = env.branch()
-        ClopenDream.Source.load(clenv, 'currentdev')
-        clenv.attr.git.local_dir = clenv.attr.clopendream.source.dir
-        Shared.Workflow.open(clenv, f"clopendream.source")
-        Shared.Workflow.set_task(clenv, self.clopen_source(clenv) )
-
-        await Shared.Workflow.run_all(self.env)
-
-        clenv = env.branch()
-        ClopenDream.Source.load(clenv, 'currentdev')
-        clenv.attr.clopendream.install.id = 'currentdev'
-        clenv.attr.clopendream.install.dir = clenv.attr.clopendream.source.dir
-        clenv.attr.install = clenv.attr.clopendream.install
-        clenv.attr.install.platform = "clopendream"
-        Shared.Workflow.open(clenv, f"clopendream.build")
-        Shared.Workflow.set_task(clenv, ClopenDream.Builder.build(clenv) )
-
-        await Shared.Workflow.run_all(self.env)
+        clenv = self.env.branch()
+        self.build_clopendream(clenv, 'currentdev')
 
         for tenv in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
             clenv = tenv.branch()
-            clenv.attr.install.platform = 'clopendream'
-            clenv.attr.install.id = "currentdev"
             ClopenDream.Source.load(clenv, 'currentdev')
             test_runner.Curated.load_test( clenv )
 
@@ -48,8 +23,6 @@ class Main(App):
             clenv.attr.clopendream.install.dir = clenv.attr.clopendream.source.dir
 
             oenv = tenv.branch()
-            oenv.attr.install.platform = 'opendream'
-            oenv.attr.install.id = 'clopendream'
             OpenDream.Source.load(oenv, 'clopendream')
             test_runner.Curated.load_test( oenv )
 

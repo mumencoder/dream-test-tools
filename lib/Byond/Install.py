@@ -25,6 +25,9 @@ class Install(object):
         info = env.attr.byond.installs[_id]
         install.type = info['type']
         install.version = info["version"]
+        install.platform = "byond"
+
+        env.attr.install = env.attr.byond.install
 
     @staticmethod
     async def ensure(env):
