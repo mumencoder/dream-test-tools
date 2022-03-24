@@ -1,4 +1,6 @@
 
+import os
+
 import Shared
 
 class Compilation(object):
@@ -12,7 +14,13 @@ class Compilation(object):
 
     @staticmethod
     def get_exe_path(env):
-        return f"{env.attr.opendream.install.dir}/DMCompiler"
+        paths = []
+        for root_dir, dirs, files in os.walk(env.attr.opendream.install.dir):
+            for filename in files:
+                if filename == "DMCompiler":
+                    path = os.path.join(root_dir, filename)
+                    paths.append(path)
+        return paths
 
     @staticmethod
     async def compile(env):
@@ -28,6 +36,11 @@ class Compilation(object):
         env.attr.shell.dir = env.attr.opendream.compilation.dm_file.parent
         env.attr.process.log_mode = None
         env.attr.process.log_path = env.attr.opendream.compilation.dm_file.parent / 'compile.log.txt'
-        env.attr.shell.command = f"{Compilation.get_exe_path(env)} {Compilation.convert_args(compilation.args)} {compilation.dm_file}"
+
+        exe_paths = Compilation.get_exe_path(env)
+        if len(exe_paths) != 1:
+            raise Exception("missing/ambiguous path", exe_paths)
+
+        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file}"
         env.event_handlers['process.complete'] = log_returncode
         await Shared.Process.shell(env)

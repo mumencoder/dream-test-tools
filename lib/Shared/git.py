@@ -55,38 +55,16 @@ class Git(object):
                     return False
 
         @staticmethod
-        async def ensure(env):
-            if not Git.Repo.exists(env):
-                with Shared.Workflow.status(env, "waiting git"):
-                    try:
-                        await env.attr.resources.git.acquire(env)
-                        cmd = "git clone "
-                        if env.attr_exists('.git.repo.clone_depth'):
-                            cmd += f"--depth {env.attr.git.repo.clone_depth} "
-                        if env.attr_exists('.git.repo.branch'):
-                            cmd += f"--branch {env.attr.git.repo.branch['name']} "
-                        cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
-                        env.attr.shell.command = cmd
-                        env.attr.wf.status[-1] = "git clone"
-                        await Shared.Process.shell(env)
-                    finally:
-                        env.attr.resources.git.release(env)
-            env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
-            await Git.Repo.ensure_commit(env)
-
-        @staticmethod
         async def init_all_submodules(env):
             try:
                 env = env.branch()
+                cmd = "git submodule update --init --recursive "
+                if env.attr_exists(".git.repo.submodule_ref"):
+                    cmd += f"--reference {env.attr.git.repo.submodule_ref} "
                 await env.attr.resources.git.acquire(env)
-                await Git.Repo.command(env, "git submodule update --init --recursive")
+                await Git.Repo.command(env, cmd)
             finally:
                 env.attr.resources.git.release(env)
-
-        @staticmethod
-        async def pull(env):
-            with Git.AutoStash():
-                env.attr.git.api.repo.remote('origin').pull(depth=config.get('git.depth', default=32), r=True, f=True)
 
         @staticmethod
         async def ensure_commit(env):
@@ -111,6 +89,27 @@ class Git(object):
                     if repo.head.commit != remote.refs[branch_info["name"]].commit:
                         raise Exception("repo head mismatch")
 
-            elif env.attr_exists(".git.repo.ref"):
-                repo.remote( 'origin' ).fetch( env.attr.git.repo.ref )
-                repo.head.reset( env.attr.git.repo.ref, working_tree=True )
+            elif env.attr_exists(".git.repo.remote_ref"):
+                repo.remote( env.attr.git.repo.remote ).fetch( env.attr.git.repo.remote_ref )
+                repo.head.reset( env.attr.git.repo.remote_ref, working_tree=True )
+
+        @staticmethod
+        async def ensure(env):
+            if not Git.Repo.exists(env):
+                with Shared.Workflow.status(env, "waiting git"):
+                    try:
+                        await env.attr.resources.git.acquire(env)
+                        cmd = "git clone "
+                        if env.attr_exists('.git.repo.clone_depth'):
+                            cmd += f"--depth {env.attr.git.repo.clone_depth} "
+                        if env.attr_exists('.git.repo.branch'):
+                            cmd += f"--branch {env.attr.git.repo.branch['name']} "
+                        cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
+                        env.attr.shell.command = cmd
+                        env.attr.wf.status[-1] = "git clone"
+                        await Shared.Process.shell(env)
+                    finally:
+                        env.attr.resources.git.release(env)
+            env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
+
+            await Git.Repo.ensure_commit(env)

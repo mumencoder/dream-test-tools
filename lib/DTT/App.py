@@ -3,6 +3,8 @@ import os, asyncio
 import json
 import Shared, Byond, ClopenDream, OpenDream
 
+import test_runner
+
 from .Resource import *
 
 class App(object):
@@ -21,6 +23,8 @@ class App(object):
         self.env.attr.process.log_mode = "auto"
         self.env.attr.process.auto_log_path = self.env.attr.wf.root_dir / "auto_process_logs"
 
+        self.env.attr.git.repo.remote = "origin"
+
         self.env.attr.resources.git = Shared.CountedResource(2)
         self.env.attr.resources.process = Shared.CountedResource(4)
         self.env.attr.resources.opendream_server = Shared.CountedResource(1)
@@ -32,7 +36,7 @@ class App(object):
         self.task_report_path = self.env.attr.dirs.ramdisc / "task_report.html"
         print(f"file://{self.task_report_path}")
 
-        for name in ["schedule", "github"]:
+        for name in ["schedule", "github", "tests"]:
             state_file = self.env.attr.dirs.state / f'{name}.json'
             state = Shared.InfiniteDefaultDict()
             if os.path.exists(state_file):
@@ -92,7 +96,7 @@ class App(object):
         await ClopenDream.Source.ensure(env)
         await Shared.Git.Repo.init_all_submodules(env)
 
-    async def build_pr(self, env):
+    async def build_opendream(self, env):
         while True:
             resource = await env.attr.resources.opendream_repo.acquire()
             if resource is not None:
@@ -100,7 +104,6 @@ class App(object):
                 break
             await asyncio.sleep(0.5)
 
-        print(data, env.attr.git.repo.ref)
         try:        
             OpenDream.Source.load( env, data["id"] )
             env.attr.git.repo.local_dir = data["path"]
@@ -108,13 +111,40 @@ class App(object):
             await Shared.Git.Repo.ensure(env)
             await Shared.Git.Repo.init_all_submodules(env)
 
-            env.attr.opendream.build.mode = "publish"
-            env.attr.dotnet.build.output_dir = env.attr.opendream.dirs.installs / f'github.opendream.wixoaGit.{env.attr.git.api.repo.head.commit}'
+            Shared.Path.sync_folders( env.attr.opendream.source.dir, env.attr.opendream.install.dir )
+            env.attr.dotnet.solution.path = env.attr.opendream.install.dir
             await OpenDream.Builder.build( env )
-
-            print( env.attr.git.api.repo.head.commit )
         finally:
             env.attr.resources.opendream_repo.release(resource)
+
+    async def update_repo(self, env):
+        if Shared.Scheduler.hourly(env):
+            env.attr.git.repo.remote_ref = 'HEAD'
+            await Shared.Git.Repo.ensure(env)
+            # TODO: this might break on submodule version updates
+            await Shared.Git.Repo.init_all_submodules(env)
+            Shared.Scheduler.update(env)
+
+    async def update_mains(self, base_env):
+        env = base_env.branch()
+        OpenDream.Source.load(env, 'main')
+        env.attr.git.repo.url = 'https://github.com/wixoaGit/OpenDream'
+        env.attr.git.repo.local_dir = env.attr.opendream.source.dir
+        env.attr.schedule.event_name = 'update.mains.opendream'
+
+        Shared.Workflow.open(env, f"update.mains.opendream")
+        Shared.Workflow.set_task(env, self.update_repo(env) )
+
+        env = base_env.branch()
+        ClopenDream.Source.load(env, 'main')
+        env.attr.git.repo.url = 'https://github.com/mumencoder/Clopendream-parser'
+        env.attr.git.repo.local_dir = env.attr.clopendream.source.dir
+        env.attr.schedule.event_name = 'update.mains.clopendream'
+
+        Shared.Workflow.open(env, f"update.mains.clopendream'")
+        Shared.Workflow.set_task(env, self.update_repo(env) )
+
+        await Shared.Workflow.run_all(self.env)
 
     async def update_prs(self, env):
         env = env.branch()
@@ -134,12 +164,24 @@ class App(object):
                 build = True
             if build is True:
                 build_env = env.branch()
-                build_env.attr.git.repo.ref = pull["merge_commit_sha"]
+                OpenDream.Install.load(build_env, f'github.wixoaGit.pr.{pull["merge_commit_sha"]}')
+                build_env.attr.git.repo.remote_ref = pull["merge_commit_sha"]
                 print(f"{pull['number']} {pull['merge_commit_sha']}")
                 Shared.Workflow.open(build_env, f"build.pr.{pull['number']}")
-                Shared.Workflow.set_task(build_env, self.build_pr(build_env) )
+                Shared.Workflow.set_task(build_env, self.build_opendream(build_env) )
                 
         await Shared.Workflow.run_all(self.env)
+
+    async def run_tests(self, env):
+        for tenv in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
+            test_runner.Curated.load_test( tenv )
+            test_runner.Curated.prepare_test( tenv )
+            test_runner.generate_test( tenv )
+            Shared.Workflow.open(tenv, f"{tenv.attr.test.prefix}.{tenv.attr.test.id}")
+            Shared.Workflow.set_task(tenv, tenv.attr.test.runner(tenv) )
+
+        await Shared.Workflow.run_all(self.env)
+        await self.update_report()
 
     async def prepare_empty_clopendream(self, env):
         empty_dir = env.attr.dirs.state / 'empty'

@@ -21,7 +21,6 @@ class Install(object):
         install.id = _id
         install.platform = 'opendream'
         install.dir = env.attr.opendream.dirs.installs / install.id
-
         env.attr.install = install
 
 class Builder(object):
@@ -36,11 +35,8 @@ class Builder(object):
     @staticmethod
     @Shared.wf_tag('opendream.build')
     async def build(env):
-        source = env.prefix('.opendream.source')
         build = env.prefix('.opendream.build')
         dotnet = env.prefix('.dotnet')
-
-        dotnet.solution.path = source.dir
 
         if env.attr_exists('.opendream.build.params'):
             dotnet.build.params = Shared.Dotnet.Project.default_params(build.params)
@@ -55,7 +51,7 @@ class Builder(object):
         env3 = env2.branch()
         if build.mode == "publish":
             await Shared.Dotnet.Project.publish( env2 )
-        elif build.mode == "build":
+        else:
             await Shared.Dotnet.Project.build( env2 )
 
         env2 = env.branch()
@@ -63,5 +59,5 @@ class Builder(object):
 
         if build.mode == "publish":
             await Shared.Dotnet.Project.publish( env2 )
-        elif build.mode == "build":
+        else:
             await Shared.Dotnet.Project.build( env2 )
