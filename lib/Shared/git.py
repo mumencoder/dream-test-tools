@@ -80,6 +80,7 @@ class Git(object):
 
                 if 'remote' in branch_info:
                     remote = repo.remote( branch_info['remote'] )
+                    remote.fetch(branch_info["name"])
                     branch.set_tracking_branch( remote.refs[branch_info["name"]] )
                     branch.set_commit( remote.refs[branch_info["name"]] )
 
@@ -92,6 +93,10 @@ class Git(object):
             elif env.attr_exists(".git.repo.remote_ref"):
                 repo.remote( env.attr.git.repo.remote ).fetch( env.attr.git.repo.remote_ref )
                 repo.head.reset( env.attr.git.repo.remote_ref, working_tree=True )
+
+            else:
+                repo.head.reset( 'origin/HEAD', working_tree=True )
+                repo.remote('origin').pull()
 
         @staticmethod
         async def ensure(env):

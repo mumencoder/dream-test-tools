@@ -1,4 +1,6 @@
 
+import psutil
+
 class Psutil(object):
     @staticmethod
     def find(name=None, env_tag=None):
@@ -21,15 +23,6 @@ class Psutil(object):
                 except psutil.AccessDenied:
                     pass
         return pinfos
-
-    @staticmethod
-    async def eliminate(find_fn):
-        while True:
-            pinfo = find_fn()
-            if len(pinfo) == 0:
-                return
-            pinfo[0].kill()
-            await asyncio.sleep(0.1)
 
     @staticmethod
     def find_by_tag(tag):

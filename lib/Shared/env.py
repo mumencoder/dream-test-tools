@@ -35,6 +35,9 @@ class Prefix(object):
         path = object.__getattribute__(self, 'path') + "." + attr
         del object.__getattribute__(self, 'root').properties[path]
 
+    def __repr__(self):
+        return f"<PREFIX {object.__getattribute__(self,'path')}>"
+
 class Environment(object):
     def __init__(self, parent=None):
         self.properties = {}

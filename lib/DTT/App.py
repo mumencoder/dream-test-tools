@@ -28,6 +28,7 @@ class App(object):
         self.env.attr.resources.git = Shared.CountedResource(2)
         self.env.attr.resources.process = Shared.CountedResource(4)
         self.env.attr.resources.opendream_server = Shared.CountedResource(1)
+        self.env.attr.resources.ss13 = Shared.CountedResource(2)
 
         self.env.attr.resources.opendream_repo = OpenDreamRepoResource(self.env, limit=4)
 
@@ -51,10 +52,11 @@ class App(object):
 
     async def deinit(self):
         await self.update_report()
-        for name in ["schedule", "github"]:
+        for name in ["schedule", "github", "tests"]:
             state_file = self.env.attr.dirs.state / f'{name}.json'
+            result = json.dumps( getattr(self.env.attr, name).state.finitize(), cls=Shared.Json.BetterEncoder)
             with open(state_file, "w") as f:
-                json.dump( getattr(self.env.attr, name).state.finitize(), f)
+                f.write( result )
 
     async def start(self):
         self.init()
@@ -92,11 +94,7 @@ class App(object):
         Shared.Workflow.set_task(env, self.update_report_loop())
         env.attr.wf.background = True
 
-    async def clopen_source(self, env):
-        await ClopenDream.Source.ensure(env)
-        await Shared.Git.Repo.init_all_submodules(env)
-
-    async def build_opendream(self, env):
+    async def build_shared_opendream(self, env):
         while True:
             resource = await env.attr.resources.opendream_repo.acquire()
             if resource is not None:
@@ -128,23 +126,25 @@ class App(object):
     async def update_mains(self, base_env):
         env = base_env.branch()
         OpenDream.Source.load(env, 'main')
-        env.attr.git.repo.url = 'https://github.com/wixoaGit/OpenDream'
-        env.attr.git.repo.local_dir = env.attr.opendream.source.dir
+        env.attr.opendream.source.location = 'https://github.com/wixoaGit/OpenDream'
         env.attr.schedule.event_name = 'update.mains.opendream'
-
         Shared.Workflow.open(env, f"update.mains.opendream")
-        Shared.Workflow.set_task(env, self.update_repo(env) )
+        Shared.Workflow.set_task(env, self.ensure_opendream(env, env.attr.opendream.source) )
+
+        env = base_env.branch()
+        OpenDream.Source.load(env, 'ClopenDream-compat')
+        env.attr.opendream.source.location = 'https://github.com/mumencoder/OpenDream'
+        env.attr.git.repo.branch = {'remote':'origin', 'name':'ClopenDream-compat'}
+        env.attr.schedule.event_name = 'update.mains.opendream.clopendream-compat'
+        Shared.Workflow.open(env, f"update.mains.opendream.clopendream-compat")
+        Shared.Workflow.set_task(env, self.ensure_opendream(env, env.attr.opendream.source) )
 
         env = base_env.branch()
         ClopenDream.Source.load(env, 'main')
-        env.attr.git.repo.url = 'https://github.com/mumencoder/Clopendream-parser'
-        env.attr.git.repo.local_dir = env.attr.clopendream.source.dir
+        env.attr.clopendream.source.location = 'https://github.com/mumencoder/Clopendream-parser'
         env.attr.schedule.event_name = 'update.mains.clopendream'
-
-        Shared.Workflow.open(env, f"update.mains.clopendream'")
-        Shared.Workflow.set_task(env, self.update_repo(env) )
-
-        await Shared.Workflow.run_all(self.env)
+        Shared.Workflow.open(env, f"update.mains.clopendream")
+        Shared.Workflow.set_task(env, self.ensure_clopendream(env, env.attr.clopendream.source) )
 
     async def update_prs(self, env):
         env = env.branch()
@@ -168,10 +168,8 @@ class App(object):
                 build_env.attr.git.repo.remote_ref = pull["merge_commit_sha"]
                 print(f"{pull['number']} {pull['merge_commit_sha']}")
                 Shared.Workflow.open(build_env, f"build.pr.{pull['number']}")
-                Shared.Workflow.set_task(build_env, self.build_opendream(build_env) )
+                Shared.Workflow.set_task(build_env, self.build_shared_opendream(build_env) )
                 
-        await Shared.Workflow.run_all(self.env)
-
     async def run_tests(self, env):
         for tenv in test_runner.list_all_tests(env, self.env.attr.tests.dirs.dm_files):
             test_runner.Curated.load_test( tenv )
@@ -180,39 +178,87 @@ class App(object):
             Shared.Workflow.open(tenv, f"{tenv.attr.test.prefix}.{tenv.attr.test.id}")
             Shared.Workflow.set_task(tenv, tenv.attr.test.runner(tenv) )
 
-        await Shared.Workflow.run_all(self.env)
-        await self.update_report()
-
     async def prepare_empty_clopendream(self, env):
         empty_dir = env.attr.dirs.state / 'empty'
-        clenv.attr.clopendream.config = {'empty_dir': empty_dir }
-        ClopenDream.Install.write_config( clenv )
-        with open(clenv.attr.dirs.state / 'empty' / 'empty.dm', "w") as f:
+        with open(env.attr.dirs.state / 'empty' / 'empty.dm', "w") as f:
             f.write('\n')
 
         benv = env.branch()
-        Byond.Install.load(benv, 'default')
-        benv.attr.byond.compilation.file_path = clenv.attr.clopendream.config['empty_dir'] / 'empty.dm'
-        benv.attr.byond.compilation.out = clenv.attr.clopendream.config['empty_dir'] / 'empty.codetree'
-        Shared.Workflow.open(benv, f"test.byond.empty")
-        Shared.Workflow.set_task(benv, Byond.Compilation.generate_code_tree(benv) )
+        Byond.Install.load(benv, 'main')
+        benv.attr.byond.compilation.file_path = empty_dir / 'empty.dm'
+        benv.attr.byond.compilation.out = empty_dir / 'empty.codetree'
+        await Byond.Compilation.generate_code_tree(benv)
 
-        await Shared.Workflow.run_all(self.env)
-
-    async def build_clopendream(self, base_env, install_id):
+    async def ensure_opendream(self, base_env, source):
         env = base_env.branch()
-        ClopenDream.Source.load(env, install_id)
-        env.attr.git.local_dir = env.attr.clopendream.source.dir
-        Shared.Workflow.open(env, f"clopendream.source.{install_id}")
-        Shared.Workflow.set_task(env, self.clopen_source(env) )
+        OpenDream.Source.load(env, source.id)
+        env.attr.git.repo.url = source.location
+        env.attr.git.repo.local_dir = env.attr.opendream.source.dir
 
-        await Shared.Workflow.run_all(self.env)
+        await Shared.Git.Repo.ensure(env)
+        await Shared.Git.Repo.init_all_submodules(env)
 
+        OpenDream.Install.load(env, source.id)
+        await self.build_opendream(env)
+
+    async def ensure_clopendream(self, base_env, source):
         env = base_env.branch()
-        ClopenDream.Source.load(env, install_id)
-        env.attr.clopendream.install.id = install_id
-        env.attr.clopendream.install.dir = env.attr.clopendream.source.dir
-        Shared.Workflow.open(env, f"clopendream.build.{install_id}")
-        Shared.Workflow.set_task(env, ClopenDream.Builder.build(env) )
+        ClopenDream.Source.load(env, source.id)
+        env.attr.git.repo.url = source.location
+        env.attr.git.repo.local_dir = env.attr.clopendream.source.dir
 
-        await Shared.Workflow.run_all(self.env)
+        await Shared.Git.Repo.ensure(env)
+        await Shared.Git.Repo.init_all_submodules(env)
+
+        ClopenDream.Install.load(env, source.id)
+        await self.build_clopendream(env)
+
+    async def build_opendream(self, base_env):
+        env = base_env.branch()
+        Shared.Path.sync_folders( env.attr.opendream.source.dir, env.attr.opendream.install.dir )
+        env.attr.dotnet.solution.path = env.attr.opendream.install.dir
+        await OpenDream.Builder.build(env)
+
+    async def build_clopendream(self, base_env):
+        env = base_env.branch()
+        await ClopenDream.Builder.build(env)
+        Shared.Path.sync_folders( env.attr.clopendream.source.dir, env.attr.clopendream.install.dir )
+        ClopenDream.Install.copy_stdlib(env)
+        await self.prepare_empty_clopendream(env)
+
+    def ss13_test(self, env):
+        env.attr.test.root_dir = env.attr.tests.dirs.output / f'ss13.{env.attr.ss13.repo_name}'
+        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
+
+    async def parse_clopendream_test(self, tenv, clopen_id):
+        btenv = tenv.branch()
+        Byond.Install.load(btenv, 'main')
+        test_runner.Curated.load_test( btenv )
+        test_runner.Curated.prepare_test( btenv )
+        test_runner.generate_test( btenv )
+        btenv.attr.byond.compilation.out = btenv.attr.test.base_dir / 'test.codetree'
+        await Byond.Compilation.generate_code_tree(btenv)
+
+        ctenv = tenv.branch()
+        ClopenDream.Install.load(ctenv, clopen_id)
+        ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
+        await ClopenDream.Install.parse(ctenv)
+    
+    async def parse_clopendream_ss13(self, ssenv, clopen_id):
+        try:
+            await self.env.attr.resources.ss13.acquire(ssenv)
+
+            btenv = ssenv.branch()
+            Byond.Install.load(btenv, 'main')
+            self.ss13_test(btenv)
+            btenv.attr.byond.compilation.out = btenv.attr.test.base_dir / 'ss13.codetree'
+            await Byond.Compilation.generate_code_tree(btenv)
+
+            ctenv = ssenv.branch()
+            ClopenDream.Install.load(ctenv, clopen_id)
+            self.ss13_test(ctenv)
+            ctenv.attr.clopendream.install.working_dir = ctenv.attr.test.base_dir
+            ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
+            await ClopenDream.Install.parse(ctenv)
+        finally:
+            self.env.attr.resources.ss13.release(ssenv)

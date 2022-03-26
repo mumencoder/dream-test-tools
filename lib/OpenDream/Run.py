@@ -26,12 +26,10 @@ class Run(object):
     async def run(env):
         run = env.attr.opendream.run
         env = env.branch()
+        exe_paths = Run.get_exe_path(env)
+        if len(exe_paths) != 1:
+            raise Exception("missing/ambiguous path", exe_paths)
         try:
-
-            exe_paths = Run.get_exe_path(env)
-            if len(exe_paths) != 1:
-                raise Exception("missing/ambiguous path", exe_paths)
-
             await env.attr.resources.opendream_server.acquire(env)
             env.attr.shell.command = f"{exe_paths[0]} {Run.convert_args(run.args)} --cvar opendream.json_path={run.file}"
             env.attr.shell.dir = env.attr.opendream.install.dir
