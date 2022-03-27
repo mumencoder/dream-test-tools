@@ -1,7 +1,7 @@
 
 import os, asyncio
-import json
-import Shared, Byond, ClopenDream, OpenDream
+import json, shutil
+import Shared, Byond, ClopenDream, OpenDream, SS13
 
 import test_runner
 
@@ -226,39 +226,71 @@ class App(object):
         ClopenDream.Install.copy_stdlib(env)
         await self.prepare_empty_clopendream(env)
 
-    def ss13_test(self, env):
+    def load_ss13_test(self, env):
         env.attr.test.root_dir = env.attr.tests.dirs.output / f'ss13.{env.attr.ss13.repo_name}'
         env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
 
-    async def parse_clopendream_test(self, tenv, clopen_id):
+    def iter_ss13_tests(self, env):
+        for repo_name, repo in self.env.attr.ss13.sources.items():
+            ssenv = env.branch()
+
+            ssenv.attr.ss13.repo_name = repo_name
+            ssenv.attr.ss13.base_dir = self.env.attr.ss13.dirs.installs / repo_name
+            SS13.Install.find_dme( ssenv )
+            if ssenv.attr.ss13.dme_file is None:
+                continue
+
+            yield ssenv
+
+    def prepare_parse_clopendream_test(self, tenv, clopen_id):
         btenv = tenv.branch()
         Byond.Install.load(btenv, 'main')
         test_runner.Curated.load_test( btenv )
-        test_runner.Curated.prepare_test( btenv )
-        test_runner.generate_test( btenv )
         btenv.attr.byond.compilation.out = btenv.attr.test.base_dir / 'test.codetree'
-        await Byond.Compilation.generate_code_tree(btenv)
 
         ctenv = tenv.branch()
         ClopenDream.Install.load(ctenv, clopen_id)
         ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
+        yield btenv, ctenv
+
+    def prepare_parse_clopendream_ss13(self, ssenv, clopen_id):
+        btenv = ssenv.branch()
+        Byond.Install.load(btenv, 'main')
+        self.load_ss13_test(btenv)
+        btenv.attr.byond.compilation.out = btenv.attr.test.base_dir / 'ss13.codetree'
+
+        ctenv = ssenv.branch()
+        ClopenDream.Install.load(ctenv, clopen_id)
+        self.load_ss13_test(ctenv)
+        ctenv.attr.clopendream.install.working_dir = ctenv.attr.test.base_dir
+        ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
+        yield btenv, ctenv
+
+    async def parse_clopendream_test(self, tenv, clopen_id):
+        btenv, ctenv = self.prepare_parse_clopendream_test(tenv, clopen_id)
+        test_runner.Curated.prepare_test( btenv )
+        test_runner.generate_test( btenv )
+        await Byond.Compilation.generate_code_tree(btenv)
+
         await ClopenDream.Install.parse(ctenv)
     
     async def parse_clopendream_ss13(self, ssenv, clopen_id):
         try:
             await self.env.attr.resources.ss13.acquire(ssenv)
 
-            btenv = ssenv.branch()
-            Byond.Install.load(btenv, 'main')
-            self.ss13_test(btenv)
-            btenv.attr.byond.compilation.out = btenv.attr.test.base_dir / 'ss13.codetree'
+            btenv, ctenv = self.prepare_parse_clopendream_ss13(ssenv, clopen_id)
+
             await Byond.Compilation.generate_code_tree(btenv)
 
-            ctenv = ssenv.branch()
-            ClopenDream.Install.load(ctenv, clopen_id)
-            self.ss13_test(ctenv)
-            ctenv.attr.clopendream.install.working_dir = ctenv.attr.test.base_dir
-            ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
             await ClopenDream.Install.parse(ctenv)
+        finally:
+            self.env.attr.resources.ss13.release(ssenv)
+
+    async def parse_opendream_ss13(self, ssenv, open_id):
+        try:
+            await self.env.attr.resources.ss13.acquire(ssenv)
+            await OpenDream.Compilation.compile(ssenv)
+            self.load_ss13_test(ssenv)
+            shutil.move( ssenv.attr.ss13.base_dir / "ast.json", ssenv.attr.test.base_dir / "ast.json")
         finally:
             self.env.attr.resources.ss13.release(ssenv)

@@ -7,10 +7,12 @@ from DTT import App
 import test_runner
 
 class Main(App):
-    async def parse_ast(self, ssenv):
-        await OpenDream.Compilation.compile(ssenv)
-        self.ss13_test(ssenv)
-        shutil.move( ssenv.attr.ss13.base_dir / "ast.json", ssenv.attr.test.base_dir / "ast.json")
+    async def run_opendream(self, ssenv):
+        ssenv.attr.git.repo.local_dir = ssenv.attr.ss13.base_dir
+        await Shared.Git.Repo.command(ssenv, 'git clean -fdx')
+
+        ssenv.attr.opendream.compilation.dm_file = ssenv.attr.ss13.dme_file
+        await self.parse_opendream_ss13(ssenv, 'ClopenDream-compat')
 
     async def run(self):
         oenv = self.env.branch()
@@ -29,18 +31,9 @@ class Main(App):
         await Shared.Workflow.run_all(self.env)
         await self.update_report()
 
-        for repo_name, repo in self.env.attr.ss13.sources.items():
-            ssenv = oenv.branch()
-
-            ssenv.attr.ss13.repo_name = repo_name
-            ssenv.attr.ss13.base_dir = self.env.attr.ss13.dirs.installs / repo_name
-            SS13.Install.find_dme( ssenv )
-            if ssenv.attr.ss13.dme_file is None:
-                continue
-
-            ssenv.attr.opendream.compilation.dm_file = ssenv.attr.ss13.dme_file
-            Shared.Workflow.open(ssenv, f"ss13.compile.{repo_name}")
-            Shared.Workflow.set_task(ssenv, self.parse_ast(ssenv))
+        for ssenv in self.iter_ss13_tests(oenv):
+            Shared.Workflow.open(ssenv, f"ss13.compile.{ssenv.attr.ss13.repo_name}")
+            Shared.Workflow.set_task(ssenv, self.run_opendream(ssenv) )
 
         await Shared.Workflow.run_all(self.env)
         await self.update_report()

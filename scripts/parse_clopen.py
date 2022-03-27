@@ -24,15 +24,7 @@ class Main(App):
         await Shared.Workflow.run_all(self.env)
         await self.update_report()
 
-        for repo_name, repo in self.env.attr.ss13.sources.items():
-            ssenv = clenv.branch()
-
-            ssenv.attr.ss13.repo_name = repo_name
-            ssenv.attr.ss13.base_dir = self.env.attr.ss13.dirs.installs / repo_name
-            SS13.Install.find_dme( ssenv )
-            if ssenv.attr.ss13.dme_file is None:
-                continue
-
+        for ssenv in self.iter_ss13_tests(clenv):
             ssenv.attr.byond.compilation.file_path = ssenv.attr.ss13.dme_file
 
             Shared.Workflow.open(ssenv, f"clopendream.ss13.{repo_name}")
