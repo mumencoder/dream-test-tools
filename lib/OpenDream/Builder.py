@@ -6,23 +6,6 @@ import pathlib
 
 import Shared
 
-class Source(object):
-    @staticmethod
-    def load(env, _id):
-        source = env.prefix('.opendream.source')
-        source.id = _id
-        source.platform = 'opendream'
-        source.dir = env.attr.opendream.dirs.sources / source.id
-
-class Install(object):
-    @staticmethod
-    def load(env, _id):
-        install = env.prefix('.opendream.install')
-        install.id = _id
-        install.platform = 'opendream'
-        install.dir = env.attr.opendream.dirs.installs / install.id
-        env.attr.install = install
-
 class Builder(object):
     @staticmethod
     def prepare_compiler_project(env):
@@ -33,7 +16,7 @@ class Builder(object):
         env.attr.dotnet.project.path = env.attr.dotnet.solution.path / 'OpenDreamServer' / 'OpenDreamServer.csproj'
 
     @staticmethod
-    @Shared.wf_tag('opendream.build')
+    @Shared.Workflow.Decorators.status('opendream.build')
     async def build(env):
         build = env.prefix('.opendream.build')
         dotnet = env.prefix('.dotnet')

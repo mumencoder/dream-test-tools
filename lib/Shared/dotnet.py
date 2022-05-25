@@ -22,21 +22,26 @@ class Dotnet(object):
             return params
             
         @staticmethod
-        @Shared.wf_tag('dotnet.restore')
+        @Shared.Workflow.Decorators.status('dotnet.restore')
         async def restore(env):
             params = env.get('.dotnet.restore.params', {})
             env.attr.shell.command = f"dotnet restore {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
             await Shared.Process.shell(env)
             
         @staticmethod
-        @Shared.wf_tag('dotnet.build')
+        @Shared.Workflow.Decorators.status('dotnet.build')
         async def build(env):
             params = env.get('.dotnet.build.params', {})
-            env.attr.shell.command = f"dotnet build -clp:ErrorsOnly {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
+            cmd = f"dotnet build "
+            if env.attr_exists('.dotnet.build.output_dir'):
+                cmd += f"-o {env.attr.dotnet.build.output_dir} "
+            cmd += "-clp:ErrorsOnly "
+            cmd += f"{env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
+            env.attr.shell.command = cmd
             await Shared.Process.shell(env)
 
         @staticmethod
-        @Shared.wf_tag('dotnet.publish')
+        @Shared.Workflow.Decorators.status('dotnet.publish')
         async def publish(env):
             params = env.get('.dotnet.build.params', {})
             cmd = f"dotnet publish " 

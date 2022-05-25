@@ -5,7 +5,7 @@ def get_paths(paths):
 
 def simple_input(benchmark, value):
     input_file = benchmark.input_dir / f'{benchmark.name}.input'
-    with open(input_file , "w") as i:
+    with Shared.File.open(input_file , "w") as i:
         i.write( str(value) )
 
 def fasta_input(benchmark, value):
@@ -14,10 +14,10 @@ def fasta_input(benchmark, value):
 
 async def simple_benchmark(benchmark):
     if benchmark.compilation.source_modified():
-        with open( dream_config.paths.log_dir / "benchmark-compile" / f"{benchmark.id}.txt", "w" ) as f:
+        with Shared.File.open( dream_config.paths.log_dir / "benchmark-compile" / f"{benchmark.id}.txt", "w" ) as f:
             io = {"stdout":f, "stderr":f}
             await benchmark.install.compile( benchmark.test_src, io )
-    with open( benchmark_tmp_dir / 'output' / f"{benchmark.id}.out", "w" ) as f:
+    with Shared.File.open( benchmark_tmp_dir / 'output' / f"{benchmark.id}.out", "w" ) as f:
             io = {"stdout":f, "stderr":f}
             await benchmark.install.run( benchmark.compilation.get_bytecode_file(), io)
 

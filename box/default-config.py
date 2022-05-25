@@ -3,7 +3,7 @@ import os, sys
 import Shared
 
 def setup_roots(env):
-    env.attr.dirs.root = Shared.Path( os.path.expanduser('~/dream-storage') )
+    env.attr.dirs.root = Shared.Path( os.path.expanduser('~/media/dream') )
     env.attr.dirs.source = Shared.Path( os.path.expanduser('~/dream-storage/source/dream-test-tools') )
     env.attr.dirs.ramdisc = Shared.Path( '/media/ramdisk/dream-test-tools' ) 
     env.attr.dirs.tmp = Shared.Path( '/tmp/dream-test-tools' )
@@ -39,23 +39,6 @@ def setup_ss13(env):
     env.attr.ss13.dirs.installs = root_dir / 'installs'
 
 def setup_defaults(env):
-    env.attr.byond.installs = {
-        'default': {'type':'web_official', 'version':'514.1575' }
-    }
-    
-    env.attr.opendream.sources = {
-        'default' : {'type':'repo', 'url':'https://github.com/wixoaGit/OpenDream', 
-            'branch': {'remote':'origin', 'name':'master'} 
-        }
-    }
-
-    env.attr.clopendream.sources = {
-        'default' : {'type':'repo', 'url':'https://github.com/mumencoder/Clopendream-parser', 
-            'branch': {'remote':'origin', 'name':'master'},
-            'opendream_version':'default', 'byond_version':'default'
-        }
-    }
-
     env.attr.ss13.sources = {
         'tgstation-OD': {'type':'repo', 'url':'https://github.com/wixoaGit/tgstation'},
         'Baystation12': {'type':'repo', 'url':'https://github.com/Baystation12/Baystation12'},

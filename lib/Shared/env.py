@@ -1,4 +1,5 @@
 
+import re
 import random
 import types
 
@@ -121,10 +122,25 @@ class Environment(object):
         for branch in self.branches.values():
             yield from branch.all_branches()
 
-    def all_properties(self):
-        for branch in self.all_branches():
-            for p_name, p_value in branch.properties.items():
-                yield branch, p_name, p_value
+    def unique_properties(self):
+        seen = set()
+        for env in self.parent_chain():
+            for prop in env.properties:
+                if prop in seen:
+                    continue
+                seen.add(prop)
+                yield prop
+
+    def filter_properties(self, re_filter):
+        re_filter = re_filter.replace(".", "\.")
+        re_filter = re_filter.replace("*", ".*")
+        pattern = re.compile(re_filter)
+        for prop in self.unique_properties():
+            if pattern.fullmatch(prop):
+                yield prop
+
+    def set_attr(self, path, value):
+        self.properties[path] = value
 
     def get_attr(self, path):
         while path not in self.properties:
@@ -133,7 +149,9 @@ class Environment(object):
                 return None
         return self.properties[path]
 
-    def attr_exists(self, path):
+    def attr_exists(self, path, local=False):
+        if local is True:
+            return path in self.properties
         while path not in self.properties:
             self = self.parent
             if self is None:
@@ -164,10 +182,14 @@ class Environment(object):
             self.branches[segment].name = segment
         return self.branches[segment]
 
-    def merge(self, config):
-        new_env = self.branch()
-        new_env.properties.update(config.properties)
-        new_env.event_handlers.update(config.event_handlers)
+    def merge(self, config, inplace=False):
+        if inplace:
+            new_env = self
+        else:
+            new_env = self.branch()
+        for parent in reversed(list(config.parent_chain())):
+            new_env.properties.update(parent.properties)
+            new_env.event_handlers.update(parent.event_handlers)
         return new_env
 
     def branch(self, path=None):

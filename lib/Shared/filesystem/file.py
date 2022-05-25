@@ -15,6 +15,12 @@ class File(type(pathlib.Path())):
             self.parent.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
+    def open(*args, **kwargs):
+        if isinstance(args[0], Shared.Prefix):
+            raise Exception("attempt to open file from Prefix")
+        return open(*args, **kwargs)
+        
+    @staticmethod
     def stale(source_files, dependent_file):
         dependent_mtime = File.mtime(dependent_file)
         for source_file in source_files:
@@ -25,7 +31,7 @@ class File(type(pathlib.Path())):
     @staticmethod
     def read_if_exists(file_path, exist_fn=None):
         if os.path.exists(file_path):
-            with open(file_path) as f:
+            with File.open(file_path) as f:
                 if exist_fn:
                     return exist_fn(f.read())
                 else:

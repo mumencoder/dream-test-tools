@@ -43,7 +43,7 @@ class Install(object):
         config["empty_dir"] = env.attr.dirs.state / 'empty'
         input_path = env.attr.clopendream.install.working_dir / 'parse_input.json'
         output_path = env.attr.clopendream.install.working_dir / 'parse_output.json'
-        with open(input_path, "w") as f:
+        with Shared.File.open(input_path, "w") as f:
             json.dump(config, f, cls=Shared.Json.BetterEncoder)
 
         env = env.branch()
@@ -61,7 +61,7 @@ class Install(object):
         config["mismatch_dir"] = env.attr.clopendream.run.working_dir / 'mismatch'
         input_path = env.attr.clopendream.run.working_dir / 'compare_input.json'
         output_path = env.attr.clopendream.run.working_dir / 'compare_output.json'
-        with open(input_path, "w") as f:
+        with Shared.File.open(input_path, "w") as f:
             json.dump(config, f, cls=Shared.Json.BetterEncoder)
 
         env = env.branch()

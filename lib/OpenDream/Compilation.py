@@ -15,7 +15,7 @@ class Compilation(object):
     @staticmethod
     def get_exe_path(env):
         paths = []
-        for root_dir, dirs, files in os.walk(env.attr.opendream.install.dir):
+        for root_dir, dirs, files in os.walk(env.attr.install.dir):
             for filename in files:
                 if filename == "DMCompiler":
                     path = os.path.join(root_dir, filename)
@@ -24,23 +24,21 @@ class Compilation(object):
 
     @staticmethod
     async def compile(env):
-        async def log_returncode(env):
-            with open(env.attr.opendream.compilation.dm_file.parent / 'compile.returncode.log', "w") as f:
-                f.write( str(env.attr.process.p.returncode) )
+        compilation = env.attr.compilation
 
-        compilation = env.attr.opendream.compilation
-        if not env.attr_exists('.opendream.compilation.args'):
+        async def log_returncode(env):
+            compilation.returncode = env.attr.process.p.returncode
+
+        if not env.attr_exists('.compilation.args'):
             compilation.args = {}
 
         env = env.branch()
-        env.attr.shell.dir = env.attr.opendream.compilation.dm_file.parent
-        env.attr.process.log_mode = None
-        env.attr.process.log_path = env.attr.opendream.compilation.dm_file.parent / 'compile.log.txt'
+        env.attr.shell.dir = compilation.dm_file_path.parent
 
         exe_paths = Compilation.get_exe_path(env)
         if len(exe_paths) != 1:
-            raise Exception("missing/ambiguous path", exe_paths)
+            raise Exception("missing/ambiguous path", env.attr.install.dir, exe_paths)
 
-        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file}"
+        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path}"
         env.event_handlers['process.complete'] = log_returncode
         await Shared.Process.shell(env)

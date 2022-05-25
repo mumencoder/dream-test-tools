@@ -12,19 +12,19 @@ class Process(object):
         return out, err
     
     @staticmethod
-    @Shared.wf_tag('process')
+    @Shared.Workflow.Decorators.status('Process.shell')
     async def shell(env):
         env = env.branch()
+        res = await env.attr.resources.process.acquire()
         try:
-            await env.attr.resources.process.acquire(env)
-            
             process = env.prefix('.process')
             shell = env.prefix('.shell')
 
             if process.log_mode == "auto":
                 process.log_path = process.auto_log_path / Shared.Random.generate_string(16)
+                
             if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
-                process.stdout = process.stderr = open(process.log_path, "w")
+                process.stdout = process.stderr = Shared.File.open(process.log_path, "w")
 
             with Shared.Workflow.status(env, "launching process"):
                 shell_env = dict(os.environ)
@@ -53,4 +53,4 @@ class Process(object):
 
                 await env.send_event("process.complete", env)
         finally:
-            env.attr.resources.process.release(env)
+            env.attr.resources.process.release(res)

@@ -2,12 +2,18 @@
 import os
 import pathlib
 
+import Shared
+
 class Push(object):
     def __init__(self, folder):
         self.folder = folder
 
     def __enter__(self):
         self.old_folder = os.getcwd()
+
+        if not os.path.exists(self.folder):
+            self.folder.mkdir(parents=True, exist_ok=True)
+
         os.chdir(self.folder)
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -16,6 +22,11 @@ class Push(object):
 class Path(type(pathlib.Path())):
     def __init__(self, path):
         self.ensure_parent_folder()
+
+    def __add__(self, path):
+        newpath = Path( super().__truediv__(path) )
+        newpath.ensure_folder()
+        return newpath
 
     def __truediv__(self, path):
         newpath = Path( super().__truediv__(path) )
@@ -36,7 +47,16 @@ class Path(type(pathlib.Path())):
             os.mkdir(self)
 
     @staticmethod            
-    def sync_folders(src, dest):
-        os.system(f'rsync -r {src}/ {dest}')
+    async def sync_folders(env, src, dest):
+        env = env.branch()
+        env.attr.shell.command = f"rsync -r {src}/ {dest}"
+        await Shared.Process.shell(env)
+
+    @staticmethod            
+    async def full_sync_folders(env, src, dest):
+        env = env.branch()
+        env.attr.shell.command = f"rsync --delete -r {src}/ {dest}"
+        await Shared.Process.shell(env)
+
 
 
