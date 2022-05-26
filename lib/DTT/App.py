@@ -11,14 +11,12 @@ from .SS13 import *
 from .Reports import *
 from .TestCase import *
 from .Tests import *
-from .Updates import *
 
 class App(
     ByondApp, ClopenDreamApp, OpenDreamApp,
     SS13App, 
     CompareApp, 
-    TestsApp, ReportsApp,
-    UpdateApp):
+    TestsApp, ReportsApp):
     def __init__(self):
         pass
 
@@ -44,7 +42,8 @@ class App(
         self.env.attr.git.repo.remote = "origin"
 
         self.env.attr.resources.git = Shared.CountedResource(2)
-        self.env.attr.resources.process = Shared.CountedResource(4)
+        self.env.attr.resources.build = Shared.CountedResource(2)
+        self.env.attr.resources.process = Shared.CountedResource(6)
 
         Shared.Workflow.init( self.env )
         Shared.Scheduler.init( self.env )

@@ -22,11 +22,19 @@ class Dotnet(object):
             return params
             
         @staticmethod
+        async def run(env):
+            try:
+                await env.attr.resources.build.acquire()
+                await Shared.Process.shell(env)
+            finally:
+                env.attr.resources.build.release(env)
+
+        @staticmethod
         @Shared.Workflow.Decorators.status('dotnet.restore')
         async def restore(env):
             params = env.get('.dotnet.restore.params', {})
             env.attr.shell.command = f"dotnet restore {env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
-            await Shared.Process.shell(env)
+            await Dotnet.Project.run(env)
             
         @staticmethod
         @Shared.Workflow.Decorators.status('dotnet.build')
@@ -38,7 +46,7 @@ class Dotnet(object):
             cmd += "-clp:ErrorsOnly "
             cmd += f"{env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
             env.attr.shell.command = cmd
-            await Shared.Process.shell(env)
+            await Dotnet.Project.run(env)
 
         @staticmethod
         @Shared.Workflow.Decorators.status('dotnet.publish')
@@ -52,4 +60,4 @@ class Dotnet(object):
             cmd += "-p:PublishReadyToRun=true "
             cmd += f"{env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
             env.attr.shell.command = cmd
-            await Shared.Process.shell(env)
+            await Dotnet.Project.run(env)

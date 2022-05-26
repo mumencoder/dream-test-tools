@@ -19,6 +19,7 @@ class Main(DTT.App):
         wixenv = self.env.branch()
         wixenv.attr.github.owner = 'wixoaGit'
         wixenv.attr.github.repo = 'OpenDream'
+        Shared.Github.prepare(wixenv)
         self.wixenv = wixenv
 
         self.top_group = self.task_group('top')
@@ -84,7 +85,6 @@ class Main(DTT.App):
         wixenv = self.env.branch()
         wixenv.attr.github.owner = 'wixoaGit'
         wixenv.attr.github.repo = 'OpenDream'
-        Shared.Github.prepare(wixenv)
         compares = wixenv.attr.scheduler.result_state.get(f'{wixenv.attr.github.repo_id}.prs.compare_commits')
         summary = {}
         for compare in compares:
@@ -130,9 +130,16 @@ class Main(DTT.App):
     async def run(self):
         self.byond_ref_version = '514.1566'
         await self.run_init()
-        #await self.run_byond_tests()
         await self.prep_opendream()
-        #await self.run_opendream_tests()
+        Shared.Github.list_all_commits( self.wixenv )
+        await asyncio.sleep(5.0)
+
+    async def run2(self):
+        self.byond_ref_version = '514.1566'
+        await self.run_init()
+        await self.run_byond_tests()
+        await self.prep_opendream()
+        await self.run_opendream_tests()
         await self.compare_reports()
         await asyncio.sleep(5.0)
 

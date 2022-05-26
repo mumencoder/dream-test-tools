@@ -109,8 +109,9 @@ class OpenDreamApp(object):
 
                 prenv.attr.git.repo.remote_ref = penv.attr.build_commit
                 await Shared.Git.Repo.ensure_commit(prenv)
+                await Shared.Git.Repo.command(prenv, 'git submodule deinit --all')
                 await Shared.Git.Repo.command(prenv, 'git clean -fdx')
-                # deinit and reinit submodules here probably
+                await Shared.Git.Repo.init_all_submodules(prenv)
                 OpenDream.Install.from_github(prenv, 'defaults')
                 await self.prepare_build(prenv)
                 await OpenDream.Builder.build(prenv)

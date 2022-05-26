@@ -50,7 +50,7 @@ class CompareApp(object):
 
     @staticmethod
     def match_ccode(env1, env2):
-        return (env1.attr.result.ccode == 0) and (env2.attr.result.ccode == 0)
+        return (env1.attr.result.ccode == 0) is (env2.attr.result.ccode == 0)
 
     @staticmethod
     def match_runlog(env1, env2):
