@@ -71,3 +71,34 @@ class PullRequestReport(BaseReport):
 
     def add_compare_report(self, report):
         self.compare_report = report
+
+class CommitHistoryReport(BaseReport):
+    def __init__(self, repo_report, ch_info):
+        self.repo_report = repo_report
+        self.ch_info = ch_info
+
+        self.link_title = f"Commit History - {ch_info['sha']}"
+        self.compare_report = None
+
+    def get_pages(self):
+        yield self
+        yield from self.compare_report.get_pages()
+
+    def get_location(self):
+        return f"./repo-{self.repo_report.rid}-history-{self.ch_info['sha']}.html"
+
+    def table_entry(self):
+        e = tr()
+        with e:
+            td(html.escape(f'{self.ch_info["sha"]}'))
+            td(f'{self.ch_info["commit"]["message"]}')
+            if self.compare_report is not None:
+                td(self.compare_report.link_html() )
+                td(self.compare_report.summary() )
+        return e
+
+    def to_html(self):
+        return ""
+
+    def add_compare_report(self, report):
+        self.compare_report = report

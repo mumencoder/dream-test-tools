@@ -30,12 +30,12 @@ class WorkflowReport(object):
             style(raw(stylesheet))
 
     @staticmethod
-    def log(env):
+    def log(wf):
         doc = dom.document(title='WF Log')
         WorkflowReport.common(doc)
 
         with doc:
-            for entry in env.attr.wf.log:
+            for entry in wf.log:
                 hr()
                 if entry['type'] == "text":
                     div(pre(code(entry["text"])), cls="text")
@@ -64,18 +64,14 @@ class WorkflowReport(object):
                     th("State")
                     th("Status")
                     th("Log")
-                for wenv in env.attr.workflows:
-                    wf = wenv.attr.wf
+                for wf in env.attr.workflows:
                     if wf.task.name is None:
                         continue
-                    if wenv.attr_exists('.wf.log_path'):
-                        log_td = lambda: td( a("*", href=f"file://{wf.log_path}") )
+                    log_td = lambda: td( a("*", href=f"file://{wf.log_path}") )
                     tr(td(wf.task.name), td(wf.task.state), td(wf.status[-1]), log_td())
 
-        for wenv in env.attr.workflows:
-            wf = wenv.attr.wf
-            if wenv.attr_exists('.wf.log_path'):
-                with open(wf.log_path, "w") as f:
-                    f.write( str(WorkflowReport.log(wenv)) )
+        for wf in env.attr.workflows:
+            with open(wf.log_path, "w") as f:
+                f.write( str(WorkflowReport.log(wf)) )
 
         return doc

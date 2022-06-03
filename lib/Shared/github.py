@@ -34,7 +34,7 @@ class Github(object):
 
     @staticmethod
     def parse_datetime(s):
-        return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ")
+        return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").timestamp()
 
     @staticmethod
     def list_all_commits(env, existing_commits=None):
@@ -63,16 +63,17 @@ class Github(object):
 
         if existing_commits is None:
             existing_commits = {}
+
+        if len(existing_commits) == 0:
             url = f'{url_prefix}/commits?per_page=100'
             more_commits = Github.make_request(env, url)
             if len(more_commits) == 0:
                 raise Exception("no results on fresh listing")
             add_commits(more_commits)
         else:
-            add_commits(existing_commits)
+            add_commits(existing_commits.values())
 
         while not have_newest or not have_oldest:
-            print(newest_commit["time"], oldest_commit["time"])
             if not have_newest:
                 url = f'{url_prefix}/commits?per_page=100&since={newest_commit["commit"]["committer"]["date"]}'
                 more_commits = Github.make_request(env, url)

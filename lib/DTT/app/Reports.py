@@ -3,15 +3,24 @@ from .common import *
 
 class ReportsApp(object):
     def task_workflow_report(self):
+        env = self.env.branch()
         async def workflow_report(penv, senv):
             def write_reports():
-                with Shared.File.open(penv.attr.wf.report_path, "w") as f:
+                print("write")
+                with Shared.File.open(penv.attr.workflow.report_path, "w") as f:
                     f.write( str(Shared.WorkflowReport.all_workflows(penv)) )
-            while self.running:
+            try:
+                while penv.attr.scheduler.running:
+                    write_reports()
+                    for i in range(0,10):
+                        if penv.attr.scheduler.running is False:
+                            break
+                        await asyncio.sleep(0.5)
                 write_reports()
-                await asyncio.sleep(5.0)
-            write_reports()
-        return Shared.Task(self.env, workflow_report, background=True)
+            except:
+                import traceback
+                print( traceback.print_exc() )
+        return Shared.Task(env, workflow_report, tags={'action':'workflow_report'}, background=True)
             
     def setup_reports(self):
         self.root_report = RootReport()

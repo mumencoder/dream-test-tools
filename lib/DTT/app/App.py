@@ -1,22 +1,7 @@
 
-import os, asyncio
-import json, shutil
-import Shared, Byond, ClopenDream, OpenDream, SS13
+from .common import *
 
-from .Byond import *
-from .ClopenDream import *
-from .Compare import *
-from .OpenDream import *
-from .SS13 import *
-from .Reports import *
-from .TestCase import *
-from .Tests import *
-
-class App(
-    ByondApp, ClopenDreamApp, OpenDreamApp,
-    SS13App, 
-    CompareApp, 
-    TestsApp, ReportsApp):
+class App(ReportsApp):
     def __init__(self):
         pass
 
@@ -26,11 +11,9 @@ class App(
 
         self.env.attr.test_mode = "all"
 
-        self.env.attr.scheduler.task_state = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'tasks', 
+        self.env.attr.state.tasks = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'tasks', 
             loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
-        self.env.attr.scheduler.event_state = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'events', 
-            loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
-        self.env.attr.scheduler.result_state = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'results',
+        self.env.attr.state.results = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'results',
             loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
 
         self.env.event_handlers['process.complete'] = self.handle_process_complete
@@ -48,8 +31,8 @@ class App(
         Shared.Workflow.init( self.env )
         Shared.Scheduler.init( self.env )
 
-        self.env.attr.wf.report_path = self.env.attr.dirs.ramdisc / "workflow_report.html"
-        print(f"file://{self.env.attr.wf.report_path}")
+        self.env.attr.workflow.report_path = self.env.attr.dirs.ramdisc / "workflow_report.html"
+        print(f"file://{self.env.attr.workflow.report_path}")
 
         self.load_states(self.env)
 
@@ -65,7 +48,7 @@ class App(
             env.set_attr(name, state)
 
     def save_states(self, env):
-        for name in env.filter_properties(".state.*"):
+        for name in env.filter_properties(".state.app.*"):
             state_filename = env.attr.dirs.state / 'app' / f'{name}.json'
             result = json.dumps( env.get_attr(name).finitize(), cls=Shared.Json.BetterEncoder)
             with Shared.File.open(state_filename, "w") as f:
@@ -76,15 +59,12 @@ class App(
         Shared.Scheduler.deinit(self.env)
 
     async def start(self):
-        self.running = True
         self.init()
         try:
             await self.run()
         finally:
             await self.deinit()
-            self.running = False
             os.system('stty sane')
-        #self.update_report(self.env)
 
     def load_configs(self):
         config_dir = os.path.abspath( os.path.expanduser("~/dream-storage/config") )

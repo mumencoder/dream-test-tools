@@ -18,6 +18,7 @@ class Install(object):
         install = env.prefix('.byond.install')
         install.id = _id
         install.platform = "byond"
+        install.tag = f'{install.platform}.{install.id}'
         install.dir = env.attr.byond.dirs.installs / install.id
 
         env.attr.install = env.attr.byond.install

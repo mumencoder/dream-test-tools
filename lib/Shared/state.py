@@ -16,6 +16,9 @@ class FilesystemState(object):
         
         with Shared.File.open(self.path / key, "r" + self.mode) as f:
             result = f.read()
+            if len(result) == 0:
+                return default
+                
         return self.loader( result )
 
     def set(self, key, value):

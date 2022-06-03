@@ -57,3 +57,27 @@ class ClopenDreamApp(object):
         ClopenDream.Install.load(ctenv, clopen_id)
         ctenv.attr.byond.codetree = btenv.attr.byond.compilation.out
         yield btenv, ctenv
+
+    async def compare_clopen_opendream(env):
+        for tenv in test_runner.list_all_tests(env, env.attr.tests.dirs.dm_files):
+            clenv = tenv.branch()
+            ClopenDream.Source.load(clenv, 'currentdev')
+            ClopenDream.Install.load(clenv, 'currentdev')
+
+            test_runner.Curated.load_test( clenv )
+            clenv.attr.clopendream.run.working_dir = clenv.attr.test.base_dir
+
+            clod_json_path = clenv.attr.test.base_dir / 'clopen_ast.json'
+            if not os.path.exists(clod_json_path):
+                continue
+            clenv.attr.clopendream.run.ast1 = clod_json_path
+
+            oenv = tenv.branch()
+            OpenDream.Source.load(oenv, 'ClopenDream-compat')
+            OpenDream.Install.load(oenv, 'ClopenDream-compat')
+            test_runner.Curated.load_test( oenv )
+
+            od_json_path = oenv.attr.test.base_dir / 'ast.json'
+            if not os.path.exists(od_json_path):
+                continue
+            clenv.attr.clopendream.run.ast2 = od_json_path
