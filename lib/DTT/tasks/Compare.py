@@ -9,8 +9,10 @@ class Compare(object):
         env.attr.compare.prev = env.branch()
         env.attr.compare.next = env.branch()
         base.Byond.Install.load(env.attr.compare.ref, ref)
-        base.OpenDream.Install.from_github(env.attr.compare.prev, commit=prev)
-        base.OpenDream.Install.from_github(env.attr.compare.next, commit=new)
+        env.attr.compare.prev.attr.git.repo.commit = prev
+        base.OpenDream.Install.from_github(env.attr.compare.prev)
+        env.attr.compare.next.attr.git.repo.commit = new
+        base.OpenDream.Install.from_github(env.attr.compare.next)
 
     def compare_test(env):
         renv = env.attr.compare.ref

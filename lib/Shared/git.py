@@ -77,44 +77,48 @@ class Git(object):
             finally:
                 env.attr.resources.git.release(res)
 
+        async def resolve_branch(env):
+            branch_info = env.attr.git.repo.branch
+
+            if branch_info["name"] not in repo.heads:
+                branch = repo.create_head(branch_info["name"])
+            else:
+                branch = repo.heads[branch_info["name"]]
+
+            if 'remote' in branch_info:
+                remote = repo.remote( branch_info['remote'] )
+                if branch_info["name"] not in remote.refs:
+                    remote.fetch(branch_info["name"])
+                branch.set_tracking_branch( remote.refs[branch_info["name"]] )
+                branch.set_commit( remote.refs[branch_info["name"]] )
+
+            repo.head.reset( branch, working_tree=True )
+
+            if 'remote' in branch_info:
+                if repo.head.commit != remote.refs[branch_info["name"]].commit:
+                    raise Exception("repo head mismatch")
+
         @staticmethod
         async def ensure_commit(env):
             repo = env.attr.git.api.repo
 
-            if env.attr_exists(".git.repo.branch"):
-                branch_info = env.attr.git.repo.branch
-
-                if branch_info["name"] not in repo.heads:
-                    branch = repo.create_head(branch_info["name"])
-                else:
-                    branch = repo.heads[branch_info["name"]]
-
-                if 'remote' in branch_info:
-                    remote = repo.remote( branch_info['remote'] )
-                    if branch_info["name"] not in remote.refs:
-                        remote.fetch(branch_info["name"])
-                    branch.set_tracking_branch( remote.refs[branch_info["name"]] )
-                    branch.set_commit( remote.refs[branch_info["name"]] )
-
-                repo.head.reset( branch, working_tree=True )
-
-                if 'remote' in branch_info:
-                    if repo.head.commit != remote.refs[branch_info["name"]].commit:
-                        raise Exception("repo head mismatch")
-
-            elif env.attr_exists(".git.repo.remote_ref"):
-                if env.attr.git.repo.remote_ref not in env.attr.git.repo.remote:
-                    repo.remote( env.attr.git.repo.remote ).fetch( env.attr.git.repo.remote_ref )
-                repo.head.reset( env.attr.git.repo.remote_ref, working_tree=True )
-
+            if env.attr_exists(".git.repo.remote"):
+                remote = repo.remote( env.attr.git.repo.remote )
+                if env.attr.git.repo.commit not in remote.refs:
+                    remote.fetch( env.attr.git.repo.commit )
+                repo.head.reset( env.attr.git.repo.commit, working_tree=True )
             else:
-                repo.head.reset( repo.remote('origin').refs['HEAD'], working_tree=True )
+                repo.head.reset( env.attr.git.repo.commit, working_tree=True )
 
         @staticmethod
         async def freshen(env):
             repo = env.attr.git.api.repo
             repo.head.reset( 'origin/HEAD', working_tree=True )
             repo.remote('origin').pull()
+
+        @staticmethod
+        def load(env):
+            env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
 
         @staticmethod
         async def ensure(env):
@@ -135,4 +139,4 @@ class Git(object):
                         await Shared.Process.shell(env)
                     finally:
                         env.attr.resources.git.release(res)
-            env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
+            Git.Repo.load(env)

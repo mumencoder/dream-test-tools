@@ -26,7 +26,15 @@ class OpenDream(object):
         env.attr.dotnet.solution.path = env.attr.install.dir
         env.attr.resources.opendream_server = Shared.CountedResource(1)
 
-    def build_commit(env):
+    async def run_build_commit(env):
+        await Shared.Git.Repo.ensure_commit(env)
+        await Shared.Git.Repo.command(env, 'git submodule deinit --all')
+        await Shared.Git.Repo.command(env, 'git clean -fdx')
+        await Shared.Git.Repo.init_all_submodules(env)
+        await OpenDream.prepare_build(env)
+        await base.OpenDream.Builder.build(env)
+
+    def build_commit_shared(env):
         async def task(penv, senv):
             try:
                 while True:
@@ -39,44 +47,50 @@ class OpenDream(object):
                 await Shared.Git.Repo.ensure(senv)
                 base.OpenDream.Source.load( senv, repo["data"]["source_id"] )
 
-                await Shared.Git.Repo.ensure_commit(senv)
-                await Shared.Git.Repo.command(senv, 'git submodule deinit --all')
-                await Shared.Git.Repo.command(senv, 'git clean -fdx')
-                await Shared.Git.Repo.init_all_submodules(senv)
-                base.OpenDream.Install.from_github(senv)
-                await OpenDream.prepare_build(senv)
-                await base.OpenDream.Builder.build(senv)
+                await OpenDream.run_build_commit(senv)
             finally:
                 senv.attr.resources.shared_opendream_repo.release(repo)
         return Shared.Task(env, task, tags={'action':'build_commit'} )
 
-    def load_install_from_commit(env, commit):
+    def build_commit_local(env):
+        async def task(penv, senv):
+            env.attr.source.dir = env.attr.git.repo.local_dir
+            OpenDream.run_build_commit(senv)
+        return Shared.Task(env, task, tags={'action':'build_commit'} )
+
+    def load_install_from_local(env, commit):
         env = env.branch()
         Shared.Task.tags(env, {'commit':commit} )
         async def task(penv, senv):
-            senv.attr.git.repo.remote_ref = commit
+            senv.attr.git.repo.commit = commit
+            senv.attr.platform_cls = base.OpenDream
+            Install.config(senv)
+        return Shared.Task(env, task, tags={'action':'load_install_from_local'} )
+
+    def load_install_from_github(env, commit, remote=None):
+        env = env.branch()
+        Shared.Task.tags(env, {'commit':commit} )
+        async def task(penv, senv):
+            senv.attr.git.repo.remote = 'origin'
+            senv.attr.git.repo.commit = commit
             senv.attr.platform_cls = base.OpenDream
             base.OpenDream.Install.from_github(senv)
             Install.config(senv)
-        return Shared.Task(env, task, tags={'action':'load_test_installs'} )
+        return Shared.Task(env, task, tags={'action':'load_install_from_github'} )
 
-    def build_if_incomplete_tests(env, bottom):
-        env = env.branch()
+    def add_local_commit(env, commit):
+        Shared.Task.tags( env, tags={'commit_type':'local'} )
         async def task(penv, senv):
-            if len(senv.attr.tests.incomplete) == 0:
-                return
-
-            tasks = []
-            tasks.append( OpenDream.build_commit(env) )
-            tasks.append( Tests.run_incomplete_tests(env) )
-            Shared.Task.chain( penv.attr.self_task, *tasks )
-            Shared.Task.link_exec( tasks[-1], bottom)
-        return Shared.Task(env, task, tags={'action':'build_if_incomplete_tests'} )
+            senv.attr.opendream.commit_tasks.append( OpenDream.load_install_from_local(env, commit) )
+        return Shared.Task(env, task, tags={'action':'load_pr_commits'} )
 
     def load_pr_commits(env):
         Shared.Task.tags( env, tags={'commit_type':'pr'} )
         async def task(penv, senv):
-            senv.attr.opendream.commits = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.commits' )
+            commit_tasks = []
+            for commit in penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.commits' ):
+                commit_tasks.append( OpenDream.load_install_from_github(env, commit) )
+            senv.attr.opendream.commit_tasks = commit_tasks
         return Shared.Task(env, task, tags={'action':'load_pr_commits'} )
 
     def load_history_commits(env, compare_limit):
@@ -92,18 +106,35 @@ class OpenDream(object):
                 commits.add( compare['new'] )
                 commits.add( compare['base'] )
                 compares.append( compare )
+            commit_tasks = []
+            for commit in commits:
+                commit_tasks.append( OpenDream.load_install_from_github(env, commit) )
             senv.attr.opendream.history_compares = compares
-            senv.attr.opendream.commits = commits
+            senv.attr.opendream.commit_tasks = commit_tasks
         return Shared.Task(env, task, tags={'action':'load_history_commits'} )
 
     def process_commits(env):
         env = env.branch()
+
+        def no_incomplete_tests(penv, senv):
+            return len(senv.attr.tests.incomplete) == 0
+
+        def build_failure(penv, senv):
+            if len( base.OpenDream.Compilation.get_exe_path(senv) ) != 1:
+                return True
+            if len( base.OpenDream.Run.get_exe_path(senv) ) != 1:
+                return True
+            return False
+
         async def task(penv, senv):
-            for commit in senv.attr.opendream.commits:
+            for commit_task in senv.attr.opendream.commit_tasks:
                 tasks = []
-                tasks.append( OpenDream.load_install_from_commit(env, commit) )
+                tasks.append( commit_task )
                 tasks.append( Tests.load_incomplete_tests(env, 'default') )
-                tasks.append( OpenDream.build_if_incomplete_tests(env, bottom) )
+                tasks.append( Shared.Task.halt_on_condition(env, no_incomplete_tests, "1" ) )
+                tasks.append( OpenDream.build_commit_shared(env) )
+                tasks.append( Shared.Task.halt_on_condition(env, build_failure, "2"))
+                tasks.append( Tests.run_incomplete_tests(env) )
                 Shared.Task.chain( t, *tasks )
                 Shared.Task.link_exec( tasks[-1], bottom)
 

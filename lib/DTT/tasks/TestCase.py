@@ -38,6 +38,13 @@ class TestCase(object):
             env.attr.test.text = f.read() + '\n'
 
     @staticmethod
+    def compute_lines(env):
+        lined_text = []
+        for i, line in enumerate(env.attr.test.text.split('\n')):
+            lined_text.append( f'{str(env.attr.test.line_start+i).ljust(4)}{line}')
+        env.attr.test.lined_text = "\n".join(lined_text)
+
+    @staticmethod
     def wrap(env):
         TestCase.load_test_text(env)
 
@@ -57,7 +64,9 @@ class TestCase(object):
                 else
                     _log[name] = value""")
 
+        env.attr.test.line_start = len(text.split('\n'))
         text += env.attr.test.text
+        TestCase.compute_lines(env)
 
         text += textwrap.dedent(f"""
             /world/New()

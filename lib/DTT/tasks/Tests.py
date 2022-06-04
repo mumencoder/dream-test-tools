@@ -19,6 +19,7 @@ class Tests(object):
 
         async def save_task(penv, senv):
             senv.attr.state.results.set(f'{senv.attr.tests.tag}.tests.completed', list(senv.attr.tests.completed))
+            await senv.send_event('tests.completed', senv)
 
         t1 = Shared.Task(env, create_task, tags={'action':'create_task'} )
         t2 = Shared.Task(env, save_task, tags={'action':'save_task'} )
@@ -89,14 +90,20 @@ class Tests(object):
     async def wait_run_complete(env):
         process = env.attr.process.p
         fin_path = env.attr.test.base_dir / 'fin.out'
+        start_time = time.time()
+        kill_proc = False
         while process.returncode is None:
+            if time.time() - start_time > 20:
+                kill_proc = True
             if os.path.exists(fin_path):
                 if os.stat(fin_path).st_mtime > env.attr.process.start_time:
-                    try:
-                        process.kill()
-                        await asyncio.wait_for(process.wait(), timeout=2.0)
-                    except asyncio.exceptions.TimeoutError:
-                        pass
+                    kill_proc = True
+            if kill_proc:
+                try:
+                    process.kill()
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                except asyncio.exceptions.TimeoutError:
+                    pass
             try:
                 await asyncio.wait_for(process.wait(), timeout=0.10)
             except asyncio.exceptions.TimeoutError:

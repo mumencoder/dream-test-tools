@@ -1,5 +1,5 @@
 
-import asyncio, time, os, sys
+import asyncio, time, os, sys, shutil
 import collections
 
 import Shared
@@ -13,6 +13,13 @@ class Main(DTT.App):
         self.env.attr.tasks.base_tags = {}
 
         env = self.env.branch()
+
+        async def cleanup_opendream(senv):
+            if senv.attr.platform_cls is OpenDream:
+                print("==============================cleanup", senv.attr.install.dir)
+                shutil.rmtree( senv.attr.install.dir )
+
+        self.env.event_handlers['tests.completed'] = cleanup_opendream
 
         self.top_task = Shared.Task.task_group(env, 'top')
         self.env.attr.tasks.top_task = self.top_task
@@ -67,7 +74,7 @@ class Main(DTT.App):
         tasks = []
         tasks.append( DTT.tasks.Git.initialize_github(env, 'wixoaGit', 'OpenDream', 'base') )
         tasks.append( DTT.tasks.Git.update_commit_history(env) )
-        tasks.append( DTT.tasks.OpenDream.load_history_commits(env, 32) )
+        tasks.append( DTT.tasks.OpenDream.load_history_commits(env, 16) )
         self.tasks[ 'wixoaGit.history_commits'] = tasks[-1]
         tasks.append( DTT.tasks.OpenDream.process_commits(env) )
         Shared.Task.chain( self.top_task, *tasks )
@@ -93,6 +100,7 @@ class Main(DTT.App):
             pr_report.compare_report = compare["report"]
         for tenv in DTT.TestCase.list_all(wixenv, self.env.attr.tests.dirs.dm_files):
             DTT.TestCase.load_test_text(tenv)
+            DTT.TestCase.wrap(tenv)
             for compare in compares:
                 cenv = wixenv.branch()
                 DTT.tasks.Compare.compare_load_environ(cenv, self.byond_ref_version, compare['base'], compare['pr'])
@@ -115,6 +123,7 @@ class Main(DTT.App):
             history_report.compare_report = compare["report"]
         for tenv in DTT.TestCase.list_all(wixenv, self.env.attr.tests.dirs.dm_files):
             DTT.TestCase.load_test_text(tenv)
+            DTT.TestCase.wrap(tenv)
             for compare in compares:
                 cenv = wixenv.branch()
                 DTT.tasks.Compare.compare_load_environ(cenv, self.byond_ref_version, compare['base'], compare['new'])

@@ -76,7 +76,7 @@ class Git(object):
                     prenv.attr.pull_info = pull_info
 
                     pr_commit = pull_info['merge_commit_sha']
-                    prenv.attr.git.repo.remote_ref = pr_commit
+                    prenv.attr.git.repo.commit = pr_commit
                     await Shared.Git.Repo.ensure_commit(prenv)
                     if len(prenv.attr.git.api.repo.head.commit.parents) != 2:
                         raise Exception("expected 2 parent commits from PR sha", prenv.attr.git.api.repo.head.commit.parents)

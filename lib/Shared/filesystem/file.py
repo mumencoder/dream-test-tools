@@ -7,7 +7,6 @@ import Shared
 
 class File(type(pathlib.Path())):
     def __init__(self, *args, **kwargs):
-        super(self).__init__(*args, **kwargs)
         self.ensure_folder()
 
     def ensure_folder(self):

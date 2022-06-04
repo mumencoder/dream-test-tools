@@ -26,7 +26,7 @@ class App(ReportsApp):
 
         self.env.attr.resources.git = Shared.CountedResource(2)
         self.env.attr.resources.build = Shared.CountedResource(2)
-        self.env.attr.resources.process = Shared.CountedResource(6)
+        self.env.attr.resources.process = Shared.CountedResource(8)
 
         Shared.Workflow.init( self.env )
         Shared.Scheduler.init( self.env )

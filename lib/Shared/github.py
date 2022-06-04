@@ -101,7 +101,7 @@ class Github(object):
         env.attr.source.id = f'github.{env.attr.github.repo_id}.{pull_info["merge_commit_sha"]}'
         # TODO: this should not really have a default
         env.attr.git.repo.remote = 'origin'
-        env.attr.git.repo.remote_ref = pull_info["merge_commit_sha"]
+        env.attr.git.repo.commit = pull_info["merge_commit_sha"]
 
     @staticmethod
     def pull_request_buildable(env):

@@ -26,26 +26,31 @@ class CompareReport(BaseReport):
     def add_test(self, tenv):
         self.tests.append( tenv )
         self.by_state["tests"][ tenv.attr.compare.result ].append( tenv )
-        self.test_pages[tenv.attr.compare.ref.attr.test.id] = SimpleReport("Compare details", self.render_test_html(tenv) )
+        self.test_pages[tenv.attr.compare.ref.attr.test.id] = SimpleReport(f"{self.page_id}.{tenv.attr.test.id}", "Compare details", self.render_test_html(tenv) )
 
     def render_test_html(self, tenv):
         ele = div()
         with ele:
             hr()
             h2("Test: ")
-            pre(code(tenv.attr.compare.ref.attr.test.text))
+            pre(code(tenv.attr.compare.ref.attr.test.lined_text))
             hr()
             ref = tenv.attr.compare.ref
             prev = tenv.attr.compare.prev
             nex = tenv.attr.compare.next
             envs = [ref, prev, nex]
 
-            h2(f'Reference install')
-            pre(code(f'{ref.attr.install.platform}.{ref.attr.install.id}'))
-            h2(f'Base install')
-            pre(code(f'{prev.attr.install.platform}.{prev.attr.install.id}'))
-            h2(f'Merge install')
-            pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
+            hr()
+            h2("Run value logs")
+            if ref.attr.result.runlog is not None:
+                h4(f"Reference")
+                pre(code(json.dumps(ref.attr.result.runlog)))
+            if prev.attr.result.runlog is not None:
+                h4(f"Base")
+                pre(code(json.dumps(prev.attr.result.runlog)))
+            if nex.attr.result.runlog is not None:
+                h4(f"Merge")
+                pre(code(json.dumps(nex.attr.result.runlog)))
 
             hr()
             h2("Compile logs")
@@ -59,17 +64,12 @@ class CompareReport(BaseReport):
                 h4(f"Merge - Return code {str(nex.attr.result.ccode)}")
                 pre(code(nex.attr.result.compilelog))
 
-            hr()
-            h2("Run value logs")
-            if ref.attr.result.runlog is not None:
-                h4(f"Reference")
-                pre(code(json.dumps(ref.attr.result.runlog)))
-            if prev.attr.result.runlog is not None:
-                h4(f"Base")
-                pre(code(json.dumps(prev.attr.result.runlog)))
-            if nex.attr.result.runlog is not None:
-                h4(f"Merge")
-                pre(code(json.dumps(nex.attr.result.runlog)))
+            h2(f'Reference install')
+            pre(code(f'{ref.attr.install.platform}.{ref.attr.install.id}'))
+            h2(f'Base install')
+            pre(code(f'{prev.attr.install.platform}.{prev.attr.install.id}'))
+            h2(f'Merge install')
+            pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
 
         return str(ele)
 

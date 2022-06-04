@@ -143,6 +143,7 @@ class Task(object):
             try:
                 props = set(self.senv.unique_properties())
 
+                self.penv.attr.halt = False
                 self.penv.attr.self_task = self
                 self.penv.attr.wf = self.wf
                 self.senv.attr.wf = self.wf
@@ -155,12 +156,20 @@ class Task(object):
             new_props = set(self.senv.unique_properties()) 
             diff_props = props.symmetric_difference(new_props)
             self.penv.attr.wf.log.append( {'type':'text', 'text':f'new props: \n{diff_props}' })
-
-            for dep in self.forward_exec_links:
-                dep.try_start()
+            self.finalize()
 
         self.co = asyncio.create_task(t())
         self.state = "running"
+
+    def finalize(self):
+        for dep in self.forward_exec_links:
+            if self.penv.attr.halt is True and len( dep.backward_exec_links ) == 1:
+                dep.penv.attr.halt = True
+                dep.state = "complete"
+                dep.finalize()
+            else:
+                dep.try_start()
+
 
     def try_start(self):
         if self.co is not None:
@@ -233,6 +242,21 @@ class Task(object):
         async def pass_task(penv, senv):
             pass       
         return Task(env, pass_task, tags={'grouped_tasks':group_name} )
+
+    @staticmethod
+    def halt_on_condition(env, cond, _id):
+        env = env.branch()
+        async def task(penv, senv):
+            if cond(penv,senv):
+                penv.attr.halt = True
+        return Shared.Task(env, task, tags={'action':f'halt_on_condition.{_id}'})
+
+    @staticmethod
+    def debug_task(env, txt):
+        env = env.branch()
+        async def task(penv, senv):
+            print(txt)
+        return Shared.Task(env, task, tags={'action':f'debug_task.{txt}'})
 
     @staticmethod
     def add_leaf(env, task):

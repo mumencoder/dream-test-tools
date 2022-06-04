@@ -30,6 +30,7 @@ class ReportsApp(object):
 
         with Shared.Push( self.env.attr.tests.dirs.reports ):
             for page in [self.root_report] + list(self.root_report.get_pages()):
+                Shared.File( page.get_location() )
                 with Shared.File.open( page.get_location(), "w" ) as f:
                     f.write( page.to_html() )
 

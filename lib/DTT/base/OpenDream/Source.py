@@ -17,6 +17,6 @@ class Source(object):
 
     @staticmethod
     def from_github(env):
-        Source.load(env, f'{env.attr.github.repo_id}.{env.attr.github.tag}')
+        Source.load(env, f'github.{env.attr.github.repo_id}.{env.attr.github.tag}')
         env.attr.git.repo.local_dir = env.attr.source.dir
         env.attr.git.repo.url = env.attr.github.url
