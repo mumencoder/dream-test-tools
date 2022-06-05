@@ -36,6 +36,15 @@ class App(ReportsApp):
 
         self.load_states(self.env)
 
+    async def init_top(self):
+        self.tasks = {}
+
+        env = self.env.branch()
+        async def cleanup_opendream(senv):
+            if senv.attr.platform_cls is OpenDream:
+                shutil.rmtree( senv.attr.install.dir )
+        self.env.event_handlers['tests.completed'] = cleanup_opendream
+
     def load_states(self, env):
         for name in os.listdir(env.attr.dirs.state + 'app'):
             state_filename = env.attr.dirs.state / 'app' / f'{name}.json'

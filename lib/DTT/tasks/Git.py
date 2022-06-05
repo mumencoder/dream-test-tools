@@ -25,7 +25,6 @@ class Git(object):
 
         async def refresh(penv, senv):
             history_state = f'{senv.attr.github.repo_id}.history.commits'
-            compare_state = f'{senv.attr.github.repo_id}.history.compares'
             commit_history = penv.attr.state.results.get(history_state, default={})
             commit_history = Shared.Github.list_all_commits( senv, existing_commits=commit_history )        
             penv.attr.state.results.set(history_state, commit_history)
@@ -34,13 +33,14 @@ class Git(object):
             history_state = f'{senv.attr.github.repo_id}.history.commits'
             compare_state = f'{senv.attr.github.repo_id}.history.compares'
             commit_history = penv.attr.state.results.get(history_state)
+            senv.attr.github.commit_history = commit_history
             commits = sorted( commit_history.keys(), key=lambda k: commit_history[k]["commit"]["committer"]["date"], reverse=True )
-            compare_commits = []
+            compares = []
             for i, commit in enumerate(commits):
                 if i+1 == len(commits):
                     continue
-                compare_commits.append( {"commit_info":commit_history[commits[i]], "base":commits[i+1], "new":commits[i]} )
-            penv.attr.state.results.set(compare_state, compare_commits)
+                compares.append( {"type":"history", "commit_info":commit_history[commits[i]], "base":commits[i+1], "new":commits[i]} )
+            penv.attr.state.results.set(compare_state, compares)
 
         t1 = Shared.Task(env, refresh, tags={'action':'refresh'} ).run_fresh(minutes=30)
         t2 = Shared.Task(env, process, tags={'action':'process'})
@@ -58,7 +58,7 @@ class Git(object):
         async def process_pull_requests(penv, senv):
             prs = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs')
             commits = set()
-            compare_commits = []
+            compares = []
 
             try:
                 while True:
@@ -86,12 +86,12 @@ class Git(object):
 
                     commits.add(base_commit)
                     commits.add(pr_commit)
-                    compare_commits.append( {"pull_info":pull_info, "base":base_commit, "pr":pr_commit} )
+                    compares.append( {"type":"pr", "pull_info":pull_info, "base":base_commit, "new":pr_commit} )
             finally:
                 senv.attr.resources.shared_opendream_repo.release(repo)
 
             penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs.commits', list(commits) )
-            penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs.compare_commits', list(compare_commits) )
+            penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs.compares', list(compares) )
         t2 = Shared.Task(env, process_pull_requests, tags={'action':'process_pull_requests'})
 
         Shared.Task.link(t1, t2)

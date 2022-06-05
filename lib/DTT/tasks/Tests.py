@@ -31,6 +31,12 @@ class Tests(object):
             Shared.Task.link( penv.attr.self_task, Tests.run_tests(env, senv.attr.tests.incomplete) )
         return Shared.Task(env, task, tags={'action':'run_incomplete_tests'} )
 
+    def clear_tests(env, tests_tag):
+        async def task(penv, senv):
+            senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'
+            senv.attr.state.results.rm(f'{senv.attr.tests.tag}.tests.completed')
+        return Shared.Task(env, task, tags={'action':'clear_tests'})
+
     def load_incomplete_tests(env, tests_tag):
         async def task(penv, senv):
             senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'

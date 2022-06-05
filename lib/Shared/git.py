@@ -77,6 +77,21 @@ class Git(object):
             finally:
                 env.attr.resources.git.release(res)
 
+        def search_base_commit(env, start, potential_matches, max_level=32):
+            repo = env.attr.git.api.repo
+            current_commits = [ repo.commit(start) ]
+
+            while max_level > 0:
+                max_level -= 1
+                new_current_commits = []
+                for commit in current_commits:
+                    if str(commit) in potential_matches:
+                        return commit
+                    new_current_commits += commit.parents
+                current_commits = new_current_commits
+
+            return None
+
         async def resolve_branch(env):
             branch_info = env.attr.git.repo.branch
 
@@ -99,16 +114,19 @@ class Git(object):
                     raise Exception("repo head mismatch")
 
         @staticmethod
+        async def ref(env, ref, remote=None):
+            repo = env.attr.git.api.repo
+            if remote is None:
+                return repo.refs[ref]
+            else:
+                return repo.remote(remote).refs[ref]
+
+        @staticmethod
         async def ensure_commit(env):
             repo = env.attr.git.api.repo
-
-            if env.attr_exists(".git.repo.remote"):
-                remote = repo.remote( env.attr.git.repo.remote )
-                if env.attr.git.repo.commit not in remote.refs:
-                    remote.fetch( env.attr.git.repo.commit )
-                repo.head.reset( env.attr.git.repo.commit, working_tree=True )
-            else:
-                repo.head.reset( env.attr.git.repo.commit, working_tree=True )
+            if env.attr_exists('.git.repo.remote'):
+                repo.remote(env.attr.git.repo.remote).fetch( env.attr.git.repo.commit )
+            repo.head.reset( env.attr.git.repo.commit, working_tree=True )
 
         @staticmethod
         async def freshen(env):

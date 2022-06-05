@@ -4,10 +4,10 @@ from .common import *
 from .SimpleReport import *
 
 class CompareReport(BaseReport):
-    def __init__(self, compare_info):
+    def __init__(self, compare):
         self.link_title = "Compare Report"
-        self.compare_info = compare_info
-        self.page_id = compare_info["id"]
+        self.compare = compare
+        self.page_id = f"{compare['cenv_ref'].attr.install.id}.{compare['cenv_base'].attr.install.id}.{compare['cenv_new'].attr.install.id}"
 
         self.tests = []
         self.by_state = {}
@@ -16,6 +16,9 @@ class CompareReport(BaseReport):
 
         self.test_pages = {}
 
+    def verbose_title(self):
+        return self.page_id
+        
     def get_pages(self):
         yield self
         yield from self.test_pages.values()
@@ -26,7 +29,7 @@ class CompareReport(BaseReport):
     def add_test(self, tenv):
         self.tests.append( tenv )
         self.by_state["tests"][ tenv.attr.compare.result ].append( tenv )
-        self.test_pages[tenv.attr.compare.ref.attr.test.id] = SimpleReport(f"{self.page_id}.{tenv.attr.test.id}", "Compare details", self.render_test_html(tenv) )
+        self.test_pages[tenv.attr.compare.ref.attr.test.id] = SimpleReport(f"{self.page_id}.{tenv.attr.compare.ref.attr.test.id}", "Compare details", self.render_test_html(tenv) )
 
     def render_test_html(self, tenv):
         ele = div()

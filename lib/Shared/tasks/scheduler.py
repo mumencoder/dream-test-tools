@@ -10,10 +10,42 @@ class Scheduler(object):
         env.attr.scheduler.runnables = set()
         env.attr.scheduler.pending = set()
 
+        env.attr.tasks.all_names = {}
+        env.attr.tasks.base_tags = {}
+
+        top_task = Shared.Task.task_group(env, 'top')
+        env.attr.scheduler.top_task = top_task
+        env.attr.scheduler.top_task.initialize(env)
+        Scheduler.schedule( env, top_task )
+
+        report_task = Scheduler.task_workflow_report(env)
+        report_task.initialize(env)
+        Shared.Scheduler.schedule( env, report_task )
+
     @staticmethod
     def deinit(env):
         for runnable in env.attr.scheduler.runnables:
             runnable.cleanup()
+
+    @staticmethod
+    def task_workflow_report(env):
+        async def workflow_report(penv, senv):
+            def write_reports():
+                print("write")
+                with Shared.File.open(penv.attr.workflow.report_path, "w") as f:
+                    f.write( str(Shared.WorkflowReport.all_workflows(penv)) )
+            try:
+                while penv.attr.scheduler.running:
+                    write_reports()
+                    for i in range(0,10):
+                        if penv.attr.scheduler.running is False:
+                            break
+                        await asyncio.sleep(0.5)
+                write_reports()
+            except:
+                import traceback
+                print( traceback.print_exc() )
+        return Shared.Task(env, workflow_report, tags={'action':'workflow_report'}, background=True)
 
     @staticmethod
     def create_flow(env, runnable):

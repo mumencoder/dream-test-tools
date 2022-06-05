@@ -21,8 +21,3 @@ class Install(object):
         _id = f"github.{env.attr.github.owner}.{env.attr.github.repo}.{env.attr.git.repo.commit}.{env.attr.github.tag}"
         Install.load(env, _id)
         env.attr.git.repo.local_dir = env.attr.install.dir
-
-    @staticmethod
-    def from_local(env, commit=None):
-        _id = f"local.{env.attr.github.repo}.{env.attr.git.repo.commit}.{env.attr.github.tag}"
-        Install.load(env, _id)

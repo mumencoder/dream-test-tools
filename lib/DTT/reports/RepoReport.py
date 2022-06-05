@@ -7,21 +7,27 @@ class GithubRepoReport(BaseReport):
         self.link_title = f"Repo - {renv.attr.github.repo_id}"
         self.rid = renv.attr.github.repo_id
 
-        self.prs = []
-        self.history = []
+        self.prs = {}
+        self.history = {}
 
     def get_pages(self):
         yield self
-        for pr in self.prs:
+        for pr in self.prs.values():
             yield from pr.get_pages()
-        for history in self.history:
+        for history in self.history.values():
             yield from history.get_pages()
 
     def add_pr(self, report):
-        self.prs.append( report )
+        self.prs[report.id] = report 
 
     def add_history(self, report):
-        self.history.append( report )
+        self.history[report.id] = report
+
+    def get_pr(self, _id):
+        return self.prs[_id]
+
+    def get_history(self, _id):
+        return self.history[_id]
 
     def get_location(self):
         return f"./repo-{self.rid}.html"
@@ -30,23 +36,24 @@ class GithubRepoReport(BaseReport):
         doc = dm.document(title='Repo Report')
         BaseReport.common(doc)
         with doc:
-           rows = [pr.table_entry() for pr in self.prs]
+           rows = [pr.table_entry() for pr in self.prs.values()]
            hr()
            h2("Pull requests")
            table(rows, title="Pull requests")
 
-           rows = [h.table_entry() for h in self.history]
+           rows = [h.table_entry() for h in self.history.values()]
            hr()
            h2("Commit history")
            table(rows, title="Commit history")
         return str(doc)
 
 class PullRequestReport(BaseReport):
-    def __init__(self, repo_report, pr_info):
+    def __init__(self, repo_report, compare):
         self.repo_report = repo_report
-        self.pr_info = pr_info
+        self.compare = compare
+        self.id = compare['pull_info']['id']
 
-        self.link_title = f"Pull Request - {pr_info['id']}"
+        self.link_title = f"Pull Request - {compare['cenv_new'].attr.github.repo_id}"
         self.compare_report = None
 
     def get_pages(self):
@@ -54,13 +61,13 @@ class PullRequestReport(BaseReport):
         yield from self.compare_report.get_pages()
 
     def get_location(self):
-        return f"./repo-{self.repo_report.rid}-pr-{self.pr_info['id']}.html"
+        return f"./repo-{self.repo_report.rid}-pr-{self.id}.html"
 
     def table_entry(self):
         e = tr()
         with e:
-            td(html.escape(f'{self.pr_info["id"]}'))
-            td(f'{self.pr_info["title"]}')
+            td(html.escape(f'{self.id}'))
+            td(f'{self.compare["pull_info"]["title"]}')
             if self.compare_report is not None:
                 td(self.compare_report.link_html() )
                 td(self.compare_report.summary() )
@@ -73,11 +80,12 @@ class PullRequestReport(BaseReport):
         self.compare_report = report
 
 class CommitHistoryReport(BaseReport):
-    def __init__(self, repo_report, ch_info):
+    def __init__(self, repo_report, compare):
         self.repo_report = repo_report
-        self.ch_info = ch_info
+        self.compare = compare
+        self.id = compare['commit_info']['sha']
 
-        self.link_title = f"Commit History - {ch_info['sha']}"
+        self.link_title = f"Commit History - {compare['cenv_new'].attr.github.repo_id}"
         self.compare_report = None
 
     def get_pages(self):
@@ -85,13 +93,13 @@ class CommitHistoryReport(BaseReport):
         yield from self.compare_report.get_pages()
 
     def get_location(self):
-        return f"./repo-{self.repo_report.rid}-history-{self.ch_info['sha']}.html"
+        return f"./repo-{self.repo_report.rid}-history-{self.id}.html"
 
     def table_entry(self):
         e = tr()
         with e:
-            td(html.escape(f'{self.ch_info["sha"]}'))
-            td(f'{self.ch_info["commit"]["message"]}')
+            td(html.escape(f'{self.id}'))
+            td(f'{self.compare["commit_info"]["commit"]["message"]}')
             if self.compare_report is not None:
                 td(self.compare_report.link_html() )
                 td(self.compare_report.summary() )

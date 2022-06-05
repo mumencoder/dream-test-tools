@@ -7,29 +7,6 @@ import DTT
 from DTT.base import *
 
 class Main(DTT.App):
-    async def init_top(self):
-        self.tasks = {}
-        self.env.attr.tasks.all_names = {}
-        self.env.attr.tasks.base_tags = {}
-
-        env = self.env.branch()
-
-        async def cleanup_opendream(senv):
-            if senv.attr.platform_cls is OpenDream:
-                print("==============================cleanup", senv.attr.install.dir)
-                shutil.rmtree( senv.attr.install.dir )
-
-        self.env.event_handlers['tests.completed'] = cleanup_opendream
-
-        self.top_task = Shared.Task.task_group(env, 'top')
-        self.env.attr.tasks.top_task = self.top_task
-        self.top_task.initialize(env)
-
-        report_task = self.task_workflow_report()
-        report_task.initialize(env)
-        Shared.Scheduler.schedule( self.env, report_task )
-        Shared.Scheduler.schedule( self.env, self.top_task )
-
     async def add_byond_tests(self):
         self.byond_ref_version = '514.1566'
 
@@ -40,7 +17,7 @@ class Main(DTT.App):
         tasks.append( DTT.tasks.Byond.download(env).run_once() )
         tasks.append( DTT.tasks.Tests.load_incomplete_tests(env, 'default') )
         tasks.append( DTT.tasks.Tests.run_incomplete_tests(env) )
-        Shared.Task.chain( self.top_task, *tasks )
+        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
 
     async def prep_opendream(self):
         env = self.env.branch()
@@ -53,7 +30,7 @@ class Main(DTT.App):
         tasks.append( DTT.tasks.Git.freshen_repo(env) )
         tasks.append( DTT.tasks.OpenDream.create_shared_repos(env) )
         self.tasks["wixoaGit.shared_repos"] = tasks[-1]
-        Shared.Task.chain( self.top_task, *tasks)
+        Shared.Task.chain( env.attr.scheduler.top_task, *tasks)
 
     async def update_pull_requests(self):
         env = self.env.branch()
@@ -63,8 +40,9 @@ class Main(DTT.App):
         tasks.append( DTT.tasks.Git.initialize_github(env, 'wixoaGit', 'OpenDream', 'base') )
         tasks.append( DTT.tasks.Git.update_pull_requests(env) )
         tasks.append( DTT.tasks.OpenDream.load_pr_commits(env) )
+        self.tasks['wixoaGit.prs'] = tasks[-1]
         tasks.append( DTT.tasks.OpenDream.process_commits(env) )
-        Shared.Task.chain( self.top_task, *tasks )
+        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
         Shared.Task.link_exec( self.tasks["wixoaGit.shared_repos"], tasks[0] )
 
     async def update_commit_history(self):
@@ -77,63 +55,56 @@ class Main(DTT.App):
         tasks.append( DTT.tasks.OpenDream.load_history_commits(env, 16) )
         self.tasks[ 'wixoaGit.history_commits'] = tasks[-1]
         tasks.append( DTT.tasks.OpenDream.process_commits(env) )
-        Shared.Task.chain( self.top_task, *tasks )
+        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
         Shared.Task.link_exec( self.tasks["wixoaGit.shared_repos"], tasks[0] )
 
     async def compare_reports(self):
         wixenv = self.tasks["wixoaGit.init_github"].senv
 
-        self.setup_reports()
+        self.root_report = DTT.RootReport("github")
         repo_report = DTT.GithubRepoReport(wixenv)
         self.root_report.add_report( repo_report )
 
-        pr_reports = {}
-        compares = wixenv.attr.state.results.get(f'{wixenv.attr.github.repo_id}.prs.compare_commits')
-        for compare in compares:
-            pi = compare['pull_info']
-            pr_report = DTT.PullRequestReport( repo_report, pi )
-            pr_reports[pi["id"]] = pr_report
+        benv = self.env.branch()
+        Byond.Install.load(benv, self.byond_ref_version)
 
-            compare["id"] = f'{self.byond_ref_version}.{compare["base"]}.{compare["pr"]}'
-            compare["report"] = DTT.CompareReport(compare)
+        ghenv = self.tasks['wixoaGit.prs'].senv
+        compares = ghenv.attr.opendream.compares
+        for compare in compares:
+            compare['cenv_ref'] = benv.branch()
+            pr_report = DTT.PullRequestReport( repo_report, compare )
             repo_report.add_pr( pr_report )
-            pr_report.compare_report = compare["report"]
-        for tenv in DTT.TestCase.list_all(wixenv, self.env.attr.tests.dirs.dm_files):
+            pr_report.compare_report = DTT.CompareReport(compare)
+        for tenv in DTT.TestCase.list_all(self.env.branch(), self.env.attr.tests.dirs.dm_files):
             DTT.TestCase.load_test_text(tenv)
             DTT.TestCase.wrap(tenv)
             for compare in compares:
-                cenv = wixenv.branch()
-                DTT.tasks.Compare.compare_load_environ(cenv, self.byond_ref_version, compare['base'], compare['pr'])
-                cenv.merge(tenv, inplace=True)
-                DTT.tasks.Compare.compare_test(cenv)
-                pi = compare['pull_info']
-                pr_report = pr_reports[pi["id"]]
-                pr_report.compare_report.add_test( cenv )
+                cenv = self.env.branch()
+                cenv.attr.compare.ref = compare['cenv_ref'].branch()
+                cenv.attr.compare.prev = compare['cenv_base'].branch()
+                cenv.attr.compare.next = compare['cenv_new'].branch()
+                DTT.tasks.Compare.compare_test(cenv, tenv)
+                repo_report.get_pr(compare['pull_info']["id"]).compare_report.add_test( cenv )
 
-        history_reports = {}
-        compares = self.tasks['wixoaGit.history_commits'].senv.attr.opendream.history_compares
+        ghenv = self.tasks['wixoaGit.history_commits'].senv
+        compares = ghenv.attr.opendream.compares
         for compare in compares:
-            ci = compare['commit_info']
-            history_report = DTT.CommitHistoryReport( repo_report, ci )
-            history_reports[ci['sha']] = history_report
-
-            compare["id"] = f'{self.byond_ref_version}.{compare["base"]}.{compare["new"]}'
-            compare["report"] = DTT.CompareReport(compare)
+            compare['cenv_ref'] = benv.branch()
+            history_report = DTT.CommitHistoryReport( repo_report, compare )
             repo_report.add_history( history_report )
-            history_report.compare_report = compare["report"]
-        for tenv in DTT.TestCase.list_all(wixenv, self.env.attr.tests.dirs.dm_files):
+            history_report.compare_report = DTT.CompareReport(compare)
+        for tenv in DTT.TestCase.list_all(self.env.branch(), self.env.attr.tests.dirs.dm_files):
             DTT.TestCase.load_test_text(tenv)
             DTT.TestCase.wrap(tenv)
             for compare in compares:
-                cenv = wixenv.branch()
-                DTT.tasks.Compare.compare_load_environ(cenv, self.byond_ref_version, compare['base'], compare['new'])
-                cenv.merge(tenv, inplace=True)
-                DTT.tasks.Compare.compare_test(cenv)
-                ci = compare['commit_info']
-                history_report = history_reports[ci["sha"]]
-                history_report.compare_report.add_test( cenv )
+                cenv = self.env.branch()
+                cenv.attr.compare.ref = compare['cenv_ref'].branch()
+                cenv.attr.compare.prev = compare['cenv_base'].branch()
+                cenv.attr.compare.next = compare['cenv_new'].branch()
+                DTT.tasks.Compare.compare_test(cenv, tenv)
+                repo_report.get_history(compare['commit_info']['sha']).compare_report.add_test( cenv )
 
-        self.write_reports()
+        self.write_report(self.root_report)
 
     async def run_tasks(self):
         await self.init_top()

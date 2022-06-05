@@ -25,6 +25,12 @@ class FilesystemState(object):
         with Shared.File.open(self.path / key, "w" + self.mode) as f:
             f.write( self.saver(value) )
 
+    def rm(self, key):
+        try:
+            os.remove( self.path / key )
+        except OSError:
+            pass
+
     def reset(self, key):
         if not os.path.exists(self.path / key):
             return

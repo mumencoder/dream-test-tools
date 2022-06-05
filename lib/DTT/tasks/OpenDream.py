@@ -52,17 +52,20 @@ class OpenDream(object):
                 senv.attr.resources.shared_opendream_repo.release(repo)
         return Shared.Task(env, task, tags={'action':'build_commit'} )
 
-    def build_commit_local(env):
+    def build_local(env):
         async def task(penv, senv):
-            env.attr.source.dir = env.attr.git.repo.local_dir
-            OpenDream.run_build_commit(senv)
-        return Shared.Task(env, task, tags={'action':'build_commit'} )
+            await OpenDream.prepare_build(senv)
+            await base.OpenDream.Builder.build(senv)
+        return Shared.Task(env, task, tags={'action':'build_local'} )
 
-    def load_install_from_local(env, commit):
+    def load_install_from_local(env, local_name, local_dir):
         env = env.branch()
-        Shared.Task.tags(env, {'commit':commit} )
+        Shared.Task.tags(env, {'local_name':local_name} )
         async def task(penv, senv):
-            senv.attr.git.repo.commit = commit
+            senv.attr.source.dir = local_dir
+            senv.attr.git.repo.local_dir = local_dir
+            Shared.Git.Repo.load(senv)
+            base.OpenDream.Install.load(senv, f'local.{local_name}')
             senv.attr.platform_cls = base.OpenDream
             Install.config(senv)
         return Shared.Task(env, task, tags={'action':'load_install_from_local'} )
@@ -78,40 +81,70 @@ class OpenDream(object):
             Install.config(senv)
         return Shared.Task(env, task, tags={'action':'load_install_from_github'} )
 
-    def add_local_commit(env, commit):
-        Shared.Task.tags( env, tags={'commit_type':'local'} )
-        async def task(penv, senv):
-            senv.attr.opendream.commit_tasks.append( OpenDream.load_install_from_local(env, commit) )
-        return Shared.Task(env, task, tags={'action':'load_pr_commits'} )
-
     def load_pr_commits(env):
         Shared.Task.tags( env, tags={'commit_type':'pr'} )
         async def task(penv, senv):
             commit_tasks = []
-            for commit in penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.commits' ):
+            commits = set(penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.commits' ))
+            compares = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.compares' )
+            new_compares = []
+            for commit in commits:
                 commit_tasks.append( OpenDream.load_install_from_github(env, commit) )
+            for compare in compares:
+                cenv_new = senv.branch()
+                cenv_new.attr.git.repo.commit = compare['new']
+                base.OpenDream.Install.from_github(cenv_new) 
+
+                cenv_base = senv.branch()
+                cenv_base.attr.git.repo.commit = compare['base']
+                base.OpenDream.Install.from_github(cenv_base) 
+
+                compare["cenv_new"] = cenv_new
+                compare["cenv_base"] = cenv_base
+                new_compares.append( compare )
+            senv.attr.opendream.compares = new_compares
             senv.attr.opendream.commit_tasks = commit_tasks
+            senv.attr.opendream.commits = commits
         return Shared.Task(env, task, tags={'action':'load_pr_commits'} )
 
     def load_history_commits(env, compare_limit):
         env = env.branch()
         Shared.Task.tags( env, tags={'commit_type':'history'} )
         async def task(penv, senv):
-            senv.attr.opendream.history_compares = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.history.compares' )
             commits = set()
-            compares = []
-            for compare in senv.attr.opendream.history_compares:
+            compares = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.history.compares' )
+            new_compares = []
+            for compare in compares:
                 if len(commits) >= compare_limit:
                     break
                 commits.add( compare['new'] )
                 commits.add( compare['base'] )
-                compares.append( compare )
+
+                cenv_new = senv.branch()
+                cenv_new.attr.git.repo.commit = compare['new']
+                base.OpenDream.Install.from_github(cenv_new) 
+
+                cenv_base = senv.branch()
+                cenv_base.attr.git.repo.commit = compare['base']
+                base.OpenDream.Install.from_github(cenv_base) 
+
+                compare["cenv_new"] = cenv_new
+                compare["cenv_base"] = cenv_base
+                new_compares.append( compare )
             commit_tasks = []
             for commit in commits:
                 commit_tasks.append( OpenDream.load_install_from_github(env, commit) )
-            senv.attr.opendream.history_compares = compares
+            senv.attr.opendream.compares = new_compares
             senv.attr.opendream.commit_tasks = commit_tasks
+            senv.attr.opendream.commits = commits
         return Shared.Task(env, task, tags={'action':'load_history_commits'} )
+
+    def set_commit_tasks(env, commit_tasks):
+        env = env.branch()
+        Shared.Task.tags( env, tags={'commit_type':'general'} )
+        async def task(penv, senv):
+            senv.attr.opendream.commit_tasks = commit_tasks
+        return Shared.Task(env, task, tags={'action':'set_commit_tasks'} )
 
     def process_commits(env):
         env = env.branch()

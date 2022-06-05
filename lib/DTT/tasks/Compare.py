@@ -4,30 +4,24 @@ from .common import *
 from .TestCase import *
 
 class Compare(object):
-    def compare_load_environ(env, ref, prev, new):
-        env.attr.compare.ref = env.branch()
-        env.attr.compare.prev = env.branch()
-        env.attr.compare.next = env.branch()
-        base.Byond.Install.load(env.attr.compare.ref, ref)
-        env.attr.compare.prev.attr.git.repo.commit = prev
-        base.OpenDream.Install.from_github(env.attr.compare.prev)
-        env.attr.compare.next.attr.git.repo.commit = new
-        base.OpenDream.Install.from_github(env.attr.compare.next)
-
-    def compare_test(env):
+    def compare_test(env, tenv):
         renv = env.attr.compare.ref
         penv = env.attr.compare.prev
         nenv = env.attr.compare.next
+
+        renv.merge(tenv, inplace=True)
+        penv.merge(tenv, inplace=True)
+        nenv.merge(tenv, inplace=True)
         
         Compare.load_result(renv)
         if not renv.attr.compare.exists:
             env.attr.compare.result = "missing reference test result"
             return
-        Compare.load_result(env.attr.compare.prev)
+        Compare.load_result(penv)
         if not penv.attr.compare.exists:
             env.attr.compare.result = "missing previous test result"
             return
-        Compare.load_result(env.attr.compare.next)
+        Compare.load_result(nenv)
         if not nenv.attr.result.exists:
             env.attr.compare.result = "missing next test result"
             return

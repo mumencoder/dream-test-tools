@@ -2,7 +2,8 @@
 from .common import *
 
 class RootReport(BaseReport):
-    def __init__(self):
+    def __init__(self, _id):
+        self.id = _id
         self.link_title = "Root"
         self.reports = []
 
