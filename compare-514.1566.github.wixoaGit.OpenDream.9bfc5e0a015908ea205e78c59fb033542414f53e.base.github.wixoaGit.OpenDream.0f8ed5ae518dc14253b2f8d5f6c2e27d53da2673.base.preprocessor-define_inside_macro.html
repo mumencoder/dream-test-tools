@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# issue 696
+37  
+38  /datum/a
+39  /datum/b
+40  /datum/c
+41  /datum/d
+42  
+43  #define IT_NO_DEFN 0
+44  #define IT_DEFINED 1
+45  #define GLOBAL_MANAGED(X, InitValue)\
+46  /datum/controller/global_vars/proc/InitGlobal##X(){\
+47  	##X = ##InitValue;\
+48  	gvars_datum_init_order += #X;\
+49  }
+50  #define GLOBAL_RAW(X) /datum/controller/global_vars/var/global##X
+51  #define GLOBAL_LIST_INIT(X, InitValue) GLOBAL_RAW(/list/##X); GLOBAL_MANAGED(X, InitValue)
+52  
+53  GLOBAL_LIST_INIT(somelist, list(
+54     /datum/a,
+55     #ifdef IT_DEFINED
+56     /datum/b,
+57     #endif
+58     #ifdef IT_NO_DEFN
+59     /datum/c,
+60     #endif
+61  ))
+62  
+63  /proc/main()
+64  	LOG(somelist)
+65  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:64:error: somelist: undefined var
+test.dm:77:error: gvars_datum_init_order: undefined var
+test.dm.dmb - 2 errors, 0 warnings (7/20/22 6:53 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:53:17: Unknown identifier &quot;gvars_datum_init_order&quot;
+Error at test.dm:64:15: Unknown identifier &quot;somelist&quot;
+Compilation failed with 2 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code -6</h4>
+    <pre><code>Compiling test.dm
+Location:test.dm:55:10
+Unhandled exception. System.Exception: expected identifier in #ifdef
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.ProducerNext(Boolean sourceRestricted) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 314
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.FullExpand(List`1 tokens) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 498
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.IdentifierExpand(PreprocessorToken defined_token) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 699
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.ProducerNext(Boolean sourceRestricted) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 336
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.GetEnumerator()+MoveNext() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 56
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.Advance() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 53
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 150
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 154
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 158
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.GetNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 66
+   at OpenDreamShared.Compiler.Parser`1.Advance() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/OpenDreamShared/Compiler/Parser.cs:line 28
+   at OpenDreamShared.Compiler.Parser`1.Check(TokenType[] types) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/OpenDreamShared/Compiler/Parser.cs:line 65
+   at DMCompiler.Compiler.DM.DMParser.PathElement() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 313
+   at DMCompiler.Compiler.DM.DMParser.Path(Boolean expression) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 291
+   at DMCompiler.Compiler.DM.DMParser.Statement(Boolean requireDelimiter) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 157
+   at DMCompiler.Compiler.DM.DMParser.BlockInner() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 137
+   at DMCompiler.Compiler.DM.DMParser.File() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 113
+   at DMCompiler.DMCompiler.Compile(IDMLexer dmLexer) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/DMCompiler.cs:line 144
+   at DMCompiler.DMCompiler.Compile(DMCompilerSettings settings) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/DMCompiler.cs:line 78
+   at DMCompiler.Program.Main(String[] args) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Program.cs:line 12
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.9bfc5e0a015908ea205e78c59fb033542414f53e.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# issue 696
+
+/datum/a
+/datum/b
+/datum/c
+/datum/d
+
+#define IT_NO_DEFN 0
+#define IT_DEFINED 1
+#define GLOBAL_MANAGED(X, InitValue)\
+/datum/controller/global_vars/proc/InitGlobal##X(){\
+	##X = ##InitValue;\
+	gvars_datum_init_order += #X;\
+}
+#define GLOBAL_RAW(X) /datum/controller/global_vars/var/global##X
+#define GLOBAL_LIST_INIT(X, InitValue) GLOBAL_RAW(/list/##X); GLOBAL_MANAGED(X, InitValue)
+
+GLOBAL_LIST_INIT(somelist, list(
+   /datum/a,
+   #ifdef IT_DEFINED
+   /datum/b,
+   #endif
+   #ifdef IT_NO_DEFN
+   /datum/c,
+   #endif
+))
+
+/proc/main()
+	LOG(somelist)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

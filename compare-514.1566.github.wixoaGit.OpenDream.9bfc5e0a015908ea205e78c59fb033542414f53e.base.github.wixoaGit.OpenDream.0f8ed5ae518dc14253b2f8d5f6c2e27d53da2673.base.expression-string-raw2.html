@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# issue 380
+37  
+38  /proc/main()
+39    var/a = @(ZZZ)
+40  asdfZZZ
+41    LOG(&quot;a&quot;, a)
+42  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;a&quot;: &quot;asdf&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (7/20/22 6:53 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:40:8: Expected end of proc statement
+Compilation failed with 1 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code -6</h4>
+    <pre><code>Compiling test.dm
+Location:test.dm:39:9
+Unhandled exception. System.Exception: a line break cannot end a simple raw string
+   at DMCompiler.Compiler.Experimental.DMPreprocessorLexer.LexRawString() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessorLexer.cs:line 409
+   at DMCompiler.Compiler.Experimental.DMPreprocessorLexer.Advance() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessorLexer.cs:line 211
+   at DMCompiler.Compiler.Experimental.DMPreprocessorLexer.MoveNext() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessorLexer.cs:line 18
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.ConsumerNext() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 83
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.ProducerNext(Boolean sourceRestricted) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 348
+   at DMCompiler.Compiler.Experimental.DMPreprocessor.GetEnumerator()+MoveNext() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMPreprocessor.cs:line 56
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.Advance() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 53
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.ParseNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 175
+   at DMCompiler.Compiler.Experimental.PreprocessorTokenConvert.GetNextToken() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/Experimental/DMTokenConvert.cs:line 66
+   at OpenDreamShared.Compiler.Parser`1.Advance() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/OpenDreamShared/Compiler/Parser.cs:line 28
+   at DMCompiler.Compiler.DM.DMParser.ProcVarEnd(Boolean allowMultiple, DMASTPath path) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 681
+   at DMCompiler.Compiler.DM.DMParser.ProcVarDeclaration(Boolean allowMultiple) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 605
+   at DMCompiler.Compiler.DM.DMParser.ProcStatement() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 573
+   at DMCompiler.Compiler.DM.DMParser.ProcBlockInner() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 501
+   at DMCompiler.Compiler.DM.DMParser.IndentedProcBlock() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 475
+   at DMCompiler.Compiler.DM.DMParser.ProcBlock() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 424
+   at DMCompiler.Compiler.DM.DMParser.Statement(Boolean requireDelimiter) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 174
+   at DMCompiler.Compiler.DM.DMParser.BlockInner() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 137
+   at DMCompiler.Compiler.DM.DMParser.File() in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Compiler/DM/DMParser.cs:line 113
+   at DMCompiler.DMCompiler.Compile(IDMLexer dmLexer) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/DMCompiler.cs:line 144
+   at DMCompiler.DMCompiler.Compile(DMCompilerSettings settings) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/DMCompiler.cs:line 78
+   at DMCompiler.Program.Main(String[] args) in /DTT/data/opendream/installs/github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base/DMCompiler/Program.cs:line 12
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.9bfc5e0a015908ea205e78c59fb033542414f53e.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.0f8ed5ae518dc14253b2f8d5f6c2e27d53da2673.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# issue 380
+
+/proc/main()
+  var/a = @(ZZZ)
+asdfZZZ
+  LOG(&quot;a&quot;, a)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>
