@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  #define f(a) a*g 
+37  #define g(a) f(a) 
+38  
+39  var/g = 5
+40      
+41  /proc/main()
+42      LOG( f(2)(9) )
+43  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;log&quot;: 90}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;log&quot;: 90}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;log&quot;: 90}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/preprocessor-clang-macro_rescan2_2/opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/preprocessor-clang-macro_rescan2_2/opendream.github.wixoaGit.OpenDream.0ee1f4ea1458c8af1d193b1be729a562e3c9981c.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.0ee1f4ea1458c8af1d193b1be729a562e3c9981c.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+#define f(a) a*g 
+#define g(a) f(a) 
+
+var/g = 5
+    
+/proc/main()
+    LOG( f(2)(9) )
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

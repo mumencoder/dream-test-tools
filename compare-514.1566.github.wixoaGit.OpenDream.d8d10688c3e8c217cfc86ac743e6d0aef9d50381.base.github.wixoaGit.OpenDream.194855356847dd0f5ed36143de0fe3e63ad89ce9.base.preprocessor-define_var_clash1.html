@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  #define A 1
+37  #define B 1
+38  
+39  // the / at the beginning makes the difference
+40  /var/const/A = 5
+41  
+42  /proc/nob()
+43      LOG(&quot;NOB&quot;, B)
+44  
+45  /proc/main()
+46      /var/const/B = 8
+47      LOG(&quot;A&quot;, A)
+48      nob()
+49  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;A&quot;: 1, &quot;NOB&quot;: 1}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:40:14: Expected end of object statement
+Error at test.dm:46:18: Expected end of proc statement
+Compilation failed with 2 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:40:14: Expected end of object statement
+Error at test.dm:46:18: Expected end of proc statement
+Compilation failed with 2 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.d8d10688c3e8c217cfc86ac743e6d0aef9d50381.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.194855356847dd0f5ed36143de0fe3e63ad89ce9.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+#define A 1
+#define B 1
+
+// the / at the beginning makes the difference
+/var/const/A = 5
+
+/proc/nob()
+    LOG(&quot;NOB&quot;, B)
+
+/proc/main()
+    /var/const/B = 8
+    LOG(&quot;A&quot;, A)
+    nob()
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

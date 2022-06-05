@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  var/count = 0
+36  
+37  /obj/object
+38      var/t = 1
+39      var/f = 0
+40  
+41  /proc/side_effect()
+42      count += 1
+43      return 5
+44  
+45  /proc/main()
+46      var/obj/object/o_and = new
+47      var/obj/object/o_or = new
+48      var/obj/object/on_and = null
+49      var/obj/object/on_or = null
+50  
+51      var/v1,v2,v3,v4
+52  
+53      v1 = (o_or.t ||= side_effect())
+54      v2 = (o_or.f ||= side_effect())
+55      v3 = (o_and.t &amp;&amp;= side_effect())
+56      v4 = (o_and.f &amp;&amp;= side_effect())
+57  
+58      LOG(&quot;vs1&quot;, list(v1,v2,v3,v4), list(1,5,5,0))
+59      LOG(&quot;o_ors1&quot;, list(o_or.t, o_or.f), list(v1, v2) )
+60      LOG(&quot;o_ands1&quot;, list(o_and.t, o_and.f), list(v3, v4) )
+61      LOG(&quot;count1&quot;, count, 2)
+62  
+63      o_and = new
+64      o_or = new
+65      v1 = v2 = v3 = v4 = null
+66      v1 = (o_or?.t ||= side_effect())
+67      v2 = (o_or?.f ||= side_effect())
+68      v3 = (o_and?.t &amp;&amp;= side_effect())
+69      v4 = (o_and?.f &amp;&amp;= side_effect())
+70  
+71      LOG(&quot;vs2&quot;, list(v1,v2,v3,v4), list(1,5,5,0))
+72      LOG(&quot;o_ors2&quot;, list(o_or.t, o_or.f), list(v1, v2) )
+73      LOG(&quot;o_ands2&quot;, list(o_and.t, o_and.f), list(v3, v4) )
+74      LOG(&quot;count2&quot;, count, 4)
+75  
+76      v1 = v2 = v3 = v4 = 5
+77      v1 = (on_or?.t ||= side_effect())
+78      v2 = (on_or?.f ||= side_effect())
+79      v3 = (on_and?.t &amp;&amp;= side_effect())
+80      v4 = (on_and?.f &amp;&amp;= side_effect())
+81  
+82      LOG(&quot;vs2&quot;, list(v1,v2,v3,v4), list(null,null,null,null))
+83      LOG(&quot;count3&quot;, count, 4)
+84  
+85  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;vs1&quot;: [1, 5, 5, 0], &quot;o_ors1&quot;: [1, 5], &quot;o_ands1&quot;: [5, 0], &quot;count1&quot;: 2, &quot;vs2&quot;: [[1, 5, 5, 0], [null, null, null, null]], &quot;o_ors2&quot;: [1, 5], &quot;o_ands2&quot;: [5, 0], &quot;count2&quot;: 4, &quot;count3&quot;: 4}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;vs1&quot;: [1, 5, 5, 0], &quot;o_ors1&quot;: [1, 5], &quot;o_ands1&quot;: [5, 0], &quot;count1&quot;: 2, &quot;vs2&quot;: [[1, 5, 5, 0], [null, null, null, null]], &quot;o_ors2&quot;: [1, 5], &quot;o_ands2&quot;: [5, 0], &quot;count2&quot;: 4, &quot;count3&quot;: 4}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;vs1&quot;: [1, 5, 5, 0], &quot;o_ors1&quot;: [1, 5], &quot;o_ands1&quot;: [5, 0], &quot;count1&quot;: 2, &quot;vs2&quot;: [[1, 5, 5, 0], [null, null, null, null]], &quot;o_ors2&quot;: [1, 5], &quot;o_ands2&quot;: [5, 0], &quot;count2&quot;: 4, &quot;count3&quot;: 4}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/operators-logical_assign/opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/operators-logical_assign/opendream.github.wixoaGit.OpenDream.300bb870bc99cb126864e133465ea05519ef3e40.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.300bb870bc99cb126864e133465ea05519ef3e40.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+var/count = 0
+
+/obj/object
+    var/t = 1
+    var/f = 0
+
+/proc/side_effect()
+    count += 1
+    return 5
+
+/proc/main()
+    var/obj/object/o_and = new
+    var/obj/object/o_or = new
+    var/obj/object/on_and = null
+    var/obj/object/on_or = null
+
+    var/v1,v2,v3,v4
+
+    v1 = (o_or.t ||= side_effect())
+    v2 = (o_or.f ||= side_effect())
+    v3 = (o_and.t &amp;&amp;= side_effect())
+    v4 = (o_and.f &amp;&amp;= side_effect())
+
+    LOG(&quot;vs1&quot;, list(v1,v2,v3,v4), list(1,5,5,0))
+    LOG(&quot;o_ors1&quot;, list(o_or.t, o_or.f), list(v1, v2) )
+    LOG(&quot;o_ands1&quot;, list(o_and.t, o_and.f), list(v3, v4) )
+    LOG(&quot;count1&quot;, count, 2)
+
+    o_and = new
+    o_or = new
+    v1 = v2 = v3 = v4 = null
+    v1 = (o_or?.t ||= side_effect())
+    v2 = (o_or?.f ||= side_effect())
+    v3 = (o_and?.t &amp;&amp;= side_effect())
+    v4 = (o_and?.f &amp;&amp;= side_effect())
+
+    LOG(&quot;vs2&quot;, list(v1,v2,v3,v4), list(1,5,5,0))
+    LOG(&quot;o_ors2&quot;, list(o_or.t, o_or.f), list(v1, v2) )
+    LOG(&quot;o_ands2&quot;, list(o_and.t, o_and.f), list(v3, v4) )
+    LOG(&quot;count2&quot;, count, 4)
+
+    v1 = v2 = v3 = v4 = 5
+    v1 = (on_or?.t ||= side_effect())
+    v2 = (on_or?.f ||= side_effect())
+    v3 = (on_and?.t &amp;&amp;= side_effect())
+    v4 = (on_and?.f &amp;&amp;= side_effect())
+
+    LOG(&quot;vs2&quot;, list(v1,v2,v3,v4), list(null,null,null,null))
+    LOG(&quot;count3&quot;, count, 4)
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

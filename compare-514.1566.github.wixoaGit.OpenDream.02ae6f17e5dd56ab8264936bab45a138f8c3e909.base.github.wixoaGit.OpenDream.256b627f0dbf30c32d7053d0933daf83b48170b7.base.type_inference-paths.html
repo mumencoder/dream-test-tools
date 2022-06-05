@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  mob
+37      var/species_alignment
+38      dragon
+39          species_alignment = .dragon
+40          red
+41              redder
+42          black
+43              species_alignment = .black
+44      snake
+45          species_alignment = .snake
+46          cobra
+47          winged
+48              species_alignment = .dragon
+49          pit_viper
+50              species_alignment = .dragon/black
+51          red_snek
+52              species_alignment = .dragon:redder
+53  
+54  /proc/main()
+55      var/mob/snake/red_snek/snek = new /mob:pit_viper
+56  
+57      LOG(&quot;typesof(snek)&quot;, typesof(snek) )
+58      LOG(&quot;snek.species_alignment&quot;, snek.species_alignment)
+59  
+60  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;typesof(snek)&quot;: [&quot;/mob/snake/pit_viper&quot;], &quot;snek.species_alignment&quot;: &quot;/mob/dragon/black&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:52:47: Expected end of object statement
+Compilation failed with 1 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:52:47: Expected end of object statement
+Compilation failed with 1 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.02ae6f17e5dd56ab8264936bab45a138f8c3e909.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.256b627f0dbf30c32d7053d0933daf83b48170b7.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+mob
+    var/species_alignment
+    dragon
+        species_alignment = .dragon
+        red
+            redder
+        black
+            species_alignment = .black
+    snake
+        species_alignment = .snake
+        cobra
+        winged
+            species_alignment = .dragon
+        pit_viper
+            species_alignment = .dragon/black
+        red_snek
+            species_alignment = .dragon:redder
+
+/proc/main()
+    var/mob/snake/red_snek/snek = new /mob:pit_viper
+
+    LOG(&quot;typesof(snek)&quot;, typesof(snek) )
+    LOG(&quot;snek.species_alignment&quot;, snek.species_alignment)
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

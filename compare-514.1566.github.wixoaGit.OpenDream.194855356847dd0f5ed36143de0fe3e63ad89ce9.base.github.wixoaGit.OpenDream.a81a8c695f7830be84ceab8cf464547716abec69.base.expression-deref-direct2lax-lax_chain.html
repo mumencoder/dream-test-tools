@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /obj
+37      var/obj/inner/o2
+38  
+39  /obj/inner
+40      var/ele = 2
+41      proc/elefn()
+42          return 4
+43  
+44  /proc/main()
+45      var/obj/o = new
+46      o.o2 = new /obj/inner
+47      LOG(o:o2.ele)
+48      LOG(o:o2.elefn())
+49  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;log&quot;: [2, 4]}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;log&quot;: [2, 4]}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;log&quot;: [2, 4]}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/expression-deref-direct2lax-lax_chain/opendream.github.wixoaGit.OpenDream.194855356847dd0f5ed36143de0fe3e63ad89ce9.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/expression-deref-direct2lax-lax_chain/opendream.github.wixoaGit.OpenDream.a81a8c695f7830be84ceab8cf464547716abec69.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.194855356847dd0f5ed36143de0fe3e63ad89ce9.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.a81a8c695f7830be84ceab8cf464547716abec69.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/obj
+    var/obj/inner/o2
+
+/obj/inner
+    var/ele = 2
+    proc/elefn()
+        return 4
+
+/proc/main()
+    var/obj/o = new
+    o.o2 = new /obj/inner
+    LOG(o:o2.ele)
+    LOG(o:o2.elefn())
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

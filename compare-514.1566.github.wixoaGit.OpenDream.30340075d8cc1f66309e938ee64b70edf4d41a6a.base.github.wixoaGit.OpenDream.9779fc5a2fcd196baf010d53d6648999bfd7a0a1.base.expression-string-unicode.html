@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# issue 662
+37  
+38  /proc/main()
+39    LOG( &quot;1&quot;, &quot;\x55&quot; )
+40    LOG( &quot;2&quot;, &quot;\u1155&quot; )
+41    LOG( &quot;3&quot;, &quot;\U123456&quot; )
+42  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Base</h4>
+    <pre><code>{&quot;1&quot;: &quot;55&quot;, &quot;2&quot;: &quot;1155&quot;, &quot;3&quot;: &quot;123456&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:41:error: &quot;\U123456&quot;: undefined text macro or escape sequence: \U123456
+test.dm.dmb - 1 error, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:39:19: Unimplemented escape sequence &quot;x&quot;
+Warning at test.dm:40:21: Unimplemented escape sequence &quot;u&quot;
+Warning at test.dm:41:23: Unimplemented escape sequence &quot;U&quot;
+Compilation succeeded with 3 warnings
+Saved to /DTT/data/tests/expression-string-unicode/opendream.github.wixoaGit.OpenDream.30340075d8cc1f66309e938ee64b70edf4d41a6a.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.30340075d8cc1f66309e938ee64b70edf4d41a6a.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.9779fc5a2fcd196baf010d53d6648999bfd7a0a1.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# issue 662
+
+/proc/main()
+  LOG( &quot;1&quot;, &quot;\x55&quot; )
+  LOG( &quot;2&quot;, &quot;\u1155&quot; )
+  LOG( &quot;3&quot;, &quot;\U123456&quot; )
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

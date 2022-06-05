@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  /var/outer1 = &quot;A&quot;
+36  
+37  proc/test_outer1()
+38      outer1 = &quot;B&quot;
+39      return 3
+40  
+41  proc/test_inner1()
+42      var/static/inner1 = test_outer1()
+43      return inner1
+44  
+45  /proc/main()
+46      LOG(&quot;outer1&quot;, outer1)
+47      LOG(&quot;test_inner1()&quot;, test_inner1())
+48      LOG(&quot;outer1&quot;, outer1)
+49  
+50  /mob
+51      var/static/outer2 = &quot;A&quot;
+52      
+53      proc/test_outer2()
+54          outer2 = &quot;B&quot;
+55          return 3
+56      
+57      proc/test_inner2()
+58          var/static/inner2 = test_outer2()
+59          return inner2
+60      
+61      verb/test()
+62          main()
+63          
+64          LOG(&quot;outer2&quot;, outer2)
+65          LOG(&quot;test_inner2()&quot;, test_inner2())
+66          LOG(&quot;outer2&quot;, outer2)
+67  
+68  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;outer1&quot;: [&quot;B&quot;, &quot;B&quot;], &quot;test_inner1()&quot;: 3}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:58:41: No global proc named &quot;test_outer2&quot;
+Compilation failed with 1 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:58:41: No global proc named &quot;test_outer2&quot;
+Compilation failed with 1 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.003ef98bec42cc34febda25179b6679e6fe2ffec.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+/var/outer1 = &quot;A&quot;
+
+proc/test_outer1()
+    outer1 = &quot;B&quot;
+    return 3
+
+proc/test_inner1()
+    var/static/inner1 = test_outer1()
+    return inner1
+
+/proc/main()
+    LOG(&quot;outer1&quot;, outer1)
+    LOG(&quot;test_inner1()&quot;, test_inner1())
+    LOG(&quot;outer1&quot;, outer1)
+
+/mob
+    var/static/outer2 = &quot;A&quot;
+    
+    proc/test_outer2()
+        outer2 = &quot;B&quot;
+        return 3
+    
+    proc/test_inner2()
+        var/static/inner2 = test_outer2()
+        return inner2
+    
+    verb/test()
+        main()
+        
+        LOG(&quot;outer2&quot;, outer2)
+        LOG(&quot;test_inner2()&quot;, test_inner2())
+        LOG(&quot;outer2&quot;, outer2)
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

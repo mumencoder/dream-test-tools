@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# issue 689
+37  //# tag generalize
+38  
+39  /obj
+40    var/a = file(&quot;test.dm&quot;)
+41  
+42  /proc/main()
+43    var/obj/o = new
+44    LOG(&quot;o.a&quot;, o.a)
+45  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;o.a&quot;: &quot;test.dm&quot;}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;o.a&quot;: &quot;\n#include \&quot;map.dmm\&quot;\n#include \&quot;interface.dmf\&quot;\n\nvar/list/_log = new\nvar/list/_multilog = new\nvar/list/_mismatch = new\n\n/proc/_LOGADD(name, value)\n    if (name in _log)\n        if (name in _multilog)\n            _log[name] += value\n        else\n            _multilog[name] = 1\n            _log[name] = list( _log[name], value )\n    else\n        _log[name] = value\n\n/proc/EXPECT(name, actual, expected)\n    if (actual ~= expected) \n        _LOGADD(\&quot;expected\&quot;, actual)\n    else\n        _mismatch[name] = list(actual, expected)\n\n/proc/LOG(arg1, arg2)\n    var/name\n    var/value\n    if (isnull(arg2))\n        name = \&quot;log\&quot;\n        value = arg1\n    else\n        name = arg1\n        value = arg2\n    _LOGADD(name, value)\n\n//# issue 689\n//# tag generalize\n\n/obj\n  var/a = file(\&quot;test.dm\&quot;)\n\n/proc/main()\n  var/obj/o = new\n  LOG(\&quot;o.a\&quot;, o.a)\n\n/world/New()\n    main()\n\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/run_log.out\&quot;)\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/run_unexpected.out\&quot;)\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/fin.out\&quot;)\n    text2file(\&quot;[json_encode(_log)]\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/run_log.out\&quot;)\n    text2file(\&quot;[json_encode(_mismatch)]\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/run_unexpected.out\&quot;)\n    text2file(\&quot;FIN\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/fin.out\&quot;)\n    world.log &lt;&lt; \&quot;shutdown()\&quot;\n    //shutdown()\n&quot;}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;o.a&quot;: &quot;\n#include \&quot;map.dmm\&quot;\n#include \&quot;interface.dmf\&quot;\n\nvar/list/_log = new\nvar/list/_multilog = new\nvar/list/_mismatch = new\n\n/proc/_LOGADD(name, value)\n    if (name in _log)\n        if (name in _multilog)\n            _log[name] += value\n        else\n            _multilog[name] = 1\n            _log[name] = list( _log[name], value )\n    else\n        _log[name] = value\n\n/proc/EXPECT(name, actual, expected)\n    if (actual ~= expected) \n        _LOGADD(\&quot;expected\&quot;, actual)\n    else\n        _mismatch[name] = list(actual, expected)\n\n/proc/LOG(arg1, arg2)\n    var/name\n    var/value\n    if (isnull(arg2))\n        name = \&quot;log\&quot;\n        value = arg1\n    else\n        name = arg1\n        value = arg2\n    _LOGADD(name, value)\n\n//# issue 689\n//# tag generalize\n\n/obj\n  var/a = file(\&quot;test.dm\&quot;)\n\n/proc/main()\n  var/obj/o = new\n  LOG(\&quot;o.a\&quot;, o.a)\n\n/world/New()\n    main()\n\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/run_log.out\&quot;)\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/run_unexpected.out\&quot;)\n    fdel(\&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/fin.out\&quot;)\n    text2file(\&quot;[json_encode(_log)]\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/run_log.out\&quot;)\n    text2file(\&quot;[json_encode(_mismatch)]\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/run_unexpected.out\&quot;)\n    text2file(\&quot;FIN\&quot;, \&quot;/DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/fin.out\&quot;)\n    world.log &lt;&lt; \&quot;shutdown()\&quot;\n    //shutdown()\n&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/stdlib-file_in_vardecl/opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.c852cf6e6795c171e7bc2bf3f9b8777842877881.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.26a47e092b0a79fcc7e1fc8b152bc6c9127ab37a.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# issue 689
+//# tag generalize
+
+/obj
+  var/a = file(&quot;test.dm&quot;)
+
+/proc/main()
+  var/obj/o = new
+  LOG(&quot;o.a&quot;, o.a)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

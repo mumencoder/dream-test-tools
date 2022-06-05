@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /proc/main()
+37      var/list/l1 = list(1,2,3)
+38      var/list/l2 = list(4,5,6)
+39      var/list/logi = list()
+40      for (var/i in l1 in l2)
+41          logi += i
+42      LOG(logi)
+43      
+44  
+45  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:40:error: : bad assignment
+test.dm.dmb - 1 error, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/statements-for-nest_in_1/opendream.github.wixoaGit.OpenDream.23ef8a993a0770c1e6afbade1e3548913591279f.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/statements-for-nest_in_1/opendream.github.wixoaGit.OpenDream.22c928e2d3beeaed2c72e6d62d68795e68e75607.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.23ef8a993a0770c1e6afbade1e3548913591279f.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.22c928e2d3beeaed2c72e6d62d68795e68e75607.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/proc/main()
+    var/list/l1 = list(1,2,3)
+    var/list/l2 = list(4,5,6)
+    var/list/logi = list()
+    for (var/i in l1 in l2)
+        logi += i
+    LOG(logi)
+    
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

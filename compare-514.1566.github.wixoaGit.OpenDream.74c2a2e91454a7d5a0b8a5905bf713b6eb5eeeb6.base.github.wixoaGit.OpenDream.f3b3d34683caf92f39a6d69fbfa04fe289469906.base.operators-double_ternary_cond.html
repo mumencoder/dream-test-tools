@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /obj
+37      var/a
+38      var/b
+39  
+40  /proc/ternary(name, obj/o, a, b)
+41      o.a = a
+42      o.b = b
+43      LOG(name, o.a ? &quot;str&quot;:o.b ? &quot;a&quot;:&quot;b&quot;)
+44  
+45  /proc/main()
+46      var/obj/o = new
+47  
+48      ternary(&quot;?00&quot;, o, 0, 0)    
+49      ternary(&quot;?01&quot;, o, 0, 1)
+50      ternary(&quot;?10&quot;, o, 1, 0)
+51      ternary(&quot;?11&quot;, o, 1, 1)
+52  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;?00&quot;: &quot;b&quot;, &quot;?01&quot;: &quot;a&quot;, &quot;?10&quot;: &quot;str&quot;, &quot;?11&quot;: &quot;str&quot;}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;?00&quot;: &quot;b&quot;, &quot;?01&quot;: &quot;a&quot;, &quot;?10&quot;: &quot;str&quot;, &quot;?11&quot;: &quot;str&quot;}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;?00&quot;: &quot;b&quot;, &quot;?01&quot;: &quot;a&quot;, &quot;?10&quot;: &quot;str&quot;, &quot;?11&quot;: &quot;str&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/operators-double_ternary_cond/opendream.github.wixoaGit.OpenDream.74c2a2e91454a7d5a0b8a5905bf713b6eb5eeeb6.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/operators-double_ternary_cond/opendream.github.wixoaGit.OpenDream.f3b3d34683caf92f39a6d69fbfa04fe289469906.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.74c2a2e91454a7d5a0b8a5905bf713b6eb5eeeb6.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.f3b3d34683caf92f39a6d69fbfa04fe289469906.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/obj
+    var/a
+    var/b
+
+/proc/ternary(name, obj/o, a, b)
+    o.a = a
+    o.b = b
+    LOG(name, o.a ? &quot;str&quot;:o.b ? &quot;a&quot;:&quot;b&quot;)
+
+/proc/main()
+    var/obj/o = new
+
+    ternary(&quot;?00&quot;, o, 0, 0)    
+    ternary(&quot;?01&quot;, o, 0, 1)
+    ternary(&quot;?10&quot;, o, 1, 0)
+    ternary(&quot;?11&quot;, o, 1, 1)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

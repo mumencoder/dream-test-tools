@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /obj
+37      var/const/c3 = se.c1 + se.c2
+38  
+39  /obj
+40      var/const/c2 = se.b
+41  
+42  /obj
+43      var/const/c1 = se.a
+44  
+45  /obj
+46      var/static/obj/se = new
+47      var/const/a = 7
+48      var/const/b = 8
+49  
+50  /proc/main()
+51      var/obj/o = new
+52      LOG(&quot;c1&quot;, o.c1)
+53      LOG(&quot;c2&quot;, o.c2)
+54      LOG(&quot;c3&quot;, o.c3)
+55  
+56      LOG(&quot;a&quot;, o.a)
+57      LOG(&quot;b&quot;, o.b)
+58  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;c1&quot;: 7, &quot;c2&quot;: 8, &quot;c3&quot;: 15, &quot;a&quot;: 7, &quot;b&quot;: 8}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:51:warning: o: variable defined but not used
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 1 warning (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:37:23: Unknown identifier &quot;se&quot;
+Error at test.dm:40:23: Unknown identifier &quot;se&quot;
+Error at test.dm:43:23: Unknown identifier &quot;se&quot;
+Compilation failed with 3 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:37:23: Unknown identifier &quot;se&quot;
+Error at test.dm:40:23: Unknown identifier &quot;se&quot;
+Error at test.dm:43:23: Unknown identifier &quot;se&quot;
+Compilation failed with 3 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.22c928e2d3beeaed2c72e6d62d68795e68e75607.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.3d9cd8fbc96461e9a449193556480d712c7dde84.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/obj
+    var/const/c3 = se.c1 + se.c2
+
+/obj
+    var/const/c2 = se.b
+
+/obj
+    var/const/c1 = se.a
+
+/obj
+    var/static/obj/se = new
+    var/const/a = 7
+    var/const/b = 8
+
+/proc/main()
+    var/obj/o = new
+    LOG(&quot;c1&quot;, o.c1)
+    LOG(&quot;c2&quot;, o.c2)
+    LOG(&quot;c3&quot;, o.c3)
+
+    LOG(&quot;a&quot;, o.a)
+    LOG(&quot;b&quot;, o.b)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

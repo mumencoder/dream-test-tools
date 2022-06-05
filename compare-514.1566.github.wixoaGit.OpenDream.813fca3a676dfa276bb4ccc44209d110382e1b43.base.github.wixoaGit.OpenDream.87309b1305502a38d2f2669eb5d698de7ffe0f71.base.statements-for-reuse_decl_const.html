@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# COMPILE False
+37  
+38  /datum
+39      var/const/idx = 0
+40      var/c = 0
+41      proc/do_loop()
+42          for (idx in 1 to 5)
+43              c += idx
+44  
+45  /proc/main()
+46      var/datum/d = new
+47      d.do_loop()
+48  
+49      var/const/idx = 0
+50      var/c = 0
+51      for (idx in 1 to 5)
+52          c += idx
+53  
+54      LOG(&quot;c&quot;, c)
+55      LOG(&quot;d.c&quot;, d.c)
+56  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Base</h4>
+    <pre><code>{&quot;c&quot;: 15, &quot;d.c&quot;: 15}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;c&quot;: 15, &quot;d.c&quot;: 15}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:42:error: idx: cannot change constant value
+test.dm:51:error: idx: cannot change constant value
+test.dm.dmb - 2 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/statements-for-reuse_decl_const/opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/statements-for-reuse_decl_const/opendream.github.wixoaGit.OpenDream.87309b1305502a38d2f2669eb5d698de7ffe0f71.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.87309b1305502a38d2f2669eb5d698de7ffe0f71.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# COMPILE False
+
+/datum
+    var/const/idx = 0
+    var/c = 0
+    proc/do_loop()
+        for (idx in 1 to 5)
+            c += idx
+
+/proc/main()
+    var/datum/d = new
+    d.do_loop()
+
+    var/const/idx = 0
+    var/c = 0
+    for (idx in 1 to 5)
+        c += idx
+
+    LOG(&quot;c&quot;, c)
+    LOG(&quot;d.c&quot;, d.c)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

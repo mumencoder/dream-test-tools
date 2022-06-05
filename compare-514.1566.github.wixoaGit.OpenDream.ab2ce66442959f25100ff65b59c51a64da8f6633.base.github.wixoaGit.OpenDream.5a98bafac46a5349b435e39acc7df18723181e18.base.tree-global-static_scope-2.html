@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /proc/p1()
+37    LOG(&quot;p1-a-1&quot;, a)
+38    LOG(&quot;p1-g1-1&quot;, g1)
+39    LOG(&quot;p1-g2-1&quot;, g2)
+40    /var/static/a = isnull(g2) ? 1 : 0
+41    LOG(&quot;p1-a-2&quot;, a)
+42    LOG(&quot;p1-g1-2&quot;, g1)
+43    LOG(&quot;p1-g2-2&quot;, g2)
+44    return a
+45  
+46  /var/static/g2 = 5
+47  /var/static/g1 = p1()
+48  
+49  /proc/main()
+50      LOG(&quot;g1&quot;, g1)
+51      LOG(&quot;g2&quot;, g2)
+52  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;p1-a-1&quot;: 0, &quot;log&quot;: [&quot;p1-g1-1&quot;, &quot;p1-g1-2&quot;], &quot;p1-g2-1&quot;: 5, &quot;p1-a-2&quot;: 0, &quot;p1-g2-2&quot;: 5, &quot;g1&quot;: 0, &quot;g2&quot;: 5}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:40:warning: g2: use of g2 precedes its definition
+test.dm:46:warning: g2: definition is here
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 2 warnings (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:37:19: Unknown identifier &quot;a&quot;
+Error at test.dm:40:7: attempt to reference r-value
+Error at test.dm:41:19: Unknown identifier &quot;a&quot;
+Error at test.dm:44:11: Unknown identifier &quot;a&quot;
+Compilation failed with 4 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:37:19: Unknown identifier &quot;a&quot;
+Error at test.dm:40:7: attempt to reference r-value
+Error at test.dm:41:19: Unknown identifier &quot;a&quot;
+Error at test.dm:44:11: Unknown identifier &quot;a&quot;
+Compilation failed with 4 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.ab2ce66442959f25100ff65b59c51a64da8f6633.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.5a98bafac46a5349b435e39acc7df18723181e18.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/proc/p1()
+  LOG(&quot;p1-a-1&quot;, a)
+  LOG(&quot;p1-g1-1&quot;, g1)
+  LOG(&quot;p1-g2-1&quot;, g2)
+  /var/static/a = isnull(g2) ? 1 : 0
+  LOG(&quot;p1-a-2&quot;, a)
+  LOG(&quot;p1-g1-2&quot;, g1)
+  LOG(&quot;p1-g2-2&quot;, g2)
+  return a
+
+/var/static/g2 = 5
+/var/static/g1 = p1()
+
+/proc/main()
+    LOG(&quot;g1&quot;, g1)
+    LOG(&quot;g2&quot;, g2)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

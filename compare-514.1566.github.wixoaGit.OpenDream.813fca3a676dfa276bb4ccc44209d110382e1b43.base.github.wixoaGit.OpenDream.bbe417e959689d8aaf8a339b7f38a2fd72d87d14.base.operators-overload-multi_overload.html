@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /datum/b 
+37    var/v2 = 0
+38  
+39    New(nv)
+40      v2 = nv
+41  
+42  /datum/a
+43    var/v = 0
+44    New(nv)
+45      v = nv
+46    proc/operator+(o)
+47      return 777
+48    proc/operator+(datum/a/o)
+49      return src.v + o.v
+50    proc/operator+(datum/b/o)
+51      return src.v + o.v2
+52  
+53  /proc/main()
+54      var/datum/a/A = new(4)
+55      var/datum/b/B = new(7)
+56      LOG(A + 1)
+57      LOG(A + A)
+58      LOG(A + B)
+59  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:48:error: operator+: duplicate definition
+test.dm:46:error: operator+: previous definition
+test.dm:50:error: operator+: duplicate definition
+test.dm.dmb - 3 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:48:7: Error recovery had to skip to test.dm:53:6
+Error at test.dm:46:18: Expected end of object statement
+Error at test.dm:47:11: Expected dedent
+Compilation failed with 2 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:48:7: Error recovery had to skip to test.dm:53:6
+Error at test.dm:46:18: Expected end of object statement
+Error at test.dm:47:11: Expected dedent
+Compilation failed with 2 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.bbe417e959689d8aaf8a339b7f38a2fd72d87d14.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/datum/b 
+  var/v2 = 0
+
+  New(nv)
+    v2 = nv
+
+/datum/a
+  var/v = 0
+  New(nv)
+    v = nv
+  proc/operator+(o)
+    return 777
+  proc/operator+(datum/a/o)
+    return src.v + o.v
+  proc/operator+(datum/b/o)
+    return src.v + o.v2
+
+/proc/main()
+    var/datum/a/A = new(4)
+    var/datum/b/B = new(7)
+    LOG(A + 1)
+    LOG(A + A)
+    LOG(A + B)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

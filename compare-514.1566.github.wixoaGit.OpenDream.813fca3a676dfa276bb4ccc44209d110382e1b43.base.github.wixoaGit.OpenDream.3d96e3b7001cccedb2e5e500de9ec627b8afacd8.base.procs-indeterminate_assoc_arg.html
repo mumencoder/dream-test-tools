@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  /obj/a
+37    var/list/results = list()
+38  
+39    proc/add_result(r) {
+40      if (r in results) {
+41        results[r] += 1
+42      } else {
+43        results[r] = 1
+44      }
+45    }
+46    proc/unique_results() {
+47      return length(results)
+48    }
+49    proc/total_results() {
+50      var/t = 0
+51      for (var/r in results) {
+52        t += results[r]
+53      }
+54      return t
+55    }
+56    proc/args_named1(arg1 = 1, arg2 = 2, arg3 = 3) {
+57      if (arg1 == 0) {
+58          add_result(&quot;arg1&quot;)
+59      }
+60      if (arg2 == 0) {
+61          add_result(&quot;arg2&quot;)
+62      }
+63      if (arg3 == 0) {
+64          add_result(&quot;arg3&quot;)
+65      }  
+66    }
+67    proc/args_named2() {
+68      for (var/arg in args)
+69        add_result(args[arg])
+70    }
+71  
+72  /proc/main()
+73      var/obj/a/o1 = new
+74      o1.args_named1(&quot;arg[pick(1,2,3)]&quot; = 0)
+75      LOG(&quot;1&quot;, o1.unique_results() == 1)
+76      var/obj/a/o2 = new
+77      for(var/i = 0, i &lt; 250, i++)
+78          o2.args_named1(&quot;arg[pick(1,2,3)]&quot; = 0)
+79      LOG(&quot;2a&quot;, o2.unique_results() == 3)
+80      LOG(&quot;2b&quot;, o2.total_results() == 250)
+81      LOG(&quot;2c&quot;, &quot;arg1&quot; in o2.results)
+82  
+83  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;1&quot;: 1, &quot;2a&quot;: 1, &quot;2b&quot;: 1, &quot;2c&quot;: 1}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:74:38: Invalid argument key
+Error at test.dm:78:42: Invalid argument key
+Compilation failed with 2 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Error at test.dm:74:38: Invalid argument key
+Error at test.dm:78:42: Invalid argument key
+Compilation failed with 2 errors and 0 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.813fca3a676dfa276bb4ccc44209d110382e1b43.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.3d96e3b7001cccedb2e5e500de9ec627b8afacd8.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+/obj/a
+  var/list/results = list()
+
+  proc/add_result(r) {
+    if (r in results) {
+      results[r] += 1
+    } else {
+      results[r] = 1
+    }
+  }
+  proc/unique_results() {
+    return length(results)
+  }
+  proc/total_results() {
+    var/t = 0
+    for (var/r in results) {
+      t += results[r]
+    }
+    return t
+  }
+  proc/args_named1(arg1 = 1, arg2 = 2, arg3 = 3) {
+    if (arg1 == 0) {
+        add_result(&quot;arg1&quot;)
+    }
+    if (arg2 == 0) {
+        add_result(&quot;arg2&quot;)
+    }
+    if (arg3 == 0) {
+        add_result(&quot;arg3&quot;)
+    }  
+  }
+  proc/args_named2() {
+    for (var/arg in args)
+      add_result(args[arg])
+  }
+
+/proc/main()
+    var/obj/a/o1 = new
+    o1.args_named1(&quot;arg[pick(1,2,3)]&quot; = 0)
+    LOG(&quot;1&quot;, o1.unique_results() == 1)
+    var/obj/a/o2 = new
+    for(var/i = 0, i &lt; 250, i++)
+        o2.args_named1(&quot;arg[pick(1,2,3)]&quot; = 0)
+    LOG(&quot;2a&quot;, o2.unique_results() == 3)
+    LOG(&quot;2b&quot;, o2.total_results() == 250)
+    LOG(&quot;2c&quot;, &quot;arg1&quot; in o2.results)
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

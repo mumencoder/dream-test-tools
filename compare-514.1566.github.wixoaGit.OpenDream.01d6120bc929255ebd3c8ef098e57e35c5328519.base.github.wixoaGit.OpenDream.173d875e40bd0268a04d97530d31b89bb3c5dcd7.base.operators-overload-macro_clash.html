@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# compile false
+37  
+38  #define operator aaa
+39  
+40  /datum/a
+41    var/v = 0
+42    New(nv)
+43      v = nv
+44    proc/operator()
+45      return 10
+46    operator+(datum/a/o)
+47      return src.v + o.v
+48  
+49  /proc/main()
+50    var/datum/a/A = new(4)
+51    var/datum/a/B = new(5)
+52    LOG(&quot;aaa&quot;, A.aaa())
+53    LOG(&quot;A+B&quot;, A+B)
+54  
+55  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 255</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:46:error: aaa: duplicate definition
+test.dm:46:error: datum/a/o: duplicate definition
+test.dm:46:error: +: instruction not allowed here
+test.dm:47:error: src.v: duplicate definition
+test.dm:47:error: o.v: duplicate definition
+test.dm:47:error: +: instruction not allowed here
+test.dm:47:error: return: instruction not allowed here
+test.dm:47:error: : empty type name (indentation error?)
+test.dm.dmb - 8 errors, 0 warnings (9/26/22 11:01 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:49:2: Error recovery had to skip to test.dm:49:6
+Error at test.dm:46:13: Expected end of object statement
+Error at test.dm:47:11: Expected dedent
+Error at test.dm:52:16: Type /datum/a does not exist
+Compilation failed with 3 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:49:2: Error recovery had to skip to test.dm:49:6
+Error at test.dm:46:13: Expected end of object statement
+Error at test.dm:47:11: Expected dedent
+Error at test.dm:52:16: Type /datum/a does not exist
+Compilation failed with 3 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.01d6120bc929255ebd3c8ef098e57e35c5328519.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.173d875e40bd0268a04d97530d31b89bb3c5dcd7.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# compile false
+
+#define operator aaa
+
+/datum/a
+  var/v = 0
+  New(nv)
+    v = nv
+  proc/operator()
+    return 10
+  operator+(datum/a/o)
+    return src.v + o.v
+
+/proc/main()
+  var/datum/a/A = new(4)
+  var/datum/a/B = new(5)
+  LOG(&quot;aaa&quot;, A.aaa())
+  LOG(&quot;A+B&quot;, A+B)
+
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

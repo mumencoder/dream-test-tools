@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35   //# issue 511
+36   
+37  /proc/switchproc(vn, v)
+38      switch (v)
+39          if (5)
+40              LOG(vn, 5)
+41          else if (9)
+42              LOG(vn, 9)
+43  
+44  /proc/main()
+45      var/x = 5
+46      var/y = 9
+47      switchproc(&quot;x&quot;, x)
+48      switchproc(&quot;y&quot;, x)    
+49  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;x&quot;: 5, &quot;y&quot;: 5}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+test.dm:46:warning: y: variable defined but not used
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 1 warning (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:44:2: Error recovery had to skip to test.dm:44:6
+Error at test.dm:41:17: Expected &quot;if&quot; or &quot;else&quot;, &quot;else if&quot; is not permitted as a switch case
+Compilation failed with 1 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 1</h4>
+    <pre><code>Compiling test.dm
+Warning at test.dm:44:2: Error recovery had to skip to test.dm:44:6
+Error at test.dm:41:17: Expected &quot;if&quot; or &quot;else&quot;, &quot;else if&quot; is not permitted as a switch case
+Compilation failed with 1 errors and 1 warnings
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.74c2a2e91454a7d5a0b8a5905bf713b6eb5eeeb6.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.f3b3d34683caf92f39a6d69fbfa04fe289469906.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+ //# issue 511
+ 
+/proc/switchproc(vn, v)
+    switch (v)
+        if (5)
+            LOG(vn, 5)
+        else if (9)
+            LOG(vn, 9)
+
+/proc/main()
+    var/x = 5
+    var/y = 9
+    switchproc(&quot;x&quot;, x)
+    switchproc(&quot;y&quot;, x)    
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>

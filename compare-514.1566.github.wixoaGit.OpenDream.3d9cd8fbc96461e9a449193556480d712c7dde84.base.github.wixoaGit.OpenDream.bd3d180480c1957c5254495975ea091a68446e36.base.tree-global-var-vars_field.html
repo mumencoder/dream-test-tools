@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compare details</title>
+    <style>
+table td {
+    border: 1px solid black;
+    text-align: center;
+}
+
+horiz_list {
+    display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <title>Compare details</title>
+    <hr>
+    <h2>Test: </h2>
+    <pre><code>35  
+36  //# issue 697
+37  
+38  /proc/main()
+39    for(var/V in global.vars)
+40      LOG(&quot;[V]&quot;, &quot;[global.vars[V]]&quot;)
+41  </code></pre>
+    <hr>
+    <hr>
+    <h2>Run value logs</h2>
+    <h4>Reference</h4>
+    <pre><code>{&quot;UNIX&quot;: &quot;UNIX&quot;, &quot;NORTH&quot;: &quot;1&quot;, &quot;SOUTH&quot;: &quot;2&quot;, &quot;EAST&quot;: &quot;4&quot;, &quot;WEST&quot;: &quot;8&quot;, &quot;NORTHEAST&quot;: &quot;5&quot;, &quot;NORTHWEST&quot;: &quot;9&quot;, &quot;SOUTHEAST&quot;: &quot;6&quot;, &quot;SOUTHWEST&quot;: &quot;10&quot;, &quot;UP&quot;: &quot;16&quot;, &quot;DOWN&quot;: &quot;32&quot;, &quot;BLIND&quot;: &quot;1&quot;, &quot;SEE_MOBS&quot;: &quot;4&quot;, &quot;SEE_OBJS&quot;: &quot;8&quot;, &quot;SEE_TURFS&quot;: &quot;16&quot;, &quot;SEE_SELF&quot;: &quot;32&quot;, &quot;SEE_INFRA&quot;: &quot;64&quot;, &quot;SEE_PIXELS&quot;: &quot;256&quot;, &quot;SEE_THRU&quot;: &quot;512&quot;, &quot;SEE_BLACKNESS&quot;: &quot;1024&quot;, &quot;MOB_PERSPECTIVE&quot;: &quot;0&quot;, &quot;EYE_PERSPECTIVE&quot;: &quot;1&quot;, &quot;EDGE_PERSPECTIVE&quot;: &quot;2&quot;, &quot;FLOAT_LAYER&quot;: &quot;-1&quot;, &quot;AREA_LAYER&quot;: &quot;1&quot;, &quot;TURF_LAYER&quot;: &quot;2&quot;, &quot;OBJ_LAYER&quot;: &quot;3&quot;, &quot;MOB_LAYER&quot;: &quot;4&quot;, &quot;FLY_LAYER&quot;: &quot;5&quot;, &quot;EFFECTS_LAYER&quot;: &quot;5000&quot;, &quot;TOPDOWN_LAYER&quot;: &quot;10000&quot;, &quot;BACKGROUND_LAYER&quot;: &quot;20000&quot;, &quot;FLOAT_PLANE&quot;: &quot;-32767&quot;, &quot;TOPDOWN_MAP&quot;: &quot;0&quot;, &quot;ISOMETRIC_MAP&quot;: &quot;1&quot;, &quot;SIDE_MAP&quot;: &quot;2&quot;, &quot;TILED_ICON_MAP&quot;: &quot;32768&quot;, &quot;TRUE&quot;: &quot;1&quot;, &quot;FALSE&quot;: &quot;0&quot;, &quot;MALE&quot;: &quot;male&quot;, &quot;FEMALE&quot;: &quot;female&quot;, &quot;NEUTER&quot;: &quot;neuter&quot;, &quot;PLURAL&quot;: &quot;plural&quot;, &quot;MOUSE_INACTIVE_POINTER&quot;: &quot;0&quot;, &quot;MOUSE_ACTIVE_POINTER&quot;: &quot;1&quot;, &quot;MOUSE_DRAG_POINTER&quot;: &quot;3&quot;, &quot;MOUSE_DROP_POINTER&quot;: &quot;4&quot;, &quot;MOUSE_ARROW_POINTER&quot;: &quot;5&quot;, &quot;MOUSE_CROSSHAIRS_POINTER&quot;: &quot;6&quot;, &quot;MOUSE_HAND_POINTER&quot;: &quot;7&quot;, &quot;MOUSE_LEFT_BUTTON&quot;: &quot;1&quot;, &quot;MOUSE_RIGHT_BUTTON&quot;: &quot;2&quot;, &quot;MOUSE_MIDDLE_BUTTON&quot;: &quot;4&quot;, &quot;MOUSE_CTRL_KEY&quot;: &quot;8&quot;, &quot;MOUSE_SHIFT_KEY&quot;: &quot;16&quot;, &quot;MOUSE_ALT_KEY&quot;: &quot;32&quot;, &quot;MS_WINDOWS&quot;: &quot;MS Windows&quot;, &quot;SOUND_MUTE&quot;: &quot;1&quot;, &quot;SOUND_PAUSED&quot;: &quot;2&quot;, &quot;SOUND_STREAM&quot;: &quot;4&quot;, &quot;SOUND_UPDATE&quot;: &quot;16&quot;, &quot;BLEND_DEFAULT&quot;: &quot;0&quot;, &quot;BLEND_OVERLAY&quot;: &quot;1&quot;, &quot;BLEND_ADD&quot;: &quot;2&quot;, &quot;BLEND_SUBTRACT&quot;: &quot;3&quot;, &quot;BLEND_MULTIPLY&quot;: &quot;4&quot;, &quot;BLEND_INSET_OVERLAY&quot;: &quot;5&quot;, &quot;_log&quot;: &quot;/list&quot;, &quot;_multilog&quot;: &quot;/list&quot;, &quot;_mismatch&quot;: &quot;/list&quot;}</code></pre>
+    <h4>Base</h4>
+    <pre><code>{&quot;_log&quot;: &quot;/list&quot;, &quot;_multilog&quot;: &quot;/list&quot;, &quot;_mismatch&quot;: &quot;/list&quot;}</code></pre>
+    <h4>Merge</h4>
+    <pre><code>{&quot;_log&quot;: &quot;/list&quot;, &quot;_multilog&quot;: &quot;/list&quot;, &quot;_mismatch&quot;: &quot;/list&quot;}</code></pre>
+    <hr>
+    <h2>Compile logs</h2>
+    <h4>Reference - Return code 0</h4>
+    <pre><code>DM compiler version 514.1566
+loading test.dm
+loading interface.dmf
+loading map.dmm
+saving test.dmb
+test.dm.dmb - 0 errors, 0 warnings (9/26/22 11:02 pm)
+Total time: 0:00
+</code></pre>
+    <h4>Base - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/tree-global-var-vars_field/opendream.github.wixoaGit.OpenDream.3d9cd8fbc96461e9a449193556480d712c7dde84.base/test.json
+Total time: 00:00
+</code></pre>
+    <h4>Merge - Return code 0</h4>
+    <pre><code>Compiling test.dm
+Compilation succeeded with 0 warnings
+Saved to /DTT/data/tests/tree-global-var-vars_field/opendream.github.wixoaGit.OpenDream.bd3d180480c1957c5254495975ea091a68446e36.base/test.json
+Total time: 00:00
+</code></pre>
+    <h2>Reference install</h2>
+    <pre><code>byond.514.1566</code></pre>
+    <h2>Base install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.3d9cd8fbc96461e9a449193556480d712c7dde84.base</code></pre>
+    <h2>Merge install</h2>
+    <pre><code>opendream.github.wixoaGit.OpenDream.bd3d180480c1957c5254495975ea091a68446e36.base</code></pre>
+    <hr>
+    <h2>Full test</h2>
+    <pre><code>
+#include &quot;map.dmm&quot;
+#include &quot;interface.dmf&quot;
+
+var/list/_log = new
+var/list/_multilog = new
+var/list/_mismatch = new
+
+/proc/_LOGADD(name, value)
+    if (name in _log)
+        if (name in _multilog)
+            _log[name] += value
+        else
+            _multilog[name] = 1
+            _log[name] = list( _log[name], value )
+    else
+        _log[name] = value
+
+/proc/EXPECT(name, actual, expected)
+    if (actual ~= expected) 
+        _LOGADD(&quot;expected&quot;, actual)
+    else
+        _mismatch[name] = list(actual, expected)
+
+/proc/LOG(arg1, arg2)
+    var/name
+    var/value
+    if (isnull(arg2))
+        name = &quot;log&quot;
+        value = arg1
+    else
+        name = arg1
+        value = arg2
+    _LOGADD(name, value)
+
+//# issue 697
+
+/proc/main()
+  for(var/V in global.vars)
+    LOG(&quot;[V]&quot;, &quot;[global.vars[V]]&quot;)
+
+/world/New()
+    main()
+
+    fdel(&quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    fdel(&quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    text2file(&quot;[json_encode(_log)]&quot;, &quot;&lt;PREFIX .test.files.run_log&gt;&quot;)
+    text2file(&quot;[json_encode(_mismatch)]&quot;, &quot;&lt;PREFIX .test.files.run_unexpected&gt;&quot;)
+    text2file(&quot;FIN&quot;, &quot;&lt;PREFIX .test.files.fin&gt;&quot;)
+    world.log &lt;&lt; &quot;shutdown()&quot;
+    //shutdown()
+</code></pre>
+  </body>
+</html>
