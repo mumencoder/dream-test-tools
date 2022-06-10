@@ -12,12 +12,20 @@ class Git(object):
         t1 = Shared.Task(env, task, tags={'action':'initialize_github'})
         return t1
 
+    def ensure_repo(env):
+        async def task(penv, senv):
+            print(senv.attr.git.api.repo)
+            await Shared.Git.Repo.ensure(senv)
+            print(senv.attr.git.api.repo)
+        t1 = Shared.Task(env, task, tags={'action':'ensure_repo'})
+        return t1
+
     def freshen_repo(env):
         async def task(penv, senv):
             await Shared.Git.Repo.ensure(senv)
             await Shared.Git.Repo.freshen(senv)
             await Shared.Git.Repo.init_all_submodules(senv)
-        t1 = Shared.Task(env, task, tags={'action':'freshen_repo'}).run_fresh(minutes=30)
+        t1 = Shared.Task(env, task, tags={'action':'freshen_repo'})
         return t1
 
     def update_commit_history(env):

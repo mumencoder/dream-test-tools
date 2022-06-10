@@ -26,6 +26,8 @@ class Builder(object):
         else:
             dotnet.build.params = {}
 
+        dotnet.build.params['configuration'] = 'Release'
+
         env2 = env.branch()
         Builder.prepare_compiler_project( env2 )
 

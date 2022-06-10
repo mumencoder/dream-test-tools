@@ -92,25 +92,31 @@ class Git(object):
 
             return None
 
-        async def resolve_branch(env):
+        async def resolve_head(env):
+            repo = env.attr.git.api.repo
+            env.attr.git.ref = repo.heads[ env.attr.git.branch.name ]
+            
+
+        async def ensure_branch(env):
             branch_info = env.attr.git.repo.branch
+            git = env.prefix('.git')
 
-            if branch_info["name"] not in repo.heads:
-                branch = repo.create_head(branch_info["name"])
-            else:
-                branch = repo.heads[branch_info["name"]]
+            if git.branch.name not in repo.heads:
+                repo.create_head( git.branch.name )
 
-            if 'remote' in branch_info:
-                remote = repo.remote( branch_info['remote'] )
-                if branch_info["name"] not in remote.refs:
-                    remote.fetch(branch_info["name"])
-                branch.set_tracking_branch( remote.refs[branch_info["name"]] )
-                branch.set_commit( remote.refs[branch_info["name"]] )
+            Git.Repo.resolve_head(env)
 
-            repo.head.reset( branch, working_tree=True )
+            if env.attr_exists('.git.repo.remote'):
+                remote = repo.remote( git.remote.name )
+                if git.branch.name not in remote.refs:
+                    remote.fetch( git.branch.name )
+                branch.set_tracking_branch( remote.refs[git.branch.name] )
+                branch.set_commit( remote.refs[git.branch.name] )
 
-            if 'remote' in branch_info:
-                if repo.head.commit != remote.refs[branch_info["name"]].commit:
+            repo.head.reset( git.branch.name, working_tree=True )
+
+            if env.attr_exists('.git.repo.remote'):
+                if repo.head.commit != remote.refs[git.branch.name].commit:
                     raise Exception("repo head mismatch")
 
         @staticmethod

@@ -46,6 +46,7 @@ class Tests(object):
                 if tenv.attr.test.id in senv.attr.tests.completed:
                     continue
                 incomplete_tests.add( tenv )
+            penv.attr.wf.log.append( {'type':'text', 'text':f'there are {len(incomplete_tests)} remaining'})
             senv.attr.tests.incomplete = incomplete_tests
 
         return Shared.Task(env, task, tags={'action':'load_incomplete_tests'})
