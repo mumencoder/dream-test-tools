@@ -1,7 +1,7 @@
 
 from .common import *
 
-class App(ReportsApp):
+class App(object):
     def __init__(self):
         pass
 

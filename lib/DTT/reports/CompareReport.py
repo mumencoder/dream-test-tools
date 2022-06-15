@@ -1,46 +1,41 @@
 
 from .common import *
 
-from .SimpleReport import *
-
 class CompareReport(BaseReport):
-    def __init__(self, compare):
-        self.link_title = "Compare Report"
-        self.compare = compare
-        self.page_id = f"{compare['cenv_ref'].attr.install.id}.{compare['cenv_base'].attr.install.id}.{compare['cenv_new'].attr.install.id}"
+    def __init__(self, cenv):
+        self.cenv = cenv
+        self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}.{cenv.attr.compare.next.attr.install.id}"
 
-        self.tests = []
+        self.ctenvs = []
         self.by_state = {}
         self.by_state["tests"] = collections.defaultdict(list)
         self.by_state["html"] = {}
 
         self.test_pages = {}
-
-    def verbose_title(self):
-        return self.page_id
-        
+    
     def get_pages(self):
-        yield self
         yield from self.test_pages.values()
 
-    def get_location(self):
-        return f"./compare-{self.page_id}.html"
+        self.page = SimplePage(f'compare-{self.id}', "Compare")
+        self.to_html(self.page.doc)
+        yield self.page
 
-    def add_test(self, tenv):
-        self.tests.append( tenv )
-        self.by_state["tests"][ tenv.attr.compare.result ].append( tenv )
-        self.test_pages[tenv.attr.compare.ref.attr.test.id] = SimpleReport(f"{self.page_id}.{tenv.attr.compare.ref.attr.test.id}", "Compare details", self.render_test_html(tenv) )
+    def add_compare_test(self, ctenv):
+        self.ctenvs.append( ctenv )
+        self.by_state["tests"][ ctenv.attr.compare.result ].append( ctenv )
+        test_page = SimplePage(f"compare-{self.id}.{ctenv.attr.compare.ref.attr.test.id}", "Compare details")
+        self.render_test_html(ctenv, test_page.doc)
+        self.test_pages[ctenv.attr.compare.ref.attr.test.id] = test_page
 
-    def render_test_html(self, tenv):
-        ele = div()
-        with ele:
+    def render_test_html(self, ctenv, doc):
+        with doc:
             hr()
             h2("Test: ")
-            pre(code(tenv.attr.compare.ref.attr.test.lined_text))
+            pre(code(ctenv.attr.compare.ref.attr.test.lined_text))
             hr()
-            ref = tenv.attr.compare.ref
-            prev = tenv.attr.compare.prev
-            nex = tenv.attr.compare.next
+            ref = ctenv.attr.compare.ref
+            prev = ctenv.attr.compare.prev
+            nex = ctenv.attr.compare.next
             envs = [ref, prev, nex]
 
             hr()
@@ -74,14 +69,6 @@ class CompareReport(BaseReport):
             h2(f'Merge install')
             pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
 
-        return str(ele)
-
-    def test_summary_html(self, tenv):
-        with tr():
-            tid = tenv.attr.compare.ref.attr.test.id
-            td(f"{tid}")
-            td(self.test_pages[tid].link_html())
-
     def summary(self):
         s = ""
         for state_type in ["fixing", "breaking"]:
@@ -91,11 +78,14 @@ class CompareReport(BaseReport):
             s += f'{state_type}: {n}, '
         return s
 
-    def to_html(self):
-        doc = dm.document(title='Compare Report')
-        BaseReport.common(doc)
+    def test_summary_html(self, cenv):
+        with tr():
+            tid = cenv.attr.compare.ref.attr.test.id
+            td(f"{tid}")
+            td(a("Result", href=self.test_pages[tid].location))
 
-        with doc:
+    def to_html(self, top):
+        with top:
             for state_type in ["fixing", "breaking", "mismatch", "match"]:
                 tenvs = self.by_state["tests"][state_type]
                 if len(tenvs) == 0:
@@ -105,4 +95,3 @@ class CompareReport(BaseReport):
                     tr( th("Test ID") )
                     for tenv in tenvs:
                         self.test_summary_html(tenv)
-        return str(doc)

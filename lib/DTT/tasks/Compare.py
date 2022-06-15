@@ -4,29 +4,29 @@ from .common import *
 from .TestCase import *
 
 class Compare(object):
-    def compare_test(env, tenv):
-        renv = env.attr.compare.ref
-        penv = env.attr.compare.prev
-        nenv = env.attr.compare.next
+    def compare_test(cenv, tenv):        
+        renv = cenv.attr.compare.ref
+        penv = cenv.attr.compare.prev
+        nenv = cenv.attr.compare.next
 
         renv.merge(tenv, inplace=True)
         penv.merge(tenv, inplace=True)
         nenv.merge(tenv, inplace=True)
-        
+
         Compare.load_result(renv)
         if not renv.attr.compare.exists:
-            env.attr.compare.result = "missing reference test result"
+            cenv.attr.compare.result = "missing reference test result"
             return
         Compare.load_result(penv)
         if not penv.attr.compare.exists:
-            env.attr.compare.result = "missing previous test result"
+            cenv.attr.compare.result = "missing previous test result"
             return
         Compare.load_result(nenv)
         if not nenv.attr.result.exists:
-            env.attr.compare.result = "missing next test result"
+            cenv.attr.compare.result = "missing next test result"
             return
 
-        env.attr.compare.result = Compare.compare_results(renv, penv, nenv)
+        cenv.attr.compare.result = Compare.compare_results(renv, penv, nenv)
         
     def load_result(env):
         TestCase.prepare_exec(env)
