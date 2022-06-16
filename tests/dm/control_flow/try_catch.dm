@@ -3,6 +3,6 @@
 
 /proc/main
   try   
-    LOG("a")
+    LOG("a", 1)
   catch(e)   
-    LOG("b")
+    LOG("b", 2)

@@ -1,4 +1,5 @@
-
+ //# issue 511
+ 
 /proc/switchproc(vn, v)
     switch (v)
         if (5)
@@ -10,4 +11,4 @@
     var/x = 5
     var/y = 9
     switchproc("x", x)
-    switchproc("y", x)
+    switchproc("y", x)    
