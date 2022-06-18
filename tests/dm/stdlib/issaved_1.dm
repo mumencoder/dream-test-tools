@@ -6,7 +6,7 @@
   var/const/C
 
   proc/log_vars()
-    for(vname in vars)
+    for(var/vname in vars)
       LOG( issaved( vars[vname] ) )
 
 /proc/main()
