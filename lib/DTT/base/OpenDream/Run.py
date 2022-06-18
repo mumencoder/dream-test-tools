@@ -1,15 +1,17 @@
 
-import os
+import os, asyncio
 
 import Shared
 
 class Run(object):
     base_port = 25566
+    port_lock = asyncio.Lock()
     current_port = 0
 
     @staticmethod
-    def get_port():
-        Run.current_port = (Run.current_port + 1) % 200
+    async def get_port():
+        async with Run.port_lock:
+            Run.current_port = (Run.current_port + 1) % 5000
         return Run.current_port + Run.base_port
 
     @staticmethod
@@ -41,7 +43,7 @@ class Run(object):
         try:
             cmd = f"{exe_paths[0]} {Run.convert_args(run.args)} "
             cmd += f"--cvar opendream.json_path={run.dm_file_path} "
-            cmd += f"--cvar net.port={Run.get_port()} "
+            cmd += f"--cvar net.port={await Run.get_port()} "
             env.attr.shell.command = cmd
             print( env.attr.shell.command )
             env.attr.shell.dir = env.attr.install.dir

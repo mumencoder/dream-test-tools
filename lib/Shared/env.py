@@ -142,13 +142,13 @@ class Environment(object):
     def set_attr(self, path, value):
         self.properties[path] = value
 
-    def get_attr(self, path, local=False):
+    def get_attr(self, path, local=False, default=None):
         if local is True:
             return self.properties[path]
         while path not in self.properties:
             self = self.parent
             if self is None:
-                return None
+                return default
         return self.properties[path]
 
     def attr_exists(self, path, local=False):

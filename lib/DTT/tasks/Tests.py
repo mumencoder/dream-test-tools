@@ -42,10 +42,13 @@ class Tests(object):
             senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
             incomplete_tests = set()
+            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
             for tenv in TestCase.list_all(env, env.attr.tests.dirs.dm_files):
-                if tenv.attr.test.id in senv.attr.tests.completed:
-                    continue
-                incomplete_tests.add( tenv )
+                for redo_test_name in redo_tests:
+                    if redo_test_name in tenv.attr.test.id:
+                        incomplete_tests.add( tenv )
+                if tenv.attr.test.id not in senv.attr.tests.completed:
+                    incomplete_tests.add( tenv )
             penv.attr.wf.log.append( {'type':'text', 'text':f'there are {len(incomplete_tests)} remaining'})
             senv.attr.tests.incomplete = incomplete_tests
 
@@ -55,7 +58,6 @@ class Tests(object):
         env.attr.process.log_mode = "file"
         env.attr.process.log_path = env.attr.test.base_dir / 'compile.log.txt'
         env.attr.compilation.dm_file_path = env.attr.test.dm_file_path
-        env.attr.compilation.args = {}
 
     def prepare_run(env):
         env.attr.process.log_mode = "file"

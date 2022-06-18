@@ -14,9 +14,7 @@ class Git(object):
 
     def ensure_repo(env):
         async def task(penv, senv):
-            print(senv.attr.git.api.repo)
             await Shared.Git.Repo.ensure(senv)
-            print(senv.attr.git.api.repo)
         t1 = Shared.Task(env, task, tags={'action':'ensure_repo'})
         return t1
 
@@ -39,7 +37,6 @@ class Git(object):
 
         async def process(penv, senv):
             history_state = f'{senv.attr.github.repo_id}.history.commits'
-            compare_state = f'{senv.attr.github.repo_id}.history.compares'
             commit_history = penv.attr.state.results.get(history_state)
             senv.attr.github.commit_history = commit_history
             commits = sorted( commit_history.keys(), key=lambda k: commit_history[k]["commit"]["committer"]["date"], reverse=True )
@@ -48,7 +45,8 @@ class Git(object):
                 if i+1 == len(commits):
                     continue
                 compares.append( {"type":"history", "commit_info":commit_history[commits[i]], "base":commits[i+1], "new":commits[i]} )
-            penv.attr.state.results.set(compare_state, compares)
+            senv.attr.git.commits = commits
+            senv.attr.opendream.compares = compares
 
         t1 = Shared.Task(env, refresh, tags={'action':'refresh'} ).run_fresh(minutes=30)
         t2 = Shared.Task(env, process, tags={'action':'process'})
@@ -65,7 +63,7 @@ class Git(object):
 
         async def process_pull_requests(penv, senv):
             prs = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs')
-            commits = set()
+            commits = {}
             compares = []
 
             try:
@@ -91,15 +89,20 @@ class Git(object):
                     for c in prenv.attr.git.api.repo.head.commit.parents:
                         if str(c) != pull_info["head"]["sha"]:
                             base_commit = str(c)
+                
+                    if base_commit not in commits:
+                        commits[base_commit] = senv.branch()
+                    if pr_commit not in commits:
+                        commits[pr_commit] = senv.branch()
+                        if pull_info['id'] == 748018792:
+                            commits[pr_commit].attr.compilation.args = {'flags':['experimental-preproc']}
 
-                    commits.add(base_commit)
-                    commits.add(pr_commit)
                     compares.append( {"type":"pr", "pull_info":pull_info, "base":base_commit, "new":pr_commit} )
             finally:
                 senv.attr.resources.shared_opendream_repo.release(repo)
 
-            penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs.commits', list(commits) )
-            penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs.compares', list(compares) )
+            senv.attr.git.commits = commits
+            senv.attr.opendream.compares = compares
         t2 = Shared.Task(env, process_pull_requests, tags={'action':'process_pull_requests'})
 
         Shared.Task.link(t1, t2)

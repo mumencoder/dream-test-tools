@@ -4,7 +4,11 @@ from .common import *
 class CompareReport(BaseReport):
     def __init__(self, cenv):
         self.cenv = cenv
-        self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}.{cenv.attr.compare.next.attr.install.id}"
+        if cenv.attr.compare.next is not None:
+            self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}.{cenv.attr.compare.next.attr.install.id}"
+        else:
+            self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}"
+
 
         self.ctenvs = []
         self.by_state = {}
@@ -36,7 +40,6 @@ class CompareReport(BaseReport):
             ref = ctenv.attr.compare.ref
             prev = ctenv.attr.compare.prev
             nex = ctenv.attr.compare.next
-            envs = [ref, prev, nex]
 
             hr()
             h2("Run value logs")
@@ -46,7 +49,7 @@ class CompareReport(BaseReport):
             if prev.attr.result.runlog is not None:
                 h4(f"Base")
                 pre(code(json.dumps(prev.attr.result.runlog)))
-            if nex.attr.result.runlog is not None:
+            if nex is not None and nex.attr.result.runlog is not None:
                 h4(f"Merge")
                 pre(code(json.dumps(nex.attr.result.runlog)))
 
@@ -58,7 +61,7 @@ class CompareReport(BaseReport):
             if prev.attr.result.compilelog is not None:
                 h4(f"Base - Return code {str(prev.attr.result.ccode)}")
                 pre(code(prev.attr.result.compilelog))
-            if nex.attr.result.compilelog is not None:
+            if nex is not None and nex.attr.result.compilelog is not None:
                 h4(f"Merge - Return code {str(nex.attr.result.ccode)}")
                 pre(code(nex.attr.result.compilelog))
 
@@ -66,8 +69,9 @@ class CompareReport(BaseReport):
             pre(code(f'{ref.attr.install.platform}.{ref.attr.install.id}'))
             h2(f'Base install')
             pre(code(f'{prev.attr.install.platform}.{prev.attr.install.id}'))
-            h2(f'Merge install')
-            pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
+            if nex is not None:
+                h2(f'Merge install')
+                pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
 
     def summary(self):
         s = ""
@@ -86,7 +90,7 @@ class CompareReport(BaseReport):
 
     def to_html(self, top):
         with top:
-            for state_type in ["fixing", "breaking", "mismatch", "match"]:
+            for state_type in ["fixing", "breaking", "mismatch-runtime", "mismatch-compile", "mismatch-lenient", "match", "missing-result"]:
                 tenvs = self.by_state["tests"][state_type]
                 if len(tenvs) == 0:
                     continue

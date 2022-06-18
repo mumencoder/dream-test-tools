@@ -70,6 +70,16 @@ class OpenDream(object):
             Install.config(senv)
         return Shared.Task(env, task, tags={'action':'load_install_from_local'} )
 
+    def merge_into_senv(env, menv, tags={}):
+        Shared.Task.tags(env, tags )
+        async def task(penv, senv):
+            senv.merge(menv, inplace=True)
+        return Shared.Task(env, task, tags={'action':'merge_into_senv'} )
+
+    def task_chain(*tasks):
+        Shared.Task.chain(*tasks)
+        return Shared.TaskBound(tasks[0], tasks[-1])
+
     def load_install_from_github(env, commit, remote=None):
         env = env.branch()
         Shared.Task.tags(env, {'commit':commit} )
@@ -85,17 +95,19 @@ class OpenDream(object):
         Shared.Task.tags( env, tags={'commit_type':'pr'} )
         async def task(penv, senv):
             commit_tasks = []
-            commits = set(penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.commits' ))
-            compares = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs.compares' )
+            commits = senv.attr.git.commits
+            compares = senv.attr.opendream.compares
             new_compares = []
             for commit in commits:
-                commit_tasks.append( OpenDream.load_install_from_github(env, commit) )
+                commit_tasks.append( 
+                    OpenDream.task_chain(OpenDream.load_install_from_github(env, commit), OpenDream.merge_into_senv(env, commits[commit]) )
+                )
             for compare in compares:
                 cenv_new = senv.branch()
                 cenv_new.attr.git.repo.commit = compare['new']
                 base.OpenDream.Install.from_github(cenv_new) 
 
-                cenv_base = senv.branch()
+                cenv_base = senv.branch().branch()
                 cenv_base.attr.git.repo.commit = compare['base']
                 base.OpenDream.Install.from_github(cenv_base) 
 
@@ -112,7 +124,7 @@ class OpenDream(object):
         Shared.Task.tags( env, tags={'commit_type':'history'} )
         async def task(penv, senv):
             commits = set()
-            compares = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.history.compares' )
+            compares = senv.attr.opendream.compares
             new_compares = []
             for compare in compares:
                 if len(commits) >= compare_limit:

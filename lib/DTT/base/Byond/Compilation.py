@@ -20,6 +20,9 @@ class Compilation(object):
         async def log_returncode(env):
             compilation.returncode = env.attr.process.p.returncode
 
+        if not env.attr_exists('.compilation.args'):
+            compilation.args = {}
+
         env = env.branch()
         env.attr.process.env = {'LD_LIBRARY_PATH':f"{install.dir}/byond/bin"}
         preargs, postargs = Compilation.convert_args(compilation.args)

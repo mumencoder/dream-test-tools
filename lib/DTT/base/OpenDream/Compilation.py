@@ -32,6 +32,8 @@ class Compilation(object):
         if not env.attr_exists('.compilation.args'):
             compilation.args = {}
 
+        await env.send_event('opendream.before_compile', env)
+
         env = env.branch()
         env.attr.shell.dir = compilation.dm_file_path.parent
 
