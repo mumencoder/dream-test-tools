@@ -36,11 +36,11 @@ var/c = 999
 
     LOG("static_proc()", static_proc() == 1003)
     LOG("static_proc_shadowed()", static_proc_shadowed() == 700)
-    LOG("o1.s", o1.s, 997)
-    LOG("o1.g", o1.g, 996)
-    LOG("o1.c", o1.c, 5)
+    LOG("o1.s", o1.s == 997)
+    LOG("o1.g", o1.g == 996)
+    LOG("o1.c", o1.c == 5)
     o1.s -= 90
-    LOG("o2.s", o2.s, 907)
-    LOG("o2.g", o2.g, 996)
-    LOG("o3.s", o3.s, 995)
-    LOG("o3.g", o3.g, 994) 
+    LOG("o2.s", o2.s == 907)
+    LOG("o2.g", o2.g == 996)
+    LOG("o3.s", o3.s == 995)
+    LOG("o3.g", o3.g == 994) 
