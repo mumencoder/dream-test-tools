@@ -1,6 +1,6 @@
 
 import os
-import pathlib
+import pathlib, shutil
 
 import Shared
 

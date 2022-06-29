@@ -3,27 +3,39 @@ from .common import *
 
 class Git(object):
     def initialize_github(env, owner, repo, tag):
-        Shared.Task.tags(env, {'github.owner':owner, 'github.repo':repo, 'github.tag':tag} )
         async def task(penv, senv):
             senv.attr.github.owner = owner
             senv.attr.github.repo = repo
             senv.attr.github.tag = tag
             Shared.Github.prepare(senv)
-        t1 = Shared.Task(env, task, tags={'action':'initialize_github'})
+        t1 = Shared.Task(env, task, ptags={'action':'initialize_github'}, stags={'github.owner':owner, 'github.repo':repo, 'github.tag':tag} )
         return t1
 
     def ensure_repo(env):
         async def task(penv, senv):
             await Shared.Git.Repo.ensure(senv)
-        t1 = Shared.Task(env, task, tags={'action':'ensure_repo'})
+        t1 = Shared.Task(env, task, ptags={'action':'ensure_repo'})
         return t1
 
     def freshen_repo(env):
         async def task(penv, senv):
             await Shared.Git.Repo.ensure(senv)
             await Shared.Git.Repo.freshen(senv)
+        t1 = Shared.Task(env, task, ptags={'action':'freshen_repo'})
+        return t1
+
+    def tag_commit(env, commit):
+        async def task(penv, senv):
+            senv.attr.git.repo.commit = commit
+        return Shared.Task(env, task, ptags={'action':'tag_commit'}, stags={'commit':commit})
+
+    def load_clean_commit(env):
+        async def task(penv, senv):
+            await Shared.Git.Repo.command(senv, 'git submodule deinit --all')
+            await Shared.Git.Repo.command(senv, 'git clean -fdx')
+            await Shared.Git.Repo.ensure_commit(senv)
             await Shared.Git.Repo.init_all_submodules(senv)
-        t1 = Shared.Task(env, task, tags={'action':'freshen_repo'})
+        t1 = Shared.Task(env, task, ptags={'action':'load_clean_commit'})
         return t1
 
     def update_commit_history(env):
@@ -40,16 +52,10 @@ class Git(object):
             commit_history = penv.attr.state.results.get(history_state)
             senv.attr.github.commit_history = commit_history
             commits = sorted( commit_history.keys(), key=lambda k: commit_history[k]["commit"]["committer"]["date"], reverse=True )
-            compares = []
-            for i, commit in enumerate(commits):
-                if i+1 == len(commits):
-                    continue
-                compares.append( {"type":"history", "commit_info":commit_history[commits[i]], "base":commits[i+1], "new":commits[i]} )
             senv.attr.git.commits = commits
-            senv.attr.opendream.compares = compares
 
-        t1 = Shared.Task(env, refresh, tags={'action':'refresh'} ).run_fresh(minutes=30)
-        t2 = Shared.Task(env, process, tags={'action':'process'})
+        t1 = Shared.Task(env, refresh, ptags={'action':'refresh'} ).run_fresh(minutes=30)
+        t2 = Shared.Task(env, process, ptags={'action':'process'})
 
         Shared.Task.link(t1, t2)
         return Shared.TaskBound(t1, t2)
@@ -57,53 +63,32 @@ class Git(object):
     def update_pull_requests(env):
         env = env.branch()
 
-        async def refresh_pull_requests(penv, senv):
+        async def refresh(penv, senv):
             penv.attr.state.results.set(f'{senv.attr.github.repo_id}.prs', Shared.Github.list_pull_requests(senv) )
-        t1 = Shared.Task(env, refresh_pull_requests, tags={'action':'refresh_pull_requests'}).run_fresh(minutes=30)
+        t1 = Shared.Task(env, refresh, ptags={'action':'refresh'}).run_fresh(minutes=30)
 
-        async def process_pull_requests(penv, senv):
-            prs = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs')
-            commits = {}
-            compares = []
-
-            try:
-                while True:
-                    repo = await senv.attr.resources.shared_opendream_repo.acquire()
-                    if repo is not None:
-                        break
-                    await asyncio.sleep(0.2)
-                renv = penv.branch()
-                renv.attr.git.repo.local_dir = repo["data"]["path"]
-                renv.attr.git.repo.remote = 'origin'
-                await Shared.Git.Repo.ensure(renv)
-
-                for pull_info in prs:
-                    prenv = renv.branch()
-                    prenv.attr.pull_info = pull_info
-
-                    pr_commit = pull_info['merge_commit_sha']
-                    prenv.attr.git.repo.commit = pr_commit
-                    await Shared.Git.Repo.ensure_commit(prenv)
-                    if len(prenv.attr.git.api.repo.head.commit.parents) != 2:
-                        raise Exception("expected 2 parent commits from PR sha", prenv.attr.git.api.repo.head.commit.parents)
-                    for c in prenv.attr.git.api.repo.head.commit.parents:
-                        if str(c) != pull_info["head"]["sha"]:
-                            base_commit = str(c)
-                
-                    if base_commit not in commits:
-                        commits[base_commit] = senv.branch()
-                    if pr_commit not in commits:
-                        commits[pr_commit] = senv.branch()
-                        if pull_info['id'] == 748018792:
-                            commits[pr_commit].attr.compilation.args = {'flags':['experimental-preproc']}
-
-                    compares.append( {"type":"pr", "pull_info":pull_info, "base":base_commit, "new":pr_commit} )
-            finally:
-                senv.attr.resources.shared_opendream_repo.release(repo)
-
-            senv.attr.git.commits = commits
-            senv.attr.opendream.compares = compares
-        t2 = Shared.Task(env, process_pull_requests, tags={'action':'process_pull_requests'})
+        async def process(penv, senv):
+            senv.attr.prs.infos = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs')
+        t2 = Shared.Task(env, process, ptags={'action':'process'})
 
         Shared.Task.link(t1, t2)
         return Shared.TaskBound(t1, t2)
+
+    def tag_pull_request(env, pull_info):
+        async def task(penv, senv):
+            senv.attr.pr.info = pull_info
+        return Shared.Task(env, task, ptags={'action':'tag_pull_request'}, stags={'pr_id':pull_info["id"]})
+
+    def load_pull_request(env):
+        async def task(penv, senv):
+            prenv = senv.branch()
+            prenv.attr.git.repo.commit = senv.attr.pr.info['merge_commit_sha']
+            await Shared.Git.Repo.ensure_commit(prenv)
+            if len(prenv.attr.git.api.repo.head.commit.parents) != 2:
+                raise Exception("expected 2 parent commits from PR sha", prenv.attr.git.api.repo.head.commit.parents)
+            for c in prenv.attr.git.api.repo.head.commit.parents:
+                if str(c) != senv.attr.pr.info["head"]["sha"]:
+                    senv.attr.pr.merge_commit = str(prenv.attr.git.repo.commit)
+                    senv.attr.pr.base_commit = str(c)
+            
+        return Shared.Task(env, task, ptags={'action':'load_pull_request'})

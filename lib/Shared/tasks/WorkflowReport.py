@@ -12,8 +12,6 @@ class WorkflowReport(object):
     @staticmethod
     def common(doc):
         with doc:
-            meta(http_equiv="refresh", content="10")
-
             stylesheet = textwrap.dedent(
                 """
                 table td {

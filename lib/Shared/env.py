@@ -29,12 +29,12 @@ class Prefix(object):
     def __setattr__(self, attr, value):
         cnode = object.__getattribute__(self, 'root')
         path = object.__getattribute__(self, 'path') + "." + attr
-        object.__getattribute__(self, 'root').properties[path] = value
+        cnode.properties[path] = value
 
     def __delattr__(self, attr):
         cnode = object.__getattribute__(self, 'root')
         path = object.__getattribute__(self, 'path') + "." + attr
-        del object.__getattribute__(self, 'root').properties[path]
+        del cnode.properties[path]
 
     def __repr__(self):
         return f"<PREFIX {object.__getattribute__(self,'path')}>"

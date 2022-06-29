@@ -11,9 +11,8 @@ class Scheduler(object):
         env.attr.scheduler.pending = set()
 
         env.attr.tasks.all_names = {}
-        env.attr.tasks.base_tags = {}
 
-        top_task = Shared.Task.task_group(env, 'top')
+        top_task = Shared.Task.group(env, 'top')
         env.attr.scheduler.top_task = top_task
         env.attr.scheduler.top_task.initialize(env)
         Scheduler.schedule( env, top_task )
@@ -37,15 +36,16 @@ class Scheduler(object):
             try:
                 while penv.attr.scheduler.running:
                     write_reports()
-                    for i in range(0,10):
+                    for i in range(0,30):
                         if penv.attr.scheduler.running is False:
                             break
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(1.0)
                 write_reports()
             except:
                 import traceback
                 print( traceback.print_exc() )
-        return Shared.Task(env, workflow_report, tags={'action':'workflow_report'}, background=True)
+                write_reports()
+        return Shared.Task(env, workflow_report, ptags={'action':'workflow_report'}, background=True)
 
     @staticmethod
     def create_flow(env, runnable):

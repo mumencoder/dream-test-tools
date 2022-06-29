@@ -4,6 +4,8 @@ import asyncio
 import os
 import pathlib
 
+from .Compilation import *
+from .Run import *
 import Shared
 
 class Builder(object):
@@ -46,3 +48,11 @@ class Builder(object):
             await Shared.Dotnet.Project.publish( env2 )
         else:
             await Shared.Dotnet.Project.build( env2 )
+
+    @staticmethod
+    def build_ready(env):
+        if len( Compilation.get_exe_path(env) ) != 1:
+            return False
+        if len( Run.get_exe_path(env) ) != 1:
+            return False
+        return True

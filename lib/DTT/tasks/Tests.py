@@ -4,81 +4,52 @@ from .common import *
 from .TestCase import *
 
 class Tests(object):
-    def run_tests(env, tenvs):
-        async def create_task(penv, senv):
-            tasks = []
-            for tenv in tenvs:
-                t = Tests.do_test(tenv)
-                Shared.Task.link(t1, t)
-                tasks.append(t)
-            
-            if len(tasks) > 0:
-                bottom = Shared.Task.meet( senv, "do_tests", Shared.Task.link_exec, tasks )
-                bottom.initialize(senv)
-                Shared.Task.link_exec(bottom, t2)
-
-        async def save_task(penv, senv):
-            senv.attr.state.results.set(f'{senv.attr.tests.tag}.tests.completed', list(senv.attr.tests.completed))
-            await senv.send_event('tests.completed', senv)
-
-        t1 = Shared.Task(env, create_task, tags={'action':'create_task'} )
-        t2 = Shared.Task(env, save_task, tags={'action':'save_task'} )
-        Shared.Task.link(t1, t2)
-        return Shared.TaskBound(t1, t2)
-
-    def run_incomplete_tests(env):
-        async def task(penv, senv):
-            Shared.Task.link( penv.attr.self_task, Tests.run_tests(env, senv.attr.tests.incomplete) )
-        return Shared.Task(env, task, tags={'action':'run_incomplete_tests'} )
-
-    def clear_tests(env, tests_tag):
-        async def task(penv, senv):
-            senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'
-            senv.attr.state.results.rm(f'{senv.attr.tests.tag}.tests.completed')
-        return Shared.Task(env, task, tags={'action':'clear_tests'})
-
-    def load_incomplete_tests(env, tests_tag):
+    def load_tests(env, tests_tag):
         async def task(penv, senv):
             senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
-            incomplete_tests = set()
-            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
-            for tenv in TestCase.list_all(env, env.attr.tests.dirs.dm_files):
-                for redo_test_name in redo_tests:
-                    if redo_test_name in tenv.attr.test.id:
-                        incomplete_tests.add( tenv )
+            senv.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
+            senv.attr.tests.incomplete = set()
+            for tenv in senv.attr.tests.all_tests:
                 if tenv.attr.test.id not in senv.attr.tests.completed:
-                    incomplete_tests.add( tenv )
-            penv.attr.wf.log.append( {'type':'text', 'text':f'there are {len(incomplete_tests)} remaining'})
-            senv.attr.tests.incomplete = incomplete_tests
+                    senv.attr.tests.incomplete.add( tenv.attr.test.id )
+        return Shared.Task(env, task, ptags={'action':'load_incomplete_tests'})
 
-        return Shared.Task(env, task, tags={'action':'load_incomplete_tests'})
-                
-    def prepare_compile(env):
-        env.attr.process.log_mode = "file"
-        env.attr.process.log_path = env.attr.test.base_dir / 'compile.log.txt'
-        env.attr.compilation.dm_file_path = env.attr.test.dm_file_path
+    def run_tests(env):
+        subtasks = lambda env, tenv: Shared.Task.bounded_tasks(
+            Tests.tag_test( env, tenv.branch() ), 
+            Tests.check_test_runnable(env),
+            Tests.do_test(env)
+        )
+        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=32, tags={'action':'run_tests'} )
 
-    def prepare_run(env):
-        env.attr.process.log_mode = "file"
-        env.attr.process.log_path = env.attr.test.base_dir / 'run.log.txt'
-        env.attr.run.dm_file_path = env.attr.platform_cls.Run.get_bytecode_file(env.attr.test.dm_file_path)
-        env.attr.run.args = {'trusted':True}
-        env.event_handlers['process.wait'] = Tests.wait_run_complete
+    def tag_test(env, tenv):
+        async def task(penv, senv):
+            senv.attr.tests.tenv = tenv
+            senv.merge(senv.attr.tests.tenv, inplace=True)
+        return Shared.Task(env, task, ptags={'action':'tag_test'}, stags={'test_id':tenv.attr.test.id})
+
+    def check_test_runnable(env):
+        async def task(penv, senv):
+            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
+            halt = False
+            if senv.attr.test.id in senv.attr.tests.completed:
+                halt = True
+            for redo_test_name in redo_tests:
+                if redo_test_name in senv.attr.test.id:
+                    halt = False
+            if halt is True:
+                penv.attr.self_task.halt()
+        return Shared.Task(env, task, ptags={'action':'check_test_runnable'})
 
     def do_test(env):
-        env = env.branch()
-        Shared.Task.tags(env, {'action':'do_test'} )
         async def task(penv, senv):
-            penv.merge(senv, inplace=True)
-
-            TestCase.prepare_exec(penv)
-            penv.attr.test.files.fin = penv.attr.test.base_dir / 'fin.out'
-            penv.attr.test.files.run_log = penv.attr.test.base_dir / 'run_log.out'
-            penv.attr.test.files.run_unexpected = penv.attr.test.base_dir / 'run_unexpected.out'
-            TestCase.wrap(penv)
-            TestCase.write(penv)
-            senv.merge(penv, inplace=True)
+            TestCase.prepare_exec(senv)
+            senv.attr.test.files.fin = senv.attr.test.base_dir / 'fin.out'
+            senv.attr.test.files.run_log = senv.attr.test.base_dir / 'run_log.out'
+            senv.attr.test.files.run_unexpected = senv.attr.test.base_dir / 'run_unexpected.out'
+            TestCase.wrap(senv)
+            TestCase.write(senv)
 
             compile_env = senv.branch()
             Tests.prepare_compile(compile_env)
@@ -93,8 +64,34 @@ class Tests(object):
                 await senv.attr.platform_cls.Run.run(run_env)
 
             senv.attr.tests.completed.add(senv.attr.test.id)
+            await senv.send_event('test.complete')
 
-        return Shared.Task(env, task, tags={'test_id':env.attr.test.id})
+        return Shared.Task(env, task, {'action':'do_test'})
+
+    def save_complete_tests(env):
+        async def task(penv, senv):
+            penv.attr.self_task.log(f"incomplete {len(senv.attr.tests.incomplete)} {senv.attr.tests.incomplete}")
+            penv.attr.self_task.log(f"complete {len(senv.attr.tests.completed)} {senv.attr.tests.completed}")
+            senv.attr.state.results.set(f'{senv.attr.tests.tag}.tests.completed', list(senv.attr.tests.completed))
+            await senv.send_event('tests.completed', senv)
+        return Shared.Task(env, task, {'action':'save_complete_tests'})
+
+    def clear_tests(env):
+        async def task(penv, senv):
+            senv.attr.state.results.rm(f'{senv.attr.tests.tag}.tests.completed')
+        return Shared.Task(env, task, ptags={'action':'clear_tests'})
+
+    def prepare_compile(env):
+        env.attr.process.log_mode = "file"
+        env.attr.process.log_path = env.attr.test.base_dir / 'compile.log.txt'
+        env.attr.compilation.dm_file_path = env.attr.test.dm_file_path
+
+    def prepare_run(env):
+        env.attr.process.log_mode = "file"
+        env.attr.process.log_path = env.attr.test.base_dir / 'run.log.txt'
+        env.attr.run.dm_file_path = env.attr.platform_cls.Run.get_bytecode_file(env.attr.test.dm_file_path)
+        env.attr.run.args = {'trusted':True}
+        env.event_handlers['process.wait'] = Tests.wait_run_complete
 
     async def wait_run_complete(env):
         process = env.attr.process.p

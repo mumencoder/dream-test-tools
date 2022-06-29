@@ -18,10 +18,6 @@ class App(object):
 
         self.env.event_handlers['process.complete'] = self.handle_process_complete
 
-        self.env.attr.process.log_mode = "auto"
-        self.env.attr.process.auto_log_path = self.env.attr.dirs.ramdisc / "auto_process_logs"
-        self.env.attr.process.auto_logs = []
-
         self.env.attr.git.repo.remote = "origin"
 
         self.env.attr.resources.git = Shared.CountedResource(2)
@@ -30,6 +26,11 @@ class App(object):
 
         Shared.Workflow.init( self.env )
         Shared.Scheduler.init( self.env )
+
+        self.env.attr.dirs.ramdisc.ensure_clean_dir()
+        self.env.attr.process.log_mode = "auto"
+        self.env.attr.process.auto_log_path = self.env.attr.dirs.ramdisc / "auto_process_logs"
+        self.env.attr.process.auto_logs = []
 
         self.env.attr.workflow.report_path = self.env.attr.dirs.ramdisc / "workflow_report.html"
         print(f"file://{self.env.attr.workflow.report_path}")

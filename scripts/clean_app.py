@@ -12,7 +12,6 @@ class Main(DTT.App):
 
     async def run(self):
         await self.run_tasks()
-        await Shared.Scheduler.run( self.env )
 
 main = Main()
 asyncio.run( main.start() )

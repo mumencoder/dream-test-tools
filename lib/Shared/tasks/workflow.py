@@ -14,6 +14,7 @@ class Workflow(object):
     @staticmethod
     def init(env):
         env.attr.workflows = []
+        env.attr.finished_workflows = []
 
     class Decorators(object):
         def status(txt):

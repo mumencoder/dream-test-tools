@@ -95,7 +95,6 @@ class Git(object):
         async def resolve_head(env):
             repo = env.attr.git.api.repo
             env.attr.git.ref = repo.heads[ env.attr.git.branch.name ]
-            
 
         async def ensure_branch(env):
             branch_info = env.attr.git.repo.branch
