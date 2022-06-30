@@ -12,7 +12,7 @@ class Scheduler(object):
 
         env.attr.tasks.all_names = {}
 
-        top_task = Shared.Task.group(env, 'top')
+        top_task = Shared.Task.action(env, 'top')
         env.attr.scheduler.top_task = top_task
         env.attr.scheduler.top_task.initialize(env)
         Scheduler.schedule( env, top_task )
@@ -42,8 +42,6 @@ class Scheduler(object):
                         await asyncio.sleep(1.0)
                 write_reports()
             except:
-                import traceback
-                print( traceback.print_exc() )
                 write_reports()
         return Shared.Task(env, workflow_report, ptags={'action':'workflow_report'}, background=True)
 

@@ -15,7 +15,7 @@ class Task(object):
 
         self.name = None
         self.private_tags = dict(ptags)
-        self.public_tags = dict(stags)
+        self.shared_tags = dict(stags)
         self.process_tags = process_tags
 
         self.guarded_resources = []
@@ -41,6 +41,12 @@ class Task(object):
 
         self.forward_exec_links = set()
         self.backward_exec_links = set()
+
+        self.forward_tag_links = set()
+        self.backward_tag_links = set()
+
+        self.forward_import_links = set()
+        self.backward_import_links = set()
 
         self.order = None
 
@@ -79,29 +85,34 @@ class Task(object):
         return list(self.backward_exec_links)[0]
 
     @staticmethod
-    def link(task1, task2):
+    def link(task1, task2, ltype="all"):
         task1 = task1.resolve_bottom()
         task2 = task2.resolve_top()
-
-        task1.forward_exec_links.add(task2)
-        task2.backward_exec_links.add(task1)
 
         if task1 is task2:
             raise Exception("self link")
-        if len(task2.backward_senv_links) == 1:
-            raise Exception(f"attempt to link multiple senvs\n{task1.task_location()}\n{task2.task_location()}\nExisting link: {list(task2.backward_senv_links)[0].task_location()}")
-
-        task2.parent_task = task1
-        task1.forward_senv_links.add(task2)
-        task2.backward_senv_links.add(task1)
-
-    @staticmethod
-    def link_exec(task1, task2):
-        task1 = task1.resolve_bottom()
-        task2 = task2.resolve_top()
 
         task1.forward_exec_links.add(task2)
         task2.backward_exec_links.add(task1)
+
+        if ltype == "exec":
+            return
+
+        if ltype == "all" or ltype == "tag" or "tag" in ltype:
+            task1.forward_tag_links.add(task2)
+            task2.backward_tag_links.add(task1)
+
+        if ltype == "all" or ltype == "import" or "import" in ltype:
+            task1.forward_import_links.add(task2)
+            task2.backward_import_links.add(task1)
+
+        if ltype == "all" or ltype == "env" or "env" in ltype:
+            if len(task2.backward_senv_links) == 1:
+                raise Exception(f"attempt to link multiple senvs\n"
+                    f"{task1.task_location()}\n{task2.task_location()}\nExisting link: {list(task2.backward_senv_links)[0].task_location()}")
+            task2.parent_task = task1
+            task1.forward_senv_links.add(task2)
+            task2.backward_senv_links.add(task1)
 
     def resolve_top(self):
         return self
@@ -131,25 +142,30 @@ class Task(object):
         self.create_tags()
         self.create_name()
 
-    # TODO: make a link type for this behavior instead of overloading exec_link
-    def merge_imports_and_tags(self, trunk):
+    def merge_imports(self, trunk):
         for env, prop in trunk.get_exports():
             self.senv.set_attr( prop, env.get_attr(prop) )
-        self.public_tags.update( trunk.public_tags )
+
+    def merge_tags(self, trunk):
+        stags = dict(trunk.shared_tags)
+        # TODO: a way for task groups that does not make this necessary
+        if "group" in stags and trunk not in self.backward_senv_links:
+            del stags["group"]
+        self.shared_tags.update( stags )
 
     def create_tags(self):
-        self.tags = dict(self.public_tags)
+        self.tags = dict(self.shared_tags)
         if self.process_tags is not None:
             self.tags.update( self.process_tags(self.penv, self.senv) )
         if self.parent_task is not None:
-            self.tags.update(self.parent_task.public_tags)
+            self.tags.update(self.parent_task.shared_tags)
         self.tags.update(self.private_tags)
 
         self.log( f"tags {self.tags}" )
-        self.log( f"pubtag {self.public_tags}" )
+        self.log( f"pubtag {self.shared_tags}" )
         self.log( f"privtag {self.private_tags}" )
-        if len(self.public_tags.keys() & self.private_tags.keys()) > 0:
-            raise Exception("senv,cenv tag clash", self.public_tags, self.private_tags)
+        if len(self.shared_tags.keys() & self.private_tags.keys()) > 0:
+            raise Exception("senv,cenv tag clash", self.shared_tags, self.private_tags)
 
     def create_name(self):
         self.name = ":".join( [ f"{key}={self.tags[key]}" for key in sorted(self.tags.keys()) ] )
@@ -179,7 +195,12 @@ class Task(object):
                 self.senv.attr.wf = self.wf
                 await self.fn(self.penv, self.senv)
                 self.state = "complete"
+            except KeyboardInterrupt:
+                raise
+            except asyncio.exceptions.CancelledError:
+                return
             except:
+                print( self.name )
                 print( traceback.format_exc() )
                 self.log( traceback.format_exc() )
                 self.state = "exception"
@@ -228,8 +249,10 @@ class Task(object):
         if self.name is None:
             raise Exception(f"task started without initialization\n{self.task_location()}")
 
-        for trunk in self.backward_exec_links:
-            self.merge_imports_and_tags(trunk)
+        for trunk in self.backward_tag_links:
+            self.merge_tags(trunk)
+        for trunk in self.backward_import_links:
+            self.merge_imports(trunk)
         self.penv.attr.scheduler.pending.add(self)
 
         self.start()
@@ -312,7 +335,7 @@ class Task(object):
             raise Exception("limit not set")
         async def task(penv, senv):
             it = iter(senv.get_attr(source_attr))
-            iter_group = Task(env, Task.empty_task_fn, ptags={'subtask_group':''}, stags=penv.attr.self_task.public_tags)
+            iter_group = Task(env, Task.empty_task_fn, ptags={'subtask_group':''}, stags=penv.attr.self_task.shared_tags)
             Task.link( penv.attr.self_task.get_senv_parent(), iter_group )
             iter_group.try_start()
 
@@ -351,11 +374,22 @@ class Task(object):
     async def empty_task_fn(penv, senv):
         pass
 
+    def nop(env):
+        async def task(penv, senv):
+            pass
+        return Shared.Task(env, task, unique=False)
+
+    @staticmethod 
+    def action(env, action):
+        async def pass_task(penv, senv):
+            pass
+        return Shared.Task(env, pass_task, ptags={'action':action} )
+
     @staticmethod
     def group(env, group_name):
         async def pass_task(penv, senv):
             pass
-        return Shared.Task(env, pass_task, ptags={'grouped_tasks':group_name} )
+        return Shared.Task(env, pass_task, stags={'group':group_name} )
 
     @staticmethod
     def halt_on_condition(env, cond, _id):
