@@ -199,6 +199,8 @@ class Task(object):
                 raise
             except asyncio.exceptions.CancelledError:
                 return
+            except GeneratorExit:
+                return
             except:
                 print( self.name )
                 print( traceback.format_exc() )
@@ -309,6 +311,13 @@ class Task(object):
                     source.release( res )
                     resource_usage[id(res)] -= 1
             current_task = current_task.parent_task
+
+    @staticmethod
+    def export_senv_props(env, prop_filter):
+        async def task(penv, senv):
+            for prop in senv.filter_properties(prop_filter):
+                penv.attr.self_task.export(senv, prop)
+        return Task(env, task, ptags={'action':'export_senv_props'}, unique=False)
 
     @staticmethod
     def chain(*tasks):

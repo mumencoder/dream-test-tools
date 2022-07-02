@@ -16,6 +16,7 @@ class Git(object):
     def ensure_repo(env):
         async def task(penv, senv):
             await Shared.Git.Repo.ensure(senv)
+            penv.attr.self_task.export(senv, '.git.api.repo')
         t1 = Shared.Task(env, task, ptags={'action':'ensure_repo'})
         return t1
 
@@ -25,6 +26,11 @@ class Git(object):
             await Shared.Git.Repo.freshen(senv)
         t1 = Shared.Task(env, task, ptags={'action':'freshen_repo'})
         return t1
+
+    def commit_from_ref(env, ref):
+        async def task(penv, senv):
+            senv.attr.git.repo.commit = senv.attr.git.api.repo.remote('origin').refs[ref].commit
+        return Shared.Task(env, task, ptags={'action':'commit_from_ref'}, stags={'ref':ref})
 
     def tag_commit(env, commit):
         async def task(penv, senv):

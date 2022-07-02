@@ -46,12 +46,6 @@ class OpenDream(object):
             penv.attr.self_task.unguard_resource( senv.attr.opendream.shared_repo )
         return Shared.Task(env, task, ptags={'action':'release_shared_repo'}, unique=False)
 
-    def build(env):
-        async def task(penv, senv):
-            await OpenDream.prepare_build(senv)
-            await base.OpenDream.Builder.build(senv)
-        return Shared.Task(env, task, ptags={'action':'build'} )
-
     def load_install_from_local(env, local_name, local_dir):
         async def task(penv, senv):
             senv.attr.source.dir = local_dir
@@ -147,7 +141,9 @@ class OpenDream(object):
                 penv.attr.self_task.halt()
                 return
 
-            await OpenDream.prepare_build(senv)
+            await Shared.Path.sync_folders( penv, senv.attr.source.dir, senv.attr.install.dir )
+            senv.attr.dotnet.solution.path = senv.attr.install.dir
+            senv.attr.resources.opendream_server = Shared.CountedResource(1)
             await base.OpenDream.Builder.build(senv)
 
             if not base.OpenDream.Builder.build_ready(senv):
@@ -250,15 +246,36 @@ class OpenDream(object):
                     senv.attr.repo_report.get_history(cid).attr.compare.report.add_compare_test( ctenv )
         return Shared.Task(env, task, ptags={'action':'history_compare_report'})
 
-    def write_report(env):
+    def commit_compare_report(env):
+        async def task(penv, senv):
+            benv = env.branch()
+            base.Byond.Install.load(benv, env.attr.compares.ref_version)
+
+            cenv = penv.branch()
+            cenv.attr.compare.ref = benv
+            cenv.attr.compare.prev = senv.attr.opendream.commits[senv.attr.git.repo.commit]
+            cenv.attr.compare.next = None
+            senv.attr.compare.report = reports.CompareReport(cenv)
+            for tenv in TestCase.list_all(penv.branch(), penv.attr.tests.dirs.dm_files):
+                TestCase.load_test_text(tenv)
+                TestCase.wrap(tenv)
+                ctenv = cenv.branch()
+                ctenv.attr.compare.ref = cenv.attr.compare.ref.branch()
+                ctenv.attr.compare.prev = senv.attr.opendream.commits[senv.attr.git.repo.commit].branch()
+                ctenv.attr.compare.next = None
+                Compare.compare_test(ctenv, tenv)
+                senv.attr.compare.report.add_compare_test( ctenv )
+        return Shared.Task(env, task, ptags={'action':'commit_compare_report'})
+
+    def write_compare_report(env, name):
+        async def task(penv, senv):
+            reports.BaseReport.write_report( env.attr.tests.dirs.reports / name, senv.attr.compare.report)
+        return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
+
+    def write_github_report(env):
         async def task(penv, senv):
             reports.BaseReport.write_report( env.attr.tests.dirs.reports / 'github', senv.attr.repo_report)
-        return Shared.Task(env, task, ptags={'action':'write_report'})
-
-    async def prepare_build(env):
-        await Shared.Path.sync_folders( env, env.attr.source.dir, env.attr.install.dir )
-        env.attr.dotnet.solution.path = env.attr.install.dir
-        env.attr.resources.opendream_server = Shared.CountedResource(1)
+        return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
     
 class OpenDreamRepoResource(Shared.ResourceTracker):
     def __init__(self, env, base_path, limit=None):

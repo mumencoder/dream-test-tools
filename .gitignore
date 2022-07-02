@@ -8,3 +8,4 @@
 *.dmb
 .doit.db.*
 scripts/local_run.py
+scripts/dtt_redo.py
