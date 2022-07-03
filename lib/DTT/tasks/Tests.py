@@ -10,9 +10,16 @@ class Tests(object):
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
             senv.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
             senv.attr.tests.incomplete = set()
+            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
             for tenv in senv.attr.tests.all_tests:
                 if tenv.attr.test.id not in senv.attr.tests.completed:
                     senv.attr.tests.incomplete.add( tenv.attr.test.id )
+                else:
+                    for redo_test_name in redo_tests:
+                        if redo_test_name in tenv.attr.test.id:
+                            senv.attr.tests.incomplete.add( tenv.attr.test.id )
+                            senv.attr.tests.completed.remove( tenv.attr.test.id )
+
         return Shared.Task(env, task, ptags={'action':'load_incomplete_tests'})
 
     def run_tests(env):
@@ -31,13 +38,9 @@ class Tests(object):
 
     def check_test_runnable(env):
         async def task(penv, senv):
-            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
             halt = False
             if senv.attr.test.id in senv.attr.tests.completed:
                 halt = True
-            for redo_test_name in redo_tests:
-                if redo_test_name in senv.attr.test.id:
-                    halt = False
             if halt is True:
                 penv.attr.self_task.halt()
         return Shared.Task(env, task, ptags={'action':'check_test_runnable'})

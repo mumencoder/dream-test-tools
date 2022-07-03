@@ -53,16 +53,36 @@ class TestCase(object):
             #include "interface.dmf"
 
             var/list/_log = new
+            var/list/_multilog = new
             var/list/_mismatch = new
 
-            /proc/LOG(name, value, expected = null)
-                if (!isnull(expected))
-                    if (value ~= expected) 
-                        _log[name] = value
+            /proc/_LOGADD(name, value)
+                if (name in _log)
+                    if (name in _multilog)
+                        _log[name] += value
                     else
-                        _mismatch[name] = list(value, expected)
+                        _multilog[name] = 1
+                        _log[name] = list( _log[name], value )
                 else
-                    _log[name] = value""")
+                    _log[name] = value
+
+            /proc/EXPECT(name, actual, expected)
+                if (actual ~= expected) 
+                    _LOGADD("expected", actual)
+                else
+                    _mismatch[name] = list(actual, expected)
+
+            /proc/LOG(arg1, arg2)
+                var/name
+                var/value
+                if (isnull(arg2))
+                    name = "log"
+                    value = arg1
+                else
+                    name = arg1
+                    value = arg2
+                _LOGADD(name, value)
+        """)
 
         env.attr.test.line_start = len(text.split('\n'))
         text += env.attr.test.text
