@@ -3,7 +3,7 @@
   var/v2 = 0
 
   New(nv)
-    n2 = nv
+    v2 = nv
 
 /datum/a
   var/v = 0
@@ -19,6 +19,6 @@
 /proc/main()
     var/datum/a/A = new(4)
     var/datum/b/B = new(7)
-    LOG("A + 1", A + 1)
-    LOG("A + A", A + A)
-    LOG("A + B", A + B)
+    LOG(A + 1)
+    LOG(A + A)
+    LOG(A + B)

@@ -3,8 +3,8 @@
 //# issue 265
 
 /obj/proc/nullproc(null, temp)
-  LOG("1", null)
-  LOG("2", temp)
+  LOG("null", null)
+  LOG("temp", temp)
 
 /proc/main()
   var/obj/o = new

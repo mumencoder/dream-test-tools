@@ -16,6 +16,6 @@
   while(world.realtime - st < 10) {
     i %= 10
   }
-  sleep(-1)
+  sleep(1)
   l += 2
   LOG("l", l)

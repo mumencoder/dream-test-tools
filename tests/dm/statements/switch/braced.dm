@@ -4,6 +4,6 @@
 /proc/main()
   var/a = 1
   switch (a) {
-    if (1) { LOG("a", 1); }
-    else { LOG("b", 2; }
+    if (1) { LOG(1); }
+    else { LOG(2); }
   }

@@ -11,4 +11,4 @@
 
 /proc/main()
   var/newtype/o = new
-  LOG("o.vars", o.vars)
+  LOG(o.vars)

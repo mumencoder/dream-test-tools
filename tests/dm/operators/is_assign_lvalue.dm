@@ -1,4 +1,6 @@
 
+//# compile false
+
 /proc/main()
     var/a = 0
     (a = 1) = 2

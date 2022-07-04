@@ -1,4 +1,6 @@
 
+//# compile false
+
 #define operator aaa
 
 /datum/a
@@ -7,7 +9,7 @@
     v = nv
   proc/operator()
     return 10
-  proc/operator+(datum/a/o)
+  operator+(datum/a/o)
     return src.v + o.v
 
 /proc/main()

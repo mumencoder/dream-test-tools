@@ -3,4 +3,4 @@
 
 /proc/main()
   var/a = "[]"
-  LOG("a", a)
+  LOG(a)

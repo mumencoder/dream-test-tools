@@ -1,8 +1,8 @@
 
 //# issue 694
 
-/proc/main
+/proc/main()
   try   
-    LOG("a", 1)
-  catch(e)   
-    LOG("b", 2)
+    LOG(1)
+  catch(var/e)   
+    LOG(2)

@@ -4,6 +4,6 @@
 
 /proc/main()
     var/obj/o = new
-    LOG("o.a-1", o.a)
+    LOG(o.a)
     o.["a"] = 10
-    LOG("o.a-2", o.a)
+    LOG(o.a)

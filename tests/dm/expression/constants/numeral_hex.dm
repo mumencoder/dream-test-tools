@@ -3,6 +3,6 @@
 
 /proc/main()
   if (16 == 0x10)
-    LOG("1", "1")
+    LOG("1")
   else
-    LOG("2", "2")
+    LOG("2")

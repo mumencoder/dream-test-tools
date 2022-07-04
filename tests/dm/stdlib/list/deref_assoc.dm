@@ -6,4 +6,4 @@
 
 /proc/main()
   var/list/obj/l = list(x=new,y=new,z=new)
-  LOG("l[x].a", l["x"].a)
+  LOG(l["x"].a)

@@ -2,5 +2,5 @@
 //# issue 416
 
 /proc/main()
-  var/a = "c"
-  LOG("?1", 1?"a":s + "b")
+  var/b = "b"
+  LOG(1?"a":b + "c")

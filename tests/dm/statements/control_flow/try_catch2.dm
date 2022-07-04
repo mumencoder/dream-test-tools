@@ -3,8 +3,8 @@
 
 /proc/main()
   try
-    LOG("t", "t")
+    LOG("t")
     throw 5
-    LOG("t2", "t2")
-  except
-    LOG("e", "e")
+    LOG("t2")
+  catch(var/e)
+    LOG("e")

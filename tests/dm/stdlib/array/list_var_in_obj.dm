@@ -5,5 +5,5 @@
   var/thing[]
 
 /proc/main()
-  var/obj/o = o
-  LOG("o.thing", o.thing)
+  var/obj/o = new
+  LOG(o.thing)

@@ -2,5 +2,7 @@
 //# issue 513
 
 /proc/main()
-  var/a = 1 : 2 ? ()
-  LOG("a", a)
+  var/a = 1 ? 2 : ()
+  var/b = 1 ? () : 1
+  LOG(a)
+  LOG(b)

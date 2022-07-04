@@ -6,5 +6,5 @@
 
 /proc/main()
   var/obj/o = new
-  table[5][6] = 2
-  LOG( "1", table[5][6] )
+  o.table[5][6] = 2
+  LOG( o.table[5][6] )

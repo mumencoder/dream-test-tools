@@ -13,5 +13,5 @@
       ..()
 
 /proc/main()
-  var/obj/b/o = new
+  var/obj/a/b/o = new
   o.la(1,2)

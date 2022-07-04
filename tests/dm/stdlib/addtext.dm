@@ -1,5 +1,6 @@
 
 //# issue 663
+//# compile false
 
 /proc/main()
   LOG( "1", addtext() )

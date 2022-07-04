@@ -1,4 +1,6 @@
 
+//# compile false
+
 var/operator+ = 1
 
 /proc/main()

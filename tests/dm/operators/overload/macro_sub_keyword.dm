@@ -5,7 +5,7 @@
   var/v = 0
   New(nv)
     v = nv
-  proc/overload+(datum/a/o)
+  overload+(datum/a/o)
     return src.v + o.v
 
 /proc/main()
