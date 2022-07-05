@@ -3,9 +3,9 @@ import os, sys
 import Shared
 
 def setup_roots(env):
-    env.attr.dirs.root = Shared.Path( os.path.expanduser('~/media/dream') )
-    env.attr.dirs.source = Shared.Path( os.path.expanduser('~/dream-storage/source/dream-test-tools') )
-    env.attr.dirs.ramdisc = Shared.Path( '/media/ramdisk/dream-test-tools' ) 
+    env.attr.dirs.root = Shared.Path( os.path.expanduser('/DTT/data') )
+    env.attr.dirs.source = Shared.Path( os.path.expanduser('/DTT/src') )
+    env.attr.dirs.ramdisc = Shared.Path( '/DTT/data/scratch' ) 
     env.attr.dirs.tmp = Shared.Path( '/tmp/dream-test-tools' )
     
     env.attr.dirs.state = env.attr.dirs.root / 'state'
@@ -18,6 +18,7 @@ def setup_tests(env):
     env.attr.tests.dirs.dm_files = env.attr.dirs.source / "tests" / "dm"
     env.attr.tests.dirs.resources = env.attr.dirs.source / "tests" / "resources"
     env.attr.tests.dirs.output = env.attr.dirs.root / "tests"
+    env.attr.tests.dirs.reports = env.attr.dirs.root / "reports"
 
 def setup_byond(env):
     root_dir = env.attr.byond.dirs.root = env.attr.dirs.root / 'byond'
@@ -39,6 +40,10 @@ def setup_ss13(env):
     env.attr.ss13.dirs.installs = root_dir / 'installs'
 
 def setup_defaults(env):
+    env.attr.byond.installs = {
+        'main': {'type':'web_official', 'version':'514.1575' }
+    }
+    
     env.attr.ss13.sources = {
         'tgstation-OD': {'type':'repo', 'url':'https://github.com/wixoaGit/tgstation'},
         'Baystation12': {'type':'repo', 'url':'https://github.com/Baystation12/Baystation12'},

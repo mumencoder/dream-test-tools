@@ -31,6 +31,9 @@ class TestCase(object):
 
     def prepare_exec(env):
         env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
+        env.attr.test.files.fin = env.attr.test.base_dir / 'fin.out'
+        env.attr.test.files.run_log = env.attr.test.base_dir / 'run_log.out'
+        env.attr.test.files.run_unexpected = env.attr.test.base_dir / 'run_unexpected.out'
 
     @staticmethod
     def load_test_text(env):
@@ -98,7 +101,8 @@ class TestCase(object):
                 text2file("[json_encode(_log)]", "{env.attr.test.files.run_log }")
                 text2file("[json_encode(_mismatch)]", "{env.attr.test.files.run_unexpected}")
                 text2file("FIN", "{env.attr.test.files.fin}")
-                shutdown()
+                world.log << "shutdown()"
+                //shutdown()
             """)
 
         env.attr.test.wrapped_text = text

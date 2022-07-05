@@ -1,5 +1,5 @@
 
-import textwrap
+import textwrap, os
 import traceback
 
 import dominate as dom
@@ -43,7 +43,7 @@ class WorkflowReport(object):
                     if penv.attr_exists(".shell.dir"):
                         pre(code( "working dir: " + str(penv.attr.shell.dir) ) )
                     if penv.attr_exists(".process.log_path"):
-                        a( "<Log>", href=f'file://{penv.attr.process.log_path}')
+                        a( "<Log>", href=f'../../{os.path.relpath(penv.attr.process.log_path, penv.attr.dirs.root)}')
                     br()
                     if penv.attr_exists('.process.p'):
                         pre(code( "result: " + str(penv.attr.process.p.returncode) ))
@@ -65,7 +65,7 @@ class WorkflowReport(object):
                 for wf in env.attr.workflows:
                     if wf.task.name is None:
                         continue
-                    log_td = lambda: td( a("*", href=f"file://{wf.log_path}") )
+                    log_td = lambda: td( a("*", href=f"./{wf.log_link}") )
                     tr(td(wf.task.name), td(wf.task.state), td(wf.status[-1]), log_td())
 
         for wf in env.attr.workflows:

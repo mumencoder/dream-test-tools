@@ -77,9 +77,12 @@ class OpenDream(object):
             if await senv.attr.opendream.processed_commits.check_add( senv.attr.pr.base_commit ) is False:
                 base_tasks = Shared.Task.bounded_tasks( 
                     Git.tag_commit(env, senv.attr.pr.base_commit), 
+                    OpenDream.acquire_shared_repo( env ),
                     Git.load_clean_commit(env), 
                     OpenDream.load_install_from_github(env),
-                    process_task() )
+                    process_task(),
+                    OpenDream.release_shared_repo( env )
+                )
                 Shared.Task.link( penv.attr.self_task, base_tasks ) 
                 Shared.Task.link( base_tasks, bottom, ltype="exec" )
             else:
@@ -96,9 +99,12 @@ class OpenDream(object):
                 merge_tasks = Shared.Task.bounded_tasks( 
                     Git.tag_commit(env, senv.attr.pr.merge_commit), 
                     extra_task,
+                    OpenDream.acquire_shared_repo( env ),
                     Git.load_clean_commit(env), 
                     OpenDream.load_install_from_github(env),
-                    process_task() )
+                    process_task(),
+                    OpenDream.release_shared_repo( env ) 
+                )
                 Shared.Task.link( penv.attr.self_task, merge_tasks )
                 Shared.Task.link( merge_tasks, bottom, ltype="exec" )
             else:
@@ -116,9 +122,12 @@ class OpenDream(object):
             if await senv.attr.opendream.processed_commits.check_add( senv.attr.git.repo.commit ) is False:
                 tasks = Shared.Task.bounded_tasks( 
                     Git.tag_commit(env, senv.attr.git.repo.commit), 
+                    OpenDream.acquire_shared_repo( env ),
                     Git.load_clean_commit(env), 
                     OpenDream.load_install_from_github(env),
-                    process_task() )
+                    process_task(),
+                    OpenDream.release_shared_repo( env ) 
+                )
                 Shared.Task.link( penv.attr.self_task, tasks )
                 Shared.Task.link( tasks, bottom, ltype="exec" )
             else:
@@ -274,6 +283,7 @@ class OpenDream(object):
 
     def write_github_report(env):
         async def task(penv, senv):
+            print(senv.attr.repo_report)
             reports.BaseReport.write_report( env.attr.tests.dirs.reports / 'github', senv.attr.repo_report)
         return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
     

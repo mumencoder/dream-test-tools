@@ -73,6 +73,10 @@ class CompareReport(BaseReport):
                 h2(f'Merge install')
                 pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
 
+            hr()
+            h2("Full test")
+            pre(code(ctenv.attr.compare.ref.attr.test.wrapped_text))
+
     def summary(self):
         s = ""
         for state_type in ["fixing", "breaking"]:

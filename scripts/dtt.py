@@ -38,7 +38,7 @@ class Main(DTT.App):
             DTT.tasks.Tests.check_test_runnable(env),
             DTT.tasks.Tests.do_test(env)
         )
-        tasks.append( Shared.Task.subtask_source(env.branch(), '.tests.all_tests', subtasks, limit=32 ) )
+        tasks.append( Shared.Task.subtask_source(env.branch(), '.tests.all_tests', subtasks, limit=4 ) )
         Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
 
     async def prep_opendream(self):
@@ -68,17 +68,15 @@ class Main(DTT.App):
     
     async def finish_opendream_github(self):
         env = self.env.branch()
-        task = DTT.tasks.OpenDream.write_report(env)
+        task = DTT.tasks.OpenDream.write_github_report(env)
         Shared.Task.link( self.tasks['wixoaGit.compare_init'], task)
         Shared.Task.link( self.tasks['wixoaGit.pr.finish'], task, ltype="exec" )
         Shared.Task.link( self.tasks['wixoaGit.history.finish'], task, ltype="exec" )
 
     def commit_tasks(self, env):
         return Shared.Task.bounded_tasks( 
-            DTT.tasks.OpenDream.acquire_shared_repo( env ),
             DTT.tasks.Tests.load_tests(env, 'default'),
             DTT.tasks.OpenDream.process_commit(env), 
-            DTT.tasks.OpenDream.release_shared_repo( env ),
             DTT.tasks.Tests.run_tests(env),
             DTT.tasks.Tests.save_complete_tests( env )
         )
@@ -159,39 +157,31 @@ class Main(DTT.App):
         Shared.Task.link( self.tasks["wixoaGit.shared_repos"], tasks[0], ltype="import" )
         Shared.Task.link( self.tasks["wixoaGit.ensure_repo"], tasks[0], ltype="import" )
 
-    async def run_all(self):
-        await self.run_byond()
-        await self.run_opendream()
-        await self.compare_reports()
-        await Shared.Scheduler.run( self.env )
-
     async def run_common(self):
         await self.init_top()
         await self.register_metrics(self.env)
 
+    async def run_all(self):
+        #await self.run_byond()
+        await self.run_opendream()
+
     async def run_byond(self):
-        await self.run_common()
         self.env.attr.compares.ref_version = '514.1566'
         await self.add_byond_tests()
-        await Shared.Scheduler.run( self.env )
 
     async def run_opendream(self):
-        await self.run_common()
         self.env.attr.compares.ref_version = '514.1566'
         await self.prep_opendream()
         await self.prep_opendream_github()
         await self.update_pull_requests()
-        await self.update_commit_history(32)
+        await self.update_commit_history(16)
         await self.finish_opendream_github()
-        await Shared.Scheduler.run( self.env )
 
     async def run_main(self):
-        await self.run_common()
         self.env.attr.compares.ref_version = '514.1566'
         await self.add_byond_tests()
         await self.prep_opendream()
         await self.test_main_branch()
-        await Shared.Scheduler.run( self.env )
 
     async def run_local(self):
         await self.add_byond_tests()
@@ -204,7 +194,9 @@ class Main(DTT.App):
     async def run(self):
         self.env.attr.config.redo_tests = []
         self.reset_dotnet()
+        await self.run_common()
         await self.run_tasks()
+        await Shared.Scheduler.run( self.env )
 
     def process_args(self):
         from optparse import OptionParser

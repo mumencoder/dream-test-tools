@@ -77,13 +77,11 @@ class App(object):
             os.system('stty sane')
 
     def load_configs(self):
-        config_dir = os.path.abspath( os.path.expanduser("~/dream-storage/config") )
-        for file_path in sorted(os.listdir( config_dir )):
-            config_path = os.path.join(config_dir, file_path)
-            config_obj = Shared.Object.import_file( config_path )
-            for name, attr in vars(config_obj).items():
-                if name.startswith('setup_'):
-                    attr(self.env)
+        config_path = os.getenv("DTT_CONFIG_FILE")
+        config_obj = Shared.Object.import_file( config_path )
+        for name, attr in vars(config_obj).items():
+            if name.startswith('setup_'):
+                attr(self.env)
 
     def parse_install_arg(s):
         s = s.split(".")

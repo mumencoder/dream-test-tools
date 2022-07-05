@@ -1,5 +1,5 @@
 
-import asyncio
+import asyncio, os
 
 import Shared
 
@@ -10,6 +10,7 @@ class Workflow(object):
         self.log = []
         self.auto_logs = []
         self.log_path = env.attr.dirs.ramdisc / 'workflow_log' / (Shared.Random.generate_string(12) + '.html')
+        self.log_link = os.path.relpath(self.log_path, env.attr.dirs.ramdisc)
 
     @staticmethod
     def init(env):

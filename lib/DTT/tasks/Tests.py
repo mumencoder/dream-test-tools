@@ -28,7 +28,7 @@ class Tests(object):
             Tests.check_test_runnable(env),
             Tests.do_test(env)
         )
-        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=32, tags={'action':'run_tests'} )
+        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=4, tags={'action':'run_tests'} )
 
     def tag_test(env, tenv):
         async def task(penv, senv):
@@ -48,9 +48,6 @@ class Tests(object):
     def do_test(env):
         async def task(penv, senv):
             TestCase.prepare_exec(senv)
-            senv.attr.test.files.fin = senv.attr.test.base_dir / 'fin.out'
-            senv.attr.test.files.run_log = senv.attr.test.base_dir / 'run_log.out'
-            senv.attr.test.files.run_unexpected = senv.attr.test.base_dir / 'run_unexpected.out'
             TestCase.wrap(senv)
             TestCase.write(senv)
 
@@ -102,7 +99,7 @@ class Tests(object):
         start_time = time.time()
         kill_proc = False
         while process.returncode is None:
-            if time.time() - start_time > 20:
+            if time.time() - start_time > 30:
                 kill_proc = True
             if os.path.exists(fin_path):
                 if os.stat(fin_path).st_mtime > env.attr.process.start_time:
@@ -110,6 +107,8 @@ class Tests(object):
             if kill_proc:
                 try:
                     process.kill()
+                    #process.send_signal(signal.SIGKILL)
+                    #os.system(f"kill -9 {process.pid}")
                     await asyncio.wait_for(process.wait(), timeout=2.0)
                 except asyncio.exceptions.TimeoutError:
                     pass
