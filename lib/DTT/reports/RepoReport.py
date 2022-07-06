@@ -32,15 +32,18 @@ class GithubRepoReport(BaseReport):
 
     def to_html(self, top):
         with top:
-           rows = [self.pr_table_entry(cenv) for cenv in self.prs.values()]
-           hr()
-           h2("Pull requests")
-           table(rows, title="Pull requests")
+            hr()
+            h4(f"Generated on: {str(datetime.datetime.utcnow())}" )
 
-           rows = [self.history_table_entry(cenv) for cenv in self.history.values()]
-           hr()
-           h2("Commit history")
-           table(rows, title="Commit history")
+            rows = [self.pr_table_entry(cenv) for cenv in self.prs.values()]
+            hr()
+            h2("Pull requests")
+            table(rows, title="Pull requests")
+
+            rows = [self.history_table_entry(cenv) for cenv in self.history.values()]
+            hr()
+            h2("Commit history")
+            table(rows, title="Commit history")
 
     def pr_table_entry(self, cenv):
         e = tr()

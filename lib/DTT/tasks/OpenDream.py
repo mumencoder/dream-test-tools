@@ -278,13 +278,16 @@ class OpenDream(object):
 
     def write_compare_report(env, name):
         async def task(penv, senv):
+            report_dir = env.attr.tests.dirs.reports / name
+            shutil.rmtree( report_dir )
             reports.BaseReport.write_report( env.attr.tests.dirs.reports / name, senv.attr.compare.report)
         return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
 
     def write_github_report(env):
         async def task(penv, senv):
-            print(senv.attr.repo_report)
-            reports.BaseReport.write_report( env.attr.tests.dirs.reports / 'github', senv.attr.repo_report)
+            report_dir = env.attr.tests.dirs.reports / 'github'
+            shutil.rmtree( report_dir )
+            reports.BaseReport.write_report( report_dir, senv.attr.repo_report)
         return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
     
 class OpenDreamRepoResource(Shared.ResourceTracker):
