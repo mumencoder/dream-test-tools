@@ -1,8 +1,14 @@
 
-import asyncio
+import asyncio, psutil
 import Shared
 
 class Dotnet(object):
+    @staticmethod
+    def reset():
+        pses = Shared.Psutil.find(name='dotnet')
+        for ps in pses:
+            ps.kill()
+
     class Project(object):
         build_param_map = {"install_dir": "-o"}
         @staticmethod

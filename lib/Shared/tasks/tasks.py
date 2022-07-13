@@ -8,7 +8,7 @@ import collections
 import Shared
 
 class Task(object):
-    def __init__(self, penv, fn, ptags={}, stags={}, process_tags=None, background=False, unique=True):
+    def __init__(self, penv, fn, ptags={}, stags={}, tagfn=None, background=False, unique=True):
         self.parent_task = None
         self.manual_finish = None
         self.halted = False
@@ -16,7 +16,7 @@ class Task(object):
         self.name = None
         self.private_tags = dict(ptags)
         self.shared_tags = dict(stags)
-        self.process_tags = process_tags
+        self.tagfn = tagfn
 
         self.guarded_resources = []
         self.unguarded_resources = []
@@ -82,7 +82,7 @@ class Task(object):
             node.add_links(data)
 
     def get_senv_parent(self):
-        return list(self.backward_exec_links)[0]
+        return list(self.backward_senv_links)[0]
 
     @staticmethod
     def link(task1, task2, ltype="all"):
@@ -107,12 +107,13 @@ class Task(object):
             task2.backward_import_links.add(task1)
 
         if ltype == "all" or ltype == "env" or "env" in ltype:
-            if len(task2.backward_senv_links) == 1:
+            if len(task2.backward_senv_links) > 0:
                 raise Exception(f"attempt to link multiple senvs\n"
                     f"{task1.task_location()}\n{task2.task_location()}\nExisting link: {list(task2.backward_senv_links)[0].task_location()}")
             task2.parent_task = task1
             task1.forward_senv_links.add(task2)
             task2.backward_senv_links.add(task1)
+            #print( id(task1), '->', id(task2) )
 
     def resolve_top(self):
         return self
@@ -155,8 +156,8 @@ class Task(object):
 
     def create_tags(self):
         self.tags = dict(self.shared_tags)
-        if self.process_tags is not None:
-            self.tags.update( self.process_tags(self.penv, self.senv) )
+        if self.tagfn is not None:
+            self.tags.update( self.tagfn(self.penv, self.senv) )
         if self.parent_task is not None:
             self.tags.update(self.parent_task.shared_tags)
         self.tags.update(self.private_tags)
@@ -178,6 +179,38 @@ class Task(object):
             raise Exception(msg)
         self.senv.attr.tasks.all_names[self.name] = self
 
+    def try_start(self):
+        if self.halted is True:
+            self.state = "complete"
+            self.finalize()
+            return
+
+        if self.co is not None:
+            raise Exception("Attempt to start a task that has been started")
+
+        for dep in self.backward_exec_links:
+            if not dep.finished():
+                return
+
+        if len(self.backward_senv_links) == 0:
+            pass
+        elif len(self.backward_senv_links) == 1:
+            trunk = list(self.backward_senv_links)[0]
+            self.initialize(trunk.senv)
+        else:
+            raise Exception(f"attempt to link multiple senvs\n{self.task_location()}\n")
+
+        if self.name is None:
+            raise Exception(f"task started without initialization\n{self.task_location()}")
+
+        for trunk in self.backward_tag_links:
+            self.merge_tags(trunk)
+        for trunk in self.backward_import_links:
+            self.merge_imports(trunk)
+        self.penv.attr.scheduler.pending.add(self)
+
+        self.start()
+
     def start(self):
         if self.halted is True:
             self.state = "complete"
@@ -186,6 +219,14 @@ class Task(object):
 
         if self.name is None:
             raise Exception(f"task started without initialization\n{self.task_location()}")
+
+        s = 'parent senv links:\n'
+        for link in self.backward_senv_links:
+            s += f'{link.name}\n'
+        self.log( s )
+#        if len(self.backward_senv_links) == 1:
+#            print(list(self.backward_senv_links)[0].name, id(self.backward_senv_links)[0]) '->', self.name, id(self) )
+
         async def t():
             try:
                 props = set(self.senv.unique_properties())
@@ -226,38 +267,6 @@ class Task(object):
                 dep.halted = True
         for dep in self.forward_exec_links:
             dep.try_start()
-
-    def try_start(self):
-        if self.halted is True:
-            self.state = "complete"
-            self.finalize()
-            return
-
-        if self.co is not None:
-            raise Exception("Attempt to start a task that has been started")
-
-        for dep in self.backward_exec_links:
-            if not dep.finished():
-                return
-
-        if len(self.backward_senv_links) == 0:
-            pass
-        elif len(self.backward_senv_links) == 1:
-            trunk = list(self.backward_senv_links)[0]
-            self.initialize(trunk.senv)
-        else:
-            raise Exception(f"attempt to link multiple senvs\n{self.task_location()}\n")
-
-        if self.name is None:
-            raise Exception(f"task started without initialization\n{self.task_location()}")
-
-        for trunk in self.backward_tag_links:
-            self.merge_tags(trunk)
-        for trunk in self.backward_import_links:
-            self.merge_imports(trunk)
-        self.penv.attr.scheduler.pending.add(self)
-
-        self.start()
 
     def get_awaitables(self):
         if self.state == "running":
@@ -345,7 +354,9 @@ class Task(object):
         async def task(penv, senv):
             it = iter(senv.get_attr(source_attr))
             iter_group = Task(env, Task.empty_task_fn, ptags={'subtask_group':''}, stags=penv.attr.self_task.shared_tags)
-            Task.link( penv.attr.self_task.get_senv_parent(), iter_group )
+            #print("source link", source_task.name, penv.attr.self_task.name, source_task.get_senv_parent().name )
+            #print( id(source_task), id(source_task.get_senv_parent()) )
+            Task.link( source_task.get_senv_parent(), iter_group )
             iter_group.try_start()
 
             penv.attr.self_task.log( f"{len(senv.get_attr(source_attr))}")
@@ -377,7 +388,10 @@ class Task(object):
                         tasks.remove(task)
                 await asyncio.sleep(1.0)
             iter_group.manual_finish = True
-        return Task(env, task, ptags=tags )
+        tags = dict(tags)
+        tags.update( { 'action':'subtask_source' } )
+        source_task = Task(env, task, ptags=tags )
+        return source_task
 
     @staticmethod
     async def empty_task_fn(penv, senv):

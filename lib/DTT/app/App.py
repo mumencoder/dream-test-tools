@@ -37,7 +37,7 @@ class App(object):
 
         self.load_states(self.env)
 
-    async def init_top(self):
+    def init_top(self):
         self.tasks = {}
 
         env = self.env.branch()

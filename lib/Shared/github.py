@@ -21,6 +21,7 @@ class Github(object):
         github.endpoint = 'api.github.com'
         github.url = f'https://github.com/{github.owner}/{github.repo}'
         github.repo_id = f'{github.repo}.{github.owner}'
+        env.attr.git.repo.url = github.url
 
     @staticmethod
     def list_pull_requests(env):

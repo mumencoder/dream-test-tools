@@ -7,214 +7,73 @@ import DTT
 from DTT.base import *
 
 class Main(DTT.App):
-    def reset_dotnet(self):
-        pses = Shared.Psutil.find(name='dotnet')
-        for ps in pses:
-            ps.kill()
+    def run_common(self):
+        self.env.attr.byond.install.version = '514.1566'
+        self.init_top()
+        self.env.attr.named_tasks = {}
+        DTT.tasks.Monitoring.register_metrics(self.env)
 
-    async def register_metrics(self, env):
-        env.attr.test_counter = 0
-        async def count_test():
-            env.attr.test_counter += 1
-        self.env.event_handlers["test.complete"] = count_test
+    def run_byond(self, env):
+        env = env.branch()
+        tasks = [
+            DTT.Byond.Setup.install(env),
+            DTT.Byond.Setup.tests(env)
+        ]
+        return Shared.Task.bounded_tasks( *tasks )
 
-        async def report_counter(penv, senv):
-            start_time = time.time()
-            while env.attr.scheduler.running:
-                penv.attr.self_task.log( env.attr.test_counter / (time.time() - start_time) )
-                await asyncio.sleep(30.0)
+    def run_opendream(self, env):
+        env = env.branch()
+        DTT.tasks.OpenDream.Setup.metadata(env)
 
-        Shared.Task.link( env.attr.scheduler.top_task, Shared.Task(env, report_counter, ptags={'action':'report_counter'}, background=True))
+        tasks = [
+            DTT.tasks.OpenDream.Setup.github(env),
+            DTT.tasks.OpenDream.Setup.update_pull_requests(env),
+            DTT.tasks.OpenDream.Setup.update_commit_history(env),
+            DTT.tasks.OpenDream.Setup.shared_repos(env),
+            DTT.tasks.OpenDream.Setup.process_pull_requests(env),
+            DTT.tasks.OpenDream.Setup.process_commit_history(env),
+        ]
+        return Shared.Task.bounded_tasks( *tasks )
 
-    async def add_byond_tests(self):
+    def run_wix_main(self):
         env = self.env.branch()
-
-        tasks = []
-        tasks.append( DTT.tasks.Byond.load_install(env, self.env.attr.compares.ref_version ) )
-        tasks.append( DTT.tasks.Byond.download(env).run_once() )
-        tasks.append( DTT.tasks.Tests.load_tests(env, 'default') )
-        subtasks = lambda env, tenv: Shared.Task.bounded_tasks(
-            DTT.tasks.Tests.tag_test( env, tenv ), 
-            DTT.tasks.Tests.check_test_runnable(env),
-            DTT.tasks.Tests.do_test(env)
-        )
-        tasks.append( Shared.Task.subtask_source(env.branch(), '.tests.all_tests', subtasks, limit=4 ) )
-        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
-
-    async def prep_opendream(self):
-        env = self.env.branch()
-
-        self.processed_commits = Shared.AtomicSet()
-        self.commits = {}
-        self.installs = {}
-
-        tasks = []
-        tasks.append( Shared.Task.group(env, 'prep_opendream') )
-        tasks.append( DTT.tasks.Git.initialize_github(env, 'wixoaGit', 'OpenDream', 'base') )
-        self.tasks["wixoaGit.init_github"] = tasks[-1]
-        tasks.append( DTT.tasks.OpenDream.source_from_github(env) )
-        tasks.append( DTT.tasks.Git.freshen_repo(env).run_fresh(minutes=30) )
-        tasks.append( DTT.tasks.Git.ensure_repo(env) )
-        self.tasks["wixoaGit.ensure_repo"] = tasks[-1]
-        tasks.append( DTT.tasks.OpenDream.create_shared_repos(env) )
-        self.tasks["wixoaGit.shared_repos"] = tasks[-1]
-        Shared.Task.chain( env.attr.scheduler.top_task, *tasks)
-
-    async def prep_opendream_github(self):
-        env = self.env.branch()
-        self.tasks['wixoaGit.compare_init'] = DTT.tasks.OpenDream.initialize_github_compares(env)
-        Shared.Task.link( env.attr.scheduler.top_task, self.tasks['wixoaGit.compare_init'] )
-        Shared.Task.link( self.tasks["wixoaGit.init_github"], self.tasks['wixoaGit.compare_init'], ltype=["tag", "import"] )
-    
-    async def finish_opendream_github(self):
-        env = self.env.branch()
-        task = DTT.tasks.OpenDream.write_github_report(env)
-        Shared.Task.link( self.tasks['wixoaGit.compare_init'], task)
-        Shared.Task.link( self.tasks['wixoaGit.pr.finish'], task, ltype="exec" )
-        Shared.Task.link( self.tasks['wixoaGit.history.finish'], task, ltype="exec" )
-
-    def commit_tasks(self, env):
-        return Shared.Task.bounded_tasks( 
-            DTT.tasks.Tests.load_tests(env, 'default'),
-            DTT.tasks.OpenDream.process_commit(env), 
-            DTT.tasks.Tests.run_tests(env),
-            DTT.tasks.Tests.save_complete_tests( env )
+        async def set_senv(penv, senv):
+            senv.attr.github.owner = 'wixoaGit'
+            senv.attr.github.repo = 'OpenDream'
+            senv.attr.github.tag = ''
+        #Shared.Task.chain( env.attr.scheduler.top_task, self.run_byond(env) )
+        Shared.Task.chain( env.attr.scheduler.top_task,
+            Shared.Task(env, set_senv, ptags={'action':'set_senv'}, unique=False),
+            self.run_opendream(env)
         )
 
-    async def update_pull_requests(self):
-        env = self.env.branch()
-
-        tasks = [ ]
-        tasks.append( Shared.Task.group(env, 'update_pull_requests') )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.processed_commits', self.processed_commits) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.commits', self.commits ) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.installs', self.installs ) )
-        tasks.append( DTT.tasks.Git.update_pull_requests(env) )
-
-        subtasks = lambda env, pull_info: Shared.Task.bounded_tasks(
-            DTT.tasks.Git.tag_pull_request( env, pull_info ),
-            DTT.tasks.OpenDream.acquire_shared_repo( env ),
-            DTT.tasks.Git.load_pull_request( env ),
-            DTT.tasks.OpenDream.release_shared_repo( env ),
-            DTT.tasks.OpenDream.process_pr_commits( env, lambda: self.commit_tasks(env) ),
-            DTT.tasks.OpenDream.load_pr_compare( env )
-        )
-        tasks.append( Shared.Task.subtask_source(env.branch(), '.prs.infos', subtasks, limit=4, tags={'action':'pr_subtasks'}) )
-        tasks.append( DTT.tasks.OpenDream.pr_compare_report( env ) )
-        self.tasks['wixoaGit.pr.finish'] = tasks[-1]
-
-        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
-        Shared.Task.link( self.tasks["wixoaGit.init_github"], tasks[0], ltype=["tag", "import"] )
-        Shared.Task.link( self.tasks["wixoaGit.shared_repos"], tasks[0], ltype="import" )
-        Shared.Task.link( self.tasks['wixoaGit.compare_init'], tasks[0], ltype="import" )
-
-    async def update_commit_history(self, n):
-        env = self.env.branch()
-
-        tasks = [ ]
-        tasks.append( Shared.Task.group(env, 'update_commit_history') )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.processed_commits', self.processed_commits) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.commits', self.commits ) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.installs', self.installs ) )
-        tasks.append( DTT.tasks.Git.update_commit_history(env, n) )
-
-        subtasks = lambda env, history_info: Shared.Task.bounded_tasks(
-            DTT.tasks.Git.tag_history( env, history_info ),
-            DTT.tasks.OpenDream.acquire_shared_repo( env ),
-            DTT.tasks.Git.load_history( env ),
-            DTT.tasks.OpenDream.release_shared_repo( env ),
-            DTT.tasks.OpenDream.process_history_commit( env, lambda: self.commit_tasks(env) ),
-        )
-        tasks.append( Shared.Task.subtask_source(env.branch(), '.history.infos', subtasks, limit=4, tags={'action':'history_subtasks'}) )
-        tasks.append( DTT.tasks.OpenDream.load_history_compares( env ) )
-        tasks.append( DTT.tasks.OpenDream.history_compare_report( env ) )
-        self.tasks['wixoaGit.history.finish'] = tasks[-1]
-
-        Shared.Task.chain( env.attr.scheduler.top_task, *tasks )
-        Shared.Task.link( self.tasks["wixoaGit.init_github"], tasks[0], ltype=["tag", "import"] )
-        Shared.Task.link( self.tasks["wixoaGit.shared_repos"], tasks[0], ltype="import" )
-        Shared.Task.link( self.tasks['wixoaGit.compare_init'], tasks[0], ltype="import" )
-
-    ### main branch HEAD test
-    async def test_main_branch(self):
-        env = self.env.branch()
-        tasks = []
-        tasks.append( Shared.Task.group(env, 'test_main_branch') )
-        tasks.append( DTT.tasks.Tests.load_tests(env, 'default') )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.processed_commits', self.processed_commits) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.commits', self.commits ) )
-        tasks.append( Shared.Task.set_senv(env, '.opendream.installs', self.installs ) )
-        tasks.append( DTT.tasks.Git.commit_from_ref(env, "HEAD") )
-        tasks.append( DTT.tasks.OpenDream.acquire_shared_repo( env ) )
-        tasks.append( DTT.tasks.Git.load_clean_commit(env) )
-        tasks.append( DTT.tasks.OpenDream.load_install_from_github(env) )
-        tasks.append( self.commit_tasks(env) )
-        tasks.append( DTT.tasks.OpenDream.release_shared_repo( env ) )
-        tasks.append( DTT.tasks.OpenDream.commit_compare_report( env ) )
-        tasks.append( DTT.tasks.OpenDream.write_compare_report(env, 'main') )
-        Shared.Task.chain( self.env.attr.scheduler.top_task, *tasks )
-        Shared.Task.link( self.tasks["wixoaGit.init_github"], tasks[0], ltype=["tag", "import"] )
-        Shared.Task.link( self.tasks["wixoaGit.shared_repos"], tasks[0], ltype="import" )
-        Shared.Task.link( self.tasks["wixoaGit.ensure_repo"], tasks[0], ltype="import" )
-
-    async def run_common(self):
-        await self.init_top()
-        await self.register_metrics(self.env)
-
-    async def run_all(self):
-        #await self.run_byond()
-        await self.run_opendream()
-
-    async def run_byond(self):
-        self.env.attr.compares.ref_version = '514.1566'
-        await self.add_byond_tests()
-
-    async def run_opendream(self):
-        self.env.attr.compares.ref_version = '514.1566'
-        await self.prep_opendream()
-        await self.prep_opendream_github()
-        await self.update_pull_requests()
-        await self.update_commit_history(16)
-        await self.finish_opendream_github()
-
-    async def run_main(self):
-        self.env.attr.compares.ref_version = '514.1566'
-        await self.add_byond_tests()
-        await self.prep_opendream()
-        await self.test_main_branch()
-
-    async def run_local(self):
-        await self.add_byond_tests()
-        await self.prep_opendream()
-        await self.update_commit_history(2)
-        self.update_local('default', os.path.expanduser(self.cmd_args["dir"]) )
-        await Shared.Scheduler.run( self.env )
-        await self.compare_report_local()
+    def clean_data(self):
+        import shutil
+        shutil.rmtree( self.env.attr.dirs.root )
 
     async def run(self):
         self.env.attr.config.redo_tests = []
-        self.reset_dotnet()
-        await self.run_common()
-        await self.run_tasks()
+        Shared.Dotnet.reset()
+        self.run_common()
+        self.run_tasks()
         await Shared.Scheduler.run( self.env )
 
     def process_args(self):
         from optparse import OptionParser
         parser = OptionParser()
         self.cmd_args = {}
-        if sys.argv[1] == "run_all":
-            self.run_tasks = self.run_all
-        elif sys.argv[1] == "run_byond":
-            self.run_tasks = self.run_byond
-        elif sys.argv[1] == "run_opendream":
-            self.run_tasks = self.run_opendream
+        if sys.argv[1] == "":
+            pass
+        elif sys.argv[1] == "run_wix_main":
+            self.run_tasks = self.run_wix_main
         elif sys.argv[1] == "run_local":
             self.run_tasks = self.run_local
             self.cmd_args["dir"] = sys.argv[2]
-        elif sys.argv[1] == "run_main":
-            self.run_tasks = self.run_main
+        elif sys.argv[1] == "clean_data":
+            self.run_tasks = self.clean_data
         else:
-            raise Exception("invalid command", sys.argv)
+            raise Exception("invalid command", sys.argv[1])
+
 main = Main()
 main.process_args()
 asyncio.run( main.start() )

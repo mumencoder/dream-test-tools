@@ -129,7 +129,9 @@ class Git(object):
         @staticmethod
         async def ensure_commit(env):
             repo = env.attr.git.api.repo
-            if env.attr_exists('.git.repo.remote') and env.attr.git.repo.commit not in env.attr.git.api.repo.refs:
+            try:
+                repo.commit( env.attr.git.repo.commit )
+            except ValueError:
                 print("fetch", env.attr.git.repo.commit)
                 repo.remote(env.attr.git.repo.remote).fetch( env.attr.git.repo.commit )
             repo.head.reset( env.attr.git.repo.commit, working_tree=True )
