@@ -23,20 +23,21 @@ class Main(DTT.App):
 
     def run_opendream(self, env):
         env = env.branch()
-        DTT.tasks.OpenDream.Setup.metadata(env)
 
-        tasks = [
-            DTT.tasks.OpenDream.Setup.github(env),
-            DTT.tasks.OpenDream.Setup.update_pull_requests(env),
-            DTT.tasks.OpenDream.Setup.update_commit_history(env),
-            DTT.tasks.OpenDream.Setup.shared_repos(env),
-            DTT.tasks.OpenDream.Setup.process_pull_requests(env),
-            DTT.tasks.OpenDream.Setup.process_commit_history(env),
-        ]
-        return Shared.Task.bounded_tasks( *tasks )
+        gh_task = DTT.tasks.OpenDream.Setup.github(env)
+
+        pr_task = DTT.tasks.OpenDream.Setup.update_pull_requests(env)
+        Shared.Task.link( gh_task, pr_task )
+
+        ch_task = DTT.tasks.OpenDream.Setup.update_commit_history(env, n=env.attr.history.n)
+        Shared.Task.link( gh_task, ch_task )
+        Shared.Task.link( pr_task, ch_task, ltype="exec" )
+      
+        return Shared.TaskBound(gh_task, ch_task)
 
     def run_wix_main(self):
         env = self.env.branch()
+        env.attr.history.n = 16
         async def set_senv(penv, senv):
             senv.attr.github.owner = 'wixoaGit'
             senv.attr.github.repo = 'OpenDream'
@@ -46,6 +47,22 @@ class Main(DTT.App):
             Shared.Task(env, set_senv, ptags={'action':'set_senv'}, unique=False),
             self.run_opendream(env)
         )
+
+    def run_local(self):
+        env = self.env.branch()
+        env.attr.history.n = 2
+        async def set_senv(penv, senv):
+            senv.attr.github.owner = 'wixoaGit'
+            senv.attr.github.repo = 'OpenDream'
+            senv.attr.github.tag = ''
+        od_task = self.run_opendream(env)
+        Shared.Task.chain( env.attr.scheduler.top_task,
+            Shared.Task(env, set_senv, ptags={'action':'set_senv'}, unique=False),
+            od_task
+        )
+        local_task = DTT.tasks.OpenDream.Setup.update_local(env, '', self.cmd_args["dir"] )
+        Shared.Task.chain( env.attr.scheduler.top_task, local_task )
+        Shared.Task.link( od_task, local_task, ltype="exec")
 
     def clean_data(self):
         import shutil

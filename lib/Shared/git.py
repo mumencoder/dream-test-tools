@@ -119,6 +119,14 @@ class Git(object):
                     raise Exception("repo head mismatch")
 
         @staticmethod
+        async def ensure_worktree(env):
+            cmd = "git worktree add --force "
+            cmd += f'-B {env.attr.git.branch} '
+            cmd += f'{env.attr.git.worktree.path} '
+            cmd += f'{env.attr.git.worktree.commit}'
+            await Git.Repo.command(env, cmd)
+
+        @staticmethod
         async def ref(env, ref, remote=None):
             repo = env.attr.git.api.repo
             if remote is None:
@@ -130,12 +138,12 @@ class Git(object):
         async def ensure_commit(env):
             repo = env.attr.git.api.repo
             try:
-                repo.commit( env.attr.git.repo.commit )
+                repo.commit( env.attr.git.commit )
             except ValueError:
-                print("fetch", env.attr.git.repo.commit)
-                repo.remote(env.attr.git.repo.remote).fetch( env.attr.git.repo.commit )
-            repo.head.reset( env.attr.git.repo.commit, working_tree=True )
-
+                print("fetch", env.attr.git.commit)
+                repo.remote(env.attr.git.remote).fetch( env.attr.git.commit )
+            env.attr.git.api.commit = repo.commit( env.attr.git.commit )
+            
         @staticmethod
         async def freshen(env):
             repo = env.attr.git.api.repo

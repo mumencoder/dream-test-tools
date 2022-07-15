@@ -198,7 +198,7 @@ class Environment(object):
         if path is None:
             path = ''.join(random.choice("012345679") for i in range(12))
         if path in self.branches:
-            raise Exception("branch exists")
+            raise Exception("branch exists", path)
         here = self
         path_segments = list(self.parse_path(path))
         if path_segments[0] == "/":

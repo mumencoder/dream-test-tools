@@ -25,7 +25,7 @@ class Run(object):
     @staticmethod
     def get_exe_path(env):
         paths = []
-        for root_dir, dirs, files in os.walk(env.attr.install.dir):
+        for root_dir, dirs, files in os.walk(env.attr.build.dir):
             for filename in files:
                 if filename == "OpenDreamServer":
                     path = os.path.join(root_dir, filename)
@@ -46,7 +46,7 @@ class Run(object):
             cmd += f"--cvar net.port={await Run.get_port()} "
             env.attr.shell.command = cmd
             print( env.attr.shell.command )
-            env.attr.shell.dir = env.attr.install.dir
+            env.attr.shell.dir = env.attr.build.dir
             await Shared.Process.shell(env)
         finally:
             env.attr.resources.opendream_server.release(res)

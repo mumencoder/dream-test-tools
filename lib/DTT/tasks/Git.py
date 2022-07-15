@@ -2,14 +2,6 @@
 from .common import *
 
 class Git(object):
-    def initialize_github(env):
-        async def task(penv, senv):
-            Shared.Github.prepare(senv)
-            for prop in senv.filter_properties('.github.*'):
-                penv.attr.self_task.export( senv, prop )
-        t1 = Shared.Task(env, task, ptags={'action':'initialize_github'} )
-        return t1
-
     def ensure_repo(env):
         async def task(penv, senv):
             await Shared.Git.Repo.ensure(senv)
@@ -26,23 +18,18 @@ class Git(object):
 
     def commit_from_ref(env, ref):
         async def task(penv, senv):
-            senv.attr.git.repo.commit = senv.attr.git.api.repo.remote('origin').refs[ref].commit
+            senv.attr.git.commit = senv.attr.git.api.remote('origin').refs[ref].commit
         return Shared.Task(env, task, ptags={'action':'commit_from_ref'}, stags={'ref':ref})
-
-    def tag_commit(env, commit):
-        async def task(penv, senv):
-            senv.attr.git.repo.commit = commit
-        return Shared.Task(env, task, ptags={'action':'tag_commit'}, stags={'commit':commit})
-
-    def load_clean_commit(env):
+        
+    def clean_commit(env):
         async def task(penv, senv):
             await Shared.Git.Repo.command(senv, 'git submodule deinit --all')
             await Shared.Git.Repo.command(senv, 'git clean -fdx')
-            await Shared.Git.Repo.ensure_commit(senv)
             await Shared.Git.Repo.init_all_submodules(senv)
-        t1 = Shared.Task(env, task, ptags={'action':'load_clean_commit'})
+        t1 = Shared.Task(env, task, ptags={'action':'clean_commit'})
         return t1
 
+    ###### commit history ######
     def update_commit_history(env, n=None):
         env = env.branch()
 
@@ -56,10 +43,7 @@ class Git(object):
             history_state = f'{senv.attr.github.repo_id}.history.commits'
             commit_history = penv.attr.state.results.get(history_state, default={})
             commit_history = sorted( commit_history.values(), key=lambda ch: ch["commit"]["committer"]["date"], reverse=True )
-            senv.attr.git.commits = [ch["commit"]["sha"] for ch in commit_history.values()]
             senv.attr.history.infos = commit_history
-            if n is not None:
-                senv.attr.history.truncated_infos = senv.attr.history.infos[0:n]
                 
         t1 = Shared.Task(env, refresh, ptags={'action':'history_refresh'} ).run_fresh(minutes=30)
         t2 = Shared.Task(env, process, ptags={'action':'history_process'})
@@ -67,17 +51,35 @@ class Git(object):
         Shared.Task.link(t1, t2)
         return Shared.TaskBound(t1, t2)
 
-    def tag_history(env, history):
+    def gather_history_commits(env, n=None):
         async def task(penv, senv):
-            senv.attr.history.info = history
-        return Shared.Task(env, task, ptags={'action':'tag_history'}, stags={'history':history["sha"]})
+            senv.attr.history.commits = []
+            i = 0
+            while i < n:
+                prenv = senv.branch()
+                prenv.attr.git.commit = senv.attr.history.infos[i]['sha']
+                await Shared.Git.Repo.ensure_commit(prenv)
+                merge_commit = prenv.attr.git.api.commit
 
-    def load_history(env):
-        async def task(penv, senv):
-            senv.attr.git.repo.commit = senv.attr.history.info["sha"]
-            await Shared.Git.Repo.ensure_commit(senv)
-        return Shared.Task(env, task, ptags={'action':'load_history'})
+                prenv = senv.branch()
+                prenv.attr.git.commit = senv.attr.history.infos[i+1]['sha']
+                await Shared.Git.Repo.ensure_commit(prenv)
+                base_commit = prenv.attr.git.api.commit
 
+                senv.attr.history.commits.append( {'base': base_commit, 'merge': merge_commit} )
+
+                i += 1
+
+        return Shared.Task(env, task, ptags={'action':'gather_history_commits'})
+        
+    def unique_history_commits(env):
+        commits = set()
+        for pr_commit in env.attr.history.commits:
+            commits.add( str(pr_commit['base']) )
+            commits.add( str(pr_commit['merge']) )
+        return commits
+
+    ###### pull request ######
     def update_pull_requests(env):
         env = env.branch()
 
@@ -87,38 +89,35 @@ class Git(object):
 
         async def process(penv, senv):
             senv.attr.prs.infos = penv.attr.state.results.get(f'{senv.attr.github.repo_id}.prs')
-            senv.attr.git.commits = [ info['merge_commit_sha'] for info in senv.attr.prs.infos ]
+
         t2 = Shared.Task(env, process, ptags={'action':'pr_process'})
 
         Shared.Task.link(t1, t2)
         return Shared.TaskBound(t1, t2)
 
-    def fetch_commits(env):
+    def gather_pr_commits(env):
         async def task(penv, senv):
-            for commit in senv.attr.git.commits:
-                senv.attr.git.repo.commit = commit
-                await Shared.Git.Repo.ensure_commit(senv)
-        return Shared.Task(env, task, ptags={'action':'fetch_commits'})
+            senv.attr.pr.commits = []
+            for info in senv.attr.prs.infos:
+                prenv = senv.branch()
+                prenv.attr.git.commit = info['merge_commit_sha']
+                await Shared.Git.Repo.ensure_commit(prenv)
+                commit = prenv.attr.git.api.commit
+                if len(commit.parents) != 2:
+                    raise Exception("expected 2 parent commits from PR sha", commit.parents)
+                for c in commit.parents:
+                    if str(c) != info["head"]["sha"]:
+                        senv.attr.pr.commits.append( {'base': c, 'merge': commit})
+        return Shared.Task(env, task, ptags={'action':'gather_pr_commits'})
 
-    def tag_pull_request(env, pull_info):
-        async def task(penv, senv):
-            senv.attr.pr.info = pull_info
-        return Shared.Task(env, task, ptags={'action':'tag_pull_request'}, stags={'pr_id':pull_info["id"]})
+    def unique_pr_commits(env):
+        commits = set()
+        for pr_commit in env.attr.pr.commits:
+            commits.add( str(pr_commit['base']) )
+            commits.add( str(pr_commit['merge']) )
+        return commits
 
-    def load_pull_request(env):
-        async def task(penv, senv):
-            prenv = senv.branch()
-            prenv.attr.git.repo.commit = senv.attr.pr.info['merge_commit_sha']
-            await Shared.Git.Repo.ensure_commit(prenv)
-            if len(prenv.attr.git.api.repo.head.commit.parents) != 2:
-                raise Exception("expected 2 parent commits from PR sha", prenv.attr.git.api.repo.head.commit.parents)
-            for c in prenv.attr.git.api.repo.head.commit.parents:
-                if str(c) != senv.attr.pr.info["head"]["sha"]:
-                    senv.attr.pr.merge_commit = str(prenv.attr.git.repo.commit)
-                    senv.attr.pr.base_commit = str(c)
-            
-        return Shared.Task(env, task, ptags={'action':'load_pull_request'})
-
+    ###### repo resources ######
     class RepoSource(Shared.ResourceTracker):
         def __init__(self, env, base_dir, base_name, limit=None):
             self.env = env
@@ -157,7 +156,7 @@ class Git(object):
             senv.attr.shared_repo.resource = repo
             penv.attr.self_task.guard_resource( senv.attr.shared_repo.source, repo )
             senv.attr.git.repo.local_dir = repo["data"]["path"]
-            senv.attr.git.repo.remote = 'origin'
+            senv.attr.git.remote = 'origin'
             await Shared.Git.Repo.ensure(senv)
 
         return Shared.Task(env, task, ptags={'action':'acquire_shared_repo'}, unique=False)

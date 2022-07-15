@@ -23,7 +23,7 @@ class Tests(object):
         return Shared.Task(env, task, ptags={'action':'load_incomplete_tests'})
 
     def run_tests(env):
-        subtasks = lambda env, tenv: Shared.Task.bounded_tasks(
+        subtasks = lambda penv, senv, tenv: Shared.Task.bounded_tasks(
             Tests.tag_test( env, tenv.branch() ), 
             Tests.check_test_runnable(env),
             Tests.do_test(env)

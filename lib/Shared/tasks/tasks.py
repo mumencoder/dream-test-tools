@@ -85,15 +85,16 @@ class Task(object):
         return list(self.backward_senv_links)[0]
 
     @staticmethod
-    def link(task1, task2, ltype="all"):
+    def link(task1, task2, ltype="all", exec_link=True):
         task1 = task1.resolve_bottom()
         task2 = task2.resolve_top()
 
         if task1 is task2:
             raise Exception("self link")
 
-        task1.forward_exec_links.add(task2)
-        task2.backward_exec_links.add(task1)
+        if exec_link:
+            task1.forward_exec_links.add(task2)
+            task2.backward_exec_links.add(task1)
 
         if ltype == "exec":
             return
@@ -145,6 +146,7 @@ class Task(object):
 
     def merge_imports(self, trunk):
         for env, prop in trunk.get_exports():
+            #print("import", prop, trunk.name, "->", self.name)
             self.senv.set_attr( prop, env.get_attr(prop) )
 
     def merge_tags(self, trunk):
@@ -340,11 +342,30 @@ class Task(object):
         for task in tasks:
             Shared.Task.link( root_task, task )
 
+
     @staticmethod
-    def meet(env, name, linker, tasks):
-        bottom = Task.task_group(env, name)
+    def anon_task(env, name, stags={}):
+        group = Task(env, Task.empty_task_fn, ptags={'group_name':name}, stags=stags, unique=False)
+        return group
+
+    @staticmethod
+    def join(env, *tasks, linker=None, ltype="exec"):
+        top = Task.anon_task(env, 'join_group')
         for task in tasks:
-            linker( task, bottom )
+            if linker is None:
+                Task.link( top, task, ltype=ltype )
+            else:
+                linker( top, task )
+        return top
+
+    @staticmethod
+    def meet(env, *tasks, linker=None, ltype="exec"):
+        bottom = Task.anon_task(env, 'meet_group')
+        for task in tasks:
+            if linker is None:
+                Task.link( task, bottom, ltype=ltype)
+            else:
+                linker( task, bottom )
         return bottom
 
     @staticmethod
@@ -353,11 +374,12 @@ class Task(object):
             raise Exception("limit not set")
         async def task(penv, senv):
             it = iter(senv.get_attr(source_attr))
-            iter_group = Task(env, Task.empty_task_fn, ptags={'subtask_group':''}, stags=penv.attr.self_task.shared_tags)
+            subtask_node = Task.anon_task(env, 'subtasks', stags=penv.attr.self_task.shared_tags)
             #print("source link", source_task.name, penv.attr.self_task.name, source_task.get_senv_parent().name )
             #print( id(source_task), id(source_task.get_senv_parent()) )
-            Task.link( source_task.get_senv_parent(), iter_group )
-            iter_group.try_start()
+            Task.link( source_task.get_senv_parent(), subtask_node, ltype="exec" )
+            Task.link( source_task, subtask_node, ltype="env", exec_link=False )
+            subtask_node.try_start()
 
             penv.attr.self_task.log( f"{len(senv.get_attr(source_attr))}")
             try:
@@ -366,10 +388,10 @@ class Task(object):
                 while True:
                     while len(tasks) < limit:
                         value = next(it)
-                        subtask = subtask_proto(env, value)
+                        subtask = subtask_proto(penv, senv, value)
                         tasks.add(subtask)
-                        Shared.Task.link( iter_group, subtask )
-                        subtask.top.try_start()
+                        Shared.Task.link( subtask_node, subtask )
+                        subtask.resolve_top().try_start()
                     await asyncio.sleep(rest_interval)
                     for task in list(tasks):
                         if task.finished():
@@ -387,11 +409,38 @@ class Task(object):
                     if task.finished():
                         tasks.remove(task)
                 await asyncio.sleep(1.0)
-            iter_group.manual_finish = True
+            subtask_node.manual_finish = True
         tags = dict(tags)
         tags.update( { 'action':'subtask_source' } )
-        source_task = Task(env, task, ptags=tags )
+        source_task = Task(env, task, ptags=tags, unique=False )
         return source_task
+
+    @staticmethod 
+    def loop_var(env, source_attr, loop_attr, task_proto, limit=0, tags={}):
+        def subtasks(penv, senv, loop_value):
+            return Task.bounded_tasks(
+                Task.set_senv(env, loop_attr, loop_value),
+                task_proto(env)
+            )
+        return Task.subtask_source(env, source_attr, subtasks, limit=limit, tags=tags)
+
+    @staticmethod 
+    def serial_loop(env, source_attr, task_proto):
+        async def task(penv, senv):
+            prev_tasks = None
+            for value in senv.get_attr(source_attr):
+                tasks = task_proto(penv, senv, value)
+                Shared.Task.link(top, tasks)
+                if prev_tasks:
+                    Shared.Task.link(prev_tasks, tasks, ltype="exec")
+                prev_tasks = tasks
+            if prev_tasks:
+                Shared.Task.link(prev_tasks, bottom, ltype="exec")
+
+        top = Shared.Task(env, task, ptags={'action':'create_worktrees'})
+        bottom = Shared.Task.nop(env)
+        Shared.Task.link(top, bottom)
+        return Shared.TaskBound(top, bottom)
 
     @staticmethod
     async def empty_task_fn(penv, senv):
@@ -422,11 +471,43 @@ class Task(object):
                 penv.halted = True
         return Shared.Task(env, task, ptags={'action':f'halt_on_condition.{_id}'})
 
+    @staticmethod
+    def act_senv(env, action):
+        async def task(penv, senv):
+            rval = action(senv)
+            if asyncio.iscoroutine(rval):
+                await rval
+        return Shared.Task(env, task, ptags={'action':f'act_senv'}, unique=False)
+
+    @staticmethod
+    def add_tags(env, tags):
+        def tagfn(penv, senv):
+            return tags
+        async def task(penv, senv):
+            pass
+        return Shared.Task(env, task, tagfn=tagfn, unique=False)
+
+    @staticmethod
+    def add_stags(env, tags):
+        async def task(penv, senv):
+            pass
+        return Shared.Task(env, task, stags=tags, unique=False)
+
     @staticmethod 
     def set_senv(env, attr, value):
         async def task(penv, senv):
             senv.set_attr(attr, value)
-        return Shared.Task(env, task, ptags={'action':'set_senv', 'attr':attr})
+        return Shared.Task(env, task, ptags={'action':'set_senv'}, unique=False)
+
+    @staticmethod 
+    def assign_senv(env, src=None, dst=None):
+        async def task(penv, senv):
+            if src is str:
+                value = senv.get_attr(src)
+            else:
+                value = src(senv)
+            senv.set_attr(dst, value)
+        return Shared.Task(env, task, ptags={'action':'assign_senv'}, unique=False)
 
     @staticmethod
     def merge_into_senv(env, menv, ptags={}):

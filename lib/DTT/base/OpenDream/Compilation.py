@@ -15,7 +15,7 @@ class Compilation(object):
     @staticmethod
     def get_exe_path(env):
         paths = []
-        for root_dir, dirs, files in os.walk(env.attr.install.dir):
+        for root_dir, dirs, files in os.walk(env.attr.build.dir):
             for filename in files:
                 if filename == "DMCompiler":
                     path = os.path.join(root_dir, filename)
@@ -39,7 +39,7 @@ class Compilation(object):
 
         exe_paths = Compilation.get_exe_path(env)
         if len(exe_paths) != 1:
-            raise Exception("missing/ambiguous path", env.attr.install.dir, exe_paths)
+            raise Exception("missing/ambiguous path", env.attr.build.dir, exe_paths)
 
         env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path}"
         env.event_handlers['process.complete'] = log_returncode

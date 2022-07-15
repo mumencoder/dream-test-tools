@@ -27,12 +27,12 @@ def setup_byond(env):
 
 def setup_opendream(env):
     root_dir = env.attr.opendream.dirs.root = env.attr.dirs.root / 'opendream'
-    env.attr.opendream.dirs.sources = root_dir / 'sources'
+    env.attr.opendream.dirs.repos = root_dir / 'repos'
     env.attr.opendream.dirs.installs = root_dir / 'installs'
 
 def setup_clopendream(env):
     root_dir = env.attr.clopendream.dirs.root = env.attr.dirs.root / 'clopendream'
-    env.attr.clopendream.dirs.sources = root_dir / 'sources'
+    env.attr.clopendream.dirs.repos = root_dir / 'repos'
     env.attr.clopendream.dirs.installs = root_dir / 'installs'
 
 def setup_ss13(env):

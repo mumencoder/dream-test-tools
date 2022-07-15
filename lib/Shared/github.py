@@ -97,14 +97,6 @@ class Github(object):
         return commits
 
     @staticmethod
-    def load_pull_request(env, pull_info):
-        env.attr.pull.id = f'github.{env.attr.github.repo_id}.pulls.{pull_info["number"]}'
-        env.attr.source.id = f'github.{env.attr.github.repo_id}.{pull_info["merge_commit_sha"]}'
-        # TODO: this should not really have a default
-        env.attr.git.repo.remote = 'origin'
-        env.attr.git.repo.commit = pull_info["merge_commit_sha"]
-
-    @staticmethod
     def pull_request_buildable(env):
         env.attr.scheduler.event_name = f'{env.attr.pull.id}.build'
         pull_info = env.attr.pull.info

@@ -1,7 +1,6 @@
 
 from .common import *
 
-from .Install import *
 from .Tests import *
 
 class Byond(object):
@@ -31,8 +30,7 @@ class Byond(object):
         async def task(penv, senv):
             senv.attr.platform_cls = base.Byond
             base.Byond.Install.load(senv, env.attr.byond.install.version)
-            Install.config(senv)
-            
+            Byond.config_install(senv)
         return Shared.Task( env, task, ptags={'action':'load_install'}, stags={'platform':'byond'}, tagfn=tagfn )
 
     def download(env):
@@ -41,3 +39,6 @@ class Byond(object):
             await base.Byond.Install.download(senv)
         return Shared.Task( env, task, ptags={'action':'download'} )
 
+    def config_install(env):
+        env.attr.resources.compile = Shared.CountedResource(4)
+        env.attr.resources.run = Shared.CountedResource(4)

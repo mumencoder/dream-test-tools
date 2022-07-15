@@ -44,7 +44,7 @@ class ClopenDreamApp(object):
     async def build_clopendream(base_env):
         env = base_env.branch()
         await ClopenDream.Builder.build(env)
-        Shared.Path.sync_folders( env, env.attr.clopendream.source.dir, env.attr.clopendream.install.dir )
+        Shared.Path.sync_folders( env, env.attr.clopendream.source.dir, env.attr.clopendream.build.dir )
         ClopenDream.Install.copy_stdlib(env)
 
     async def prepare_parse_clopendream_test(tenv, clopen_id):

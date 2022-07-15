@@ -18,7 +18,7 @@ class Install(object):
     @staticmethod
     def get_exe_path(env):
         paths = []
-        for root_dir, dirs, files in os.walk(env.attr.clopendream.install.dir):
+        for root_dir, dirs, files in os.walk(env.attr.build.dir):
             for filename in files:
                 if filename == "ClopenDreamCommandLine":
                     path = os.path.join(root_dir, filename)

@@ -18,8 +18,6 @@ class App(object):
 
         self.env.event_handlers['process.complete'] = self.handle_process_complete
 
-        self.env.attr.git.repo.remote = "origin"
-
         self.env.attr.resources.git = Shared.CountedResource(2)
         self.env.attr.resources.build = Shared.CountedResource(2)
         self.env.attr.resources.process = Shared.CountedResource(8)
@@ -43,7 +41,7 @@ class App(object):
         env = self.env.branch()
         async def cleanup_opendream(senv):
             if senv.attr.platform_cls is OpenDream:
-                shutil.rmtree( senv.attr.install.dir )
+                shutil.rmtree( senv.attr.build.dir )
         self.env.event_handlers['tests.completed'] = cleanup_opendream
 
     def load_states(self, env):
