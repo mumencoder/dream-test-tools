@@ -5,54 +5,54 @@ from .TestCase import *
 
 class Compare(object):
     @staticmethod
-    def compare_test(cenv, tenv):        
-        renv = cenv.attr.compare.ref
-        renv.merge(tenv, inplace=True)
-        Compare.load_result(renv)
+    def compare_test(ctenv):   
+        ctenv.attr.compare.ref = ctenv.attr.compare.ref.branch()     
+        renv = ctenv.attr.compare.ref
+        Compare.load_result(renv, ctenv)
         if not renv.attr.compare.exists:
-            cenv.attr.compare.result = "missing-result"
+            ctenv.attr.compare.result = "missing-result"
             return
 
-        penv = cenv.attr.compare.prev
-        penv.merge(tenv, inplace=True)
-        Compare.load_result(penv)
+        ctenv.attr.compare.prev = ctenv.attr.compare.prev.branch()
+        penv = ctenv.attr.compare.prev
+        Compare.load_result(penv, ctenv)
         if not penv.attr.compare.exists:
-            cenv.attr.compare.result = "missing-result"
+            ctenv.attr.compare.result = "missing-result"
             return
 
-        nenv = cenv.attr.compare.next
-        if nenv is not None:
-            nenv = cenv.attr.compare.next
-            nenv.merge(tenv, inplace=True)
-            Compare.load_result(nenv)
+        if ctenv.attr.compare.next is not None:
+            ctenv.attr.compare.next = ctenv.attr.compare.next.branch()
+            nenv = ctenv.attr.compare.next
+            Compare.load_result(nenv, ctenv)
             if not nenv.attr.result.exists:
-                cenv.attr.compare.result = "missing-result"
+                ctenv.attr.compare.result = "missing-result"
                 return
            
-        cenv.attr.compare.result = Compare.compare_results(renv, penv, nenv)
+        ctenv.attr.compare.result = Compare.compare_results(renv, penv, nenv)
         
-    def load_result(env):
+    def load_result(renv, tenv):
         def read_json(s):
             try:
                 return json.loads(s)
             except json.JSONDecodeError:
                 return None
 
-        TestCase.prepare_exec(env)
-        env.attr.result.ccode = Shared.File.read_if_exists(env.attr.test.base_dir / "compile.returncode.log")
-        env.attr.result.compilelog = Shared.File.read_if_exists(env.attr.test.base_dir / "compile.log.txt")
-        env.attr.result.runlog = Shared.File.read_if_exists(env.attr.test.base_dir / "run_log.out", read_json )
+        renv.merge(tenv, inplace=True)
+        TestCase.prepare_exec(renv)
+        renv.attr.result.ccode = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.returncode.log")
+        renv.attr.result.compilelog = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.log.txt")
+        renv.attr.result.runlog = Shared.File.read_if_exists(renv.attr.test.base_dir / "run_log.out", read_json )
 
-        if env.attr.result.ccode is None:
-            env.attr.result.exists = False
+        if renv.attr.result.ccode is None:
+            renv.attr.result.exists = False
             return
-        env.attr.result.ccode = int(env.attr.result.ccode)
+        renv.attr.result.ccode = int(renv.attr.result.ccode)
         
-        if env.attr.result.ccode == 0:
-            if env.attr.result.runlog is None:
-                env.attr.result.exists = False
+        if renv.attr.result.ccode == 0:
+            if renv.attr.result.runlog is None:
+                renv.attr.result.exists = False
                 return
-        env.attr.result.exists = True
+        renv.attr.result.exists = True
         return
 
     @staticmethod
@@ -96,3 +96,15 @@ class Compare(object):
 
         return result
 
+    def report(env):
+        cenv = env.branch()
+        report = reports.CompareReport(cenv)
+        for tenv in TestCase.list_all(env.branch(), env.attr.tests.dirs.dm_files):
+            TestCase.load_test_text(tenv)
+            TestCase.wrap(tenv)
+
+            ctenv = cenv.branch()
+            ctenv.merge(tenv, inplace=True)
+            Compare.compare_test(ctenv)
+            report.add_compare_test( ctenv )
+        reports.BaseReport.write_report(env.attr.tests.dirs.reports / 'test', report)

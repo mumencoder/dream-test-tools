@@ -6,7 +6,7 @@ from .TestCase import *
 class Tests(object):
     def load_tests(env, tests_tag):
         async def task(penv, senv):
-            senv.attr.tests.tag = f'{senv.attr.install.tag}.{tests_tag}'
+            senv.attr.tests.tag = f'{senv.attr.install.id}.{tests_tag}'
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
             senv.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
             senv.attr.tests.incomplete = set()
@@ -28,7 +28,7 @@ class Tests(object):
             Tests.check_test_runnable(env),
             Tests.do_test(env)
         )
-        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=4, tags={'action':'run_tests'} )
+        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=32, tags={'action':'run_tests'} )
 
     def tag_test(env, tenv):
         async def task(penv, senv):
@@ -64,7 +64,7 @@ class Tests(object):
                 await senv.attr.platform_cls.Run.run(run_env)
 
             senv.attr.tests.completed.add(senv.attr.test.id)
-            await senv.send_event('test.complete')
+            await senv.send_event('test.complete', senv)
 
         return Shared.Task(env, task, {'action':'do_test'})
 

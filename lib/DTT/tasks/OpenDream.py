@@ -47,6 +47,36 @@ class OpenDream(object):
 
             return Shared.TaskBound( t1, t3 )
 
+        def update_commits(env):
+            t1 = Shared.Task.bounded_tasks(
+                Shared.Task.group(env, 'OpenDream.update_commits'),
+            )
+            t2 = OpenDream.create_worktrees(env)
+            Shared.Task.link( t1, t2 )
+
+            t3 = OpenDream.process_commits(env, 'process_head_commits')
+            Shared.Task.link( t1, t3 )
+            Shared.Task.link( t2, t3, ltype='exec' )
+
+            return Shared.TaskBound( t1, t3 )
+
+        def create_local(env):
+            return Shared.Task.bounded_tasks(
+                Shared.Task.group(env, 'OpenDream.create_local'),
+                OpenDream.build_from_local(env),
+                OpenDream.repo_from_build(env),
+                OpenDream.load_build(env)
+            )
+
+        def update_local(env):
+            return Shared.Task.bounded_tasks(
+                Shared.Task.group(env, 'OpenDream.update_local'),
+                Git.reset_submodule(env),
+                OpenDream.build_opendream( env ),
+                Tests.clear_tests( env ),
+                OpenDream.run_tests( env )
+            )
+
     ############### Begin tasks ##############
     def load_build_from_commit(env, commit):
         return Shared.Task.bounded_tasks(
@@ -80,11 +110,10 @@ class OpenDream(object):
 
     def build_opendream(env):
         async def task(penv, senv):
-            senv.attr.resources.opendream_server = Shared.CountedResource(1)
             await base.OpenDream.Builder.build(senv)
             if not base.OpenDream.Builder.build_ready(senv):
                 penv.attr.self_task.halt()
-
+            await senv.send_event("install.load", senv)
         return Shared.Task(env, task, ptags={'action':'build_opendream'})
 
     ####### loading tasks ######
@@ -99,14 +128,21 @@ class OpenDream(object):
     def repo_from_build(env):
         async def task(penv, senv):
             senv.attr.git.repo.local_dir = senv.attr.build.dir
+            Shared.Git.Repo.load(senv)
         return Shared.Task(env, task, ptags={'action':'repo_from_build'})
 
     def build_from_github(env):
         async def task(penv, senv):
             senv.attr.install.id = f"github.{senv.attr.github.owner}.{senv.attr.github.repo}.{senv.attr.git.commit}.{senv.attr.github.tag}"
-            senv.attr.install.tag = senv.attr.install.id
             senv.attr.build.dir = senv.attr.opendream.dirs.installs / senv.attr.install.id
         return Shared.Task(env, task, ptags={'action':'build_from_github'})
+
+    def build_from_local(env):
+        async def task(penv, senv):
+            senv.attr.install.id = f"local.{senv.attr.local.id}"
+            senv.attr.build.dir = senv.attr.opendream.dirs.installs / senv.attr.install.id
+            await Shared.Path.full_sync_folders( senv, senv.attr.local.dir, senv.attr.build.dir )
+        return Shared.Task(env, task, ptags={'action':'build_from_local'})
 
     def load_build(env):
         async def task(penv, senv):
@@ -117,8 +153,8 @@ class OpenDream(object):
         return Shared.Task(env, task, ptags={'action':'load_build'} )
 
     def config_build(env):
-        env.attr.resources.compile = Shared.CountedResource(4)
-        env.attr.resources.run = Shared.CountedResource(1)
+        env.attr.resources.compile = Shared.CountedResource(8)
+        env.attr.resources.run = Shared.CountedResource(8)
 
     def load_worktree(env):
         async def task(penv, senv):
@@ -150,133 +186,3 @@ class OpenDream(object):
                 penv.attr.self_task.halt()
         return Shared.Task(env, task, ptags={'action':'process_commit'})
 
-    ###### compares ######
-    def initialize_github_compares(env):
-        async def task(penv, senv):
-            senv.attr.pr.compares = []
-            senv.attr.history.compares = []
-            senv.attr.repo_report = reports.GithubRepoReport(senv)
-            penv.attr.self_task.export( senv, ".pr.compares" )
-            penv.attr.self_task.export( senv, ".history.compares" )
-            penv.attr.self_task.export( senv, ".repo_report" )
-
-        return Shared.Task(env, task, ptags={'action':'initialize_github_compares'})
-
-    def load_pr_compare(env):
-        async def task(penv, senv):
-            benv = env.branch()
-            base.Byond.Install.load(benv, env.attr.byond.install.version)
-            compare = {'pull_info': senv.attr.pr.info,
-                'ref_env':benv, 
-                'base_env':penv.attr.opendream.commits[senv.attr.pr.base_commit], 
-                'merge_env':penv.attr.opendream.commits[senv.attr.pr.merge_commit]
-            }
-            senv.attr.pr.compares.append(compare)
-        return Shared.Task(env, task, ptags={'action':'load_pr_compare'})
-
-    def pr_compare_report(env):
-        async def task(penv, senv):
-            compares = senv.attr.pr.compares
-            cenvs = {}
-            for tenv in TestCase.list_all(penv.branch(), penv.attr.tests.dirs.dm_files):
-                TestCase.load_test_text(tenv)
-                TestCase.wrap(tenv)
-                for compare in compares:
-                    cid = compare['pull_info']['id']
-                    if cid not in cenvs:
-                        cenv = penv.branch()
-                        cenvs[cid] = cenv
-                        cenv.attr.pr.info = compare['pull_info']
-                        cenv.attr.compare.ref = compare['ref_env'].branch()
-                        cenv.attr.compare.prev = compare['base_env'].branch()
-                        cenv.attr.compare.next = compare['merge_env'].branch()
-                        cenv.attr.compare.report = reports.CompareReport(cenv)
-                        senv.attr.repo_report.add_pr( cenv )
-
-                    ctenv = cenvs[cid].branch()
-                    ctenv.attr.compare.ref = compare['ref_env'].branch()
-                    ctenv.attr.compare.prev = compare['base_env'].branch()
-                    ctenv.attr.compare.next = compare['merge_env'].branch()
-                    Compare.compare_test(ctenv, tenv)
-                    senv.attr.repo_report.get_pr(cid).attr.compare.report.add_compare_test( ctenv )
-        return Shared.Task(env, task, ptags={'action':'pr_compare_report'})
-
-    def load_history_compares(env):
-        async def task(penv, senv):
-            i = 0
-            while i+1 < len(senv.attr.history.truncated_infos):
-                merge_info = senv.attr.history.truncated_infos[i]
-                base_info = senv.attr.history.truncated_infos[i+1]
-
-                benv = env.branch()
-                base.Byond.Install.load(benv, env.attr.byond.install.version)
-                compare = {'history_info': merge_info,
-                    'ref_env':benv, 
-                    'base_env':penv.attr.opendream.commits[base_info["sha"]], 
-                    'merge_env':penv.attr.opendream.commits[merge_info["sha"]]
-                }
-                senv.attr.history.compares.append(compare)
-                i += 1
-        return Shared.Task(env, task, ptags={'action':'load_history_compares'})
-
-    def history_compare_report(env):
-        async def task(penv, senv):
-            compares = senv.attr.history.compares
-            cenvs = {}
-            for tenv in TestCase.list_all(penv.branch(), penv.attr.tests.dirs.dm_files):
-                TestCase.load_test_text(tenv)
-                TestCase.wrap(tenv)
-                for compare in compares:
-                    cid = compare['history_info']['sha']
-                    if cid not in cenvs:
-                        cenv = penv.branch()
-                        cenvs[cid] = cenv
-                        cenv.attr.history.info = compare['history_info']
-                        cenv.attr.compare.ref = compare['ref_env'].branch()
-                        cenv.attr.compare.prev = compare['base_env'].branch()
-                        cenv.attr.compare.next = compare['merge_env'].branch()
-                        cenv.attr.compare.report = reports.CompareReport(cenv)
-                        senv.attr.repo_report.add_history( cenv )
-
-                    ctenv = cenvs[cid].branch()
-                    ctenv.attr.compare.ref = compare['ref_env'].branch()
-                    ctenv.attr.compare.prev = compare['base_env'].branch()
-                    ctenv.attr.compare.next = compare['merge_env'].branch()
-                    Compare.compare_test(ctenv, tenv)
-                    senv.attr.repo_report.get_history(cid).attr.compare.report.add_compare_test( ctenv )
-        return Shared.Task(env, task, ptags={'action':'history_compare_report'})
-
-    def commit_compare_report(env):
-        async def task(penv, senv):
-            benv = env.branch()
-            base.Byond.Install.load(benv, env.attr.byond.install.version)
-
-            cenv = penv.branch()
-            cenv.attr.compare.ref = benv
-            cenv.attr.compare.prev = penv.attr.opendream.commits[senv.attr.git.commit]
-            cenv.attr.compare.next = None
-            senv.attr.compare.report = reports.CompareReport(cenv)
-            for tenv in TestCase.list_all(penv.branch(), penv.attr.tests.dirs.dm_files):
-                TestCase.load_test_text(tenv)
-                TestCase.wrap(tenv)
-                ctenv = cenv.branch()
-                ctenv.attr.compare.ref = cenv.attr.compare.ref.branch()
-                ctenv.attr.compare.prev = penv.attr.opendream.commits[senv.attr.git.commit].branch()
-                ctenv.attr.compare.next = None
-                Compare.compare_test(ctenv, tenv)
-                senv.attr.compare.report.add_compare_test( ctenv )
-        return Shared.Task(env, task, ptags={'action':'commit_compare_report'})
-
-    def write_compare_report(env, name):
-        async def task(penv, senv):
-            report_dir = env.attr.tests.dirs.reports / name
-            shutil.rmtree( report_dir )
-            reports.BaseReport.write_report( env.attr.tests.dirs.reports / name, senv.attr.compare.report)
-        return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
-
-    def write_github_compare_report(env):
-        async def task(penv, senv):
-            report_dir = env.attr.tests.dirs.reports / 'github'
-            shutil.rmtree( report_dir )
-            reports.BaseReport.write_report( report_dir, senv.attr.repo_report)
-        return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)

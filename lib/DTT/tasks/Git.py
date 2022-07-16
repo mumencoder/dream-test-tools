@@ -2,31 +2,21 @@
 from .common import *
 
 class Git(object):
-    def ensure_repo(env):
+    ###### utility ######
+    def reset_submodule(env):
         async def task(penv, senv):
-            await Shared.Git.Repo.ensure(senv)
-            penv.attr.self_task.export(senv, '.git.api.repo')
-        t1 = Shared.Task(env, task, ptags={'action':'ensure_repo'})
-        return t1
-
-    def freshen_repo(env):
-        async def task(penv, senv):
-            await Shared.Git.Repo.ensure(senv)
-            await Shared.Git.Repo.freshen(senv)
-        t1 = Shared.Task(env, task, ptags={'action':'freshen_repo'})
-        return t1
-
-    def commit_from_ref(env, ref):
-        async def task(penv, senv):
-            senv.attr.git.commit = senv.attr.git.api.remote('origin').refs[ref].commit
-        return Shared.Task(env, task, ptags={'action':'commit_from_ref'}, stags={'ref':ref})
-        
-    def clean_commit(env):
-        async def task(penv, senv):
-            await Shared.Git.Repo.command(senv, 'git submodule deinit --all')
-            await Shared.Git.Repo.command(senv, 'git clean -fdx')
+            await Shared.Git.Repo.command(senv, 'git submodule deinit -f --all')
+            #await Shared.Git.Repo.command(senv, 'git clean -fdx')
             await Shared.Git.Repo.init_all_submodules(senv)
         t1 = Shared.Task(env, task, ptags={'action':'clean_commit'})
+        return t1
+
+    ###### single commits ######
+    def update_head(env):
+        async def task(penv, senv):
+            await Shared.Git.Repo.freshen(senv)
+            senv.attr.git.commits = [ str(senv.attr.git.api.repo.head.commit) ]
+        t1 = Shared.Task(env, task, ptags={'action':'update_head'})
         return t1
 
     ###### commit history ######
@@ -71,13 +61,19 @@ class Git(object):
                 i += 1
 
         return Shared.Task(env, task, ptags={'action':'gather_history_commits'})
-        
+
     def unique_history_commits(env):
         commits = set()
         for pr_commit in env.attr.history.commits:
             commits.add( str(pr_commit['base']) )
             commits.add( str(pr_commit['merge']) )
         return commits
+
+    def find_history_base_commit(env):
+        async def task(penv, senv):
+            senv.attr.git.commit = Shared.Git.Repo.search_base_commit(senv, senv.attr.git.commit, [info["sha"] for info in senv.attr.history.infos])
+            print(senv.attr.git.commit)
+        return Shared.Task(env, task, ptags={'action':'get_head_base_history'})
 
     ###### pull request ######
     def update_pull_requests(env):

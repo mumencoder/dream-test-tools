@@ -15,12 +15,12 @@ class Byond(object):
         def tests(env):
             tasks = []
             tasks.append( Tests.load_tests(env, 'default') )
-            subtasks = lambda env, tenv: Shared.Task.bounded_tasks(
+            subtasks = lambda penv, senv, tenv: Shared.Task.bounded_tasks(
                 Tests.tag_test( env, tenv ), 
                 Tests.check_test_runnable(env),
                 Tests.do_test(env)
             )
-            tasks.append( Shared.Task.subtask_source(env.branch(), '.tests.all_tests', subtasks, limit=4 ) )
+            tasks.append( Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=32 ) )
             return Shared.Task.bounded_tasks( *tasks )
 
     def load_install(env):
@@ -31,6 +31,7 @@ class Byond(object):
             senv.attr.platform_cls = base.Byond
             base.Byond.Install.load(senv, env.attr.byond.install.version)
             Byond.config_install(senv)
+            await senv.send_event('install.load', senv)
         return Shared.Task( env, task, ptags={'action':'load_install'}, stags={'platform':'byond'}, tagfn=tagfn )
 
     def download(env):
@@ -40,5 +41,5 @@ class Byond(object):
         return Shared.Task( env, task, ptags={'action':'download'} )
 
     def config_install(env):
-        env.attr.resources.compile = Shared.CountedResource(4)
-        env.attr.resources.run = Shared.CountedResource(4)
+        env.attr.resources.compile = Shared.CountedResource(8)
+        env.attr.resources.run = Shared.CountedResource(8)

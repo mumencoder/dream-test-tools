@@ -5,7 +5,7 @@ class Monitoring(object):
     @staticmethod
     def register_metrics(env):
         env.attr.test_counter = 0
-        async def count_test():
+        async def count_test(tenv):
             env.attr.test_counter += 1
         env.event_handlers["test.complete"] = count_test
 
@@ -16,3 +16,4 @@ class Monitoring(object):
                 await asyncio.sleep(30.0)
 
         return Shared.Task(env, report_counter, ptags={'action':'report_counter'}, background=True)
+    

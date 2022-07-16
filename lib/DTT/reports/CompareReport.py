@@ -4,11 +4,13 @@ from .common import *
 class CompareReport(BaseReport):
     def __init__(self, cenv):
         self.cenv = cenv
-        if cenv.attr.compare.next is not None:
-            self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}.{cenv.attr.compare.next.attr.install.id}"
+        self.ref = cenv.attr.compare.ref
+        self.prev = cenv.attr.compare.prev
+        self.next = cenv.attr.compare.next
+        if self.next is not None:
+            self.id = f"{self.ref.attr.install.id}.{self.prev.attr.install.id}.{self.next.attr.install.id}"
         else:
-            self.id = f"{cenv.attr.compare.ref.attr.install.id}.{cenv.attr.compare.prev.attr.install.id}"
-
+            self.id = f"{self.ref.attr.install.id}.{self.prev.attr.install.id}"
 
         self.ctenvs = []
         self.by_state = {}
@@ -27,19 +29,18 @@ class CompareReport(BaseReport):
     def add_compare_test(self, ctenv):
         self.ctenvs.append( ctenv )
         self.by_state["tests"][ ctenv.attr.compare.result ].append( ctenv )
-        test_page = SimplePage(f"compare-{self.id}.{ctenv.attr.compare.ref.attr.test.id}", "Compare details")
+        test_page = SimplePage(f"compare-{self.id}.{ctenv.attr.test.id}", "Compare details")
         self.render_test_html(ctenv, test_page.doc)
-        self.test_pages[ctenv.attr.compare.ref.attr.test.id] = test_page
+        self.test_pages[ctenv.attr.test.id] = test_page
 
     def render_test_html(self, ctenv, doc):
+        ref = ctenv.attr.compare.ref
+        prev = ctenv.attr.compare.prev
+        nex = ctenv.attr.compare.next
         with doc:
             hr()
             h2("Test: ")
-            pre(code(ctenv.attr.compare.ref.attr.test.lined_text))
-            hr()
-            ref = ctenv.attr.compare.ref
-            prev = ctenv.attr.compare.prev
-            nex = ctenv.attr.compare.next
+            pre(code(ctenv.attr.test.lined_text))
 
             hr()
             h2("Run value logs")
@@ -75,7 +76,13 @@ class CompareReport(BaseReport):
 
             hr()
             h2("Full test")
-            pre(code(ctenv.attr.compare.ref.attr.test.wrapped_text))
+            pre(code(ctenv.attr.test.wrapped_text))
+
+    def test_summary_html(self, tenv):
+        with tr():
+            tid = tenv.attr.test.id
+            td(f"{tid}")
+            td(a("Result", href=self.test_pages[tid].location))
 
     def summary(self):
         s = ""
@@ -85,12 +92,6 @@ class CompareReport(BaseReport):
                 continue
             s += f'{state_type}: {n}, '
         return s
-
-    def test_summary_html(self, cenv):
-        with tr():
-            tid = cenv.attr.compare.ref.attr.test.id
-            td(f"{tid}")
-            td(a("Result", href=self.test_pages[tid].location))
 
     def to_html(self, top):
         with top:

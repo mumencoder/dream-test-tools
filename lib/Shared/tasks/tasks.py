@@ -31,6 +31,7 @@ class Task(object):
         self.senv = None
 
         self.exports = []
+        self.links = {}
 
         self.wf = Shared.Workflow(penv)
         self.wf.task = self
@@ -85,29 +86,32 @@ class Task(object):
         return list(self.backward_senv_links)[0]
 
     @staticmethod
-    def link(task1, task2, ltype="all", exec_link=True):
+    def link(task1, task2, ltype=["all"], exec_link=True, name=None):
         task1 = task1.resolve_bottom()
         task2 = task2.resolve_top()
+
+        if type(ltype) is not list:
+            ltype = [ltype]
 
         if task1 is task2:
             raise Exception("self link")
 
-        if exec_link:
+        if name is not None:
+            task2.links[name] = task1
+
+        if "all" in ltype or "exec" in ltype:
             task1.forward_exec_links.add(task2)
             task2.backward_exec_links.add(task1)
 
-        if ltype == "exec":
-            return
-
-        if ltype == "all" or ltype == "tag" or "tag" in ltype:
+        if "all" in ltype or "tag" in ltype:
             task1.forward_tag_links.add(task2)
             task2.backward_tag_links.add(task1)
 
-        if ltype == "all" or ltype == "import" or "import" in ltype:
+        if "all" in ltype or "import" in ltype:
             task1.forward_import_links.add(task2)
             task2.backward_import_links.add(task1)
 
-        if ltype == "all" or ltype == "env" or "env" in ltype:
+        if "all" in ltype or "env" in ltype:
             if len(task2.backward_senv_links) > 0:
                 raise Exception(f"attempt to link multiple senvs\n"
                     f"{task1.task_location()}\n{task2.task_location()}\nExisting link: {list(task2.backward_senv_links)[0].task_location()}")
@@ -143,6 +147,8 @@ class Task(object):
 
         self.create_tags()
         self.create_name()
+        if self.parent_task is not None:
+            self.links.update(self.parent_task.links)
 
     def merge_imports(self, trunk):
         for env, prop in trunk.get_exports():
@@ -157,11 +163,12 @@ class Task(object):
         self.shared_tags.update( stags )
 
     def create_tags(self):
-        self.tags = dict(self.shared_tags)
+        self.tags = {}
         if self.tagfn is not None:
             self.tags.update( self.tagfn(self.penv, self.senv) )
         if self.parent_task is not None:
             self.tags.update(self.parent_task.shared_tags)
+        self.tags.update(self.shared_tags)
         self.tags.update(self.private_tags)
 
         self.log( f"tags {self.tags}" )
@@ -446,16 +453,16 @@ class Task(object):
     async def empty_task_fn(penv, senv):
         pass
 
-    def nop(env):
+    def nop(env, tags={}):
         async def task(penv, senv):
             pass
-        return Shared.Task(env, task, unique=False)
+        return Shared.Task(env, task, unique=False, ptags=tags)
 
     @staticmethod 
-    def action(env, action):
-        async def pass_task(penv, senv):
-            pass
-        return Shared.Task(env, pass_task, ptags={'action':action} )
+    def action(env, action, tags={}):
+        async def task(penv, senv):
+            action()
+        return Shared.Task(env, task, ptags=tags, unique=False )
 
     @staticmethod
     def group(env, group_name):
@@ -478,6 +485,14 @@ class Task(object):
             if asyncio.iscoroutine(rval):
                 await rval
         return Shared.Task(env, task, ptags={'action':f'act_senv'}, unique=False)
+
+    @staticmethod
+    def act(env, action):
+        async def task(penv, senv):
+            rval = action(penv, senv)
+            if asyncio.iscoroutine(rval):
+                await rval
+        return Shared.Task(env, task, ptags={'action':f'act'}, unique=False)
 
     @staticmethod
     def add_tags(env, tags):

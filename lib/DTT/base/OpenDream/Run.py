@@ -39,7 +39,7 @@ class Run(object):
         exe_paths = Run.get_exe_path(env)
         if len(exe_paths) != 1:
             raise Exception("missing/ambiguous path", exe_paths)
-        res = await env.attr.resources.opendream_server.acquire()
+        res = await env.attr.resources.run.acquire()
         try:
             cmd = f"{exe_paths[0]} {Run.convert_args(run.args)} "
             cmd += f"--cvar opendream.json_path={run.dm_file_path} "
@@ -49,4 +49,4 @@ class Run(object):
             env.attr.shell.dir = env.attr.build.dir
             await Shared.Process.shell(env)
         finally:
-            env.attr.resources.opendream_server.release(res)
+            env.attr.resources.run.release(res)

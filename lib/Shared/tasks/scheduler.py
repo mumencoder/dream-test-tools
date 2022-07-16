@@ -12,7 +12,7 @@ class Scheduler(object):
 
         env.attr.tasks.all_names = {}
 
-        top_task = Shared.Task.action(env, 'top')
+        top_task = Shared.Task.nop(env, tags={'action':'top'})
         env.attr.scheduler.top_task = top_task
         env.attr.scheduler.top_task.initialize(env)
         Scheduler.schedule( env, top_task )
