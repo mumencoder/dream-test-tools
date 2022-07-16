@@ -76,9 +76,9 @@ class Tests(object):
             await senv.send_event('tests.completed', senv)
         return Shared.Task(env, task, {'action':'save_complete_tests'})
 
-    def clear_tests(env):
+    def clear_tests(env, tests_tag):
         async def task(penv, senv):
-            senv.attr.state.results.rm(f'{senv.attr.tests.tag}.tests.completed')
+            senv.attr.state.results.rm(f'{senv.attr.install.id}.{tests_tag}.tests.completed')
         return Shared.Task(env, task, ptags={'action':'clear_tests'})
 
     def prepare_compile(env):

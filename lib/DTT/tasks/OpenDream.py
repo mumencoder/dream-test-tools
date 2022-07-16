@@ -73,7 +73,7 @@ class OpenDream(object):
                 Shared.Task.group(env, 'OpenDream.update_local'),
                 Git.reset_submodule(env),
                 OpenDream.build_opendream( env ),
-                Tests.clear_tests( env ),
+                Tests.clear_tests( env, 'default' ),
                 OpenDream.run_tests( env )
             )
 
