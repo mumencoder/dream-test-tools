@@ -14,9 +14,9 @@ class Compare(object):
             return
 
         ctenv.attr.compare.prev = ctenv.attr.compare.prev.branch()
-        penv = ctenv.attr.compare.prev
-        Compare.load_result(penv, ctenv)
-        if not penv.attr.compare.exists:
+        prenv = ctenv.attr.compare.prev
+        Compare.load_result(prenv, ctenv)
+        if not prenv.attr.compare.exists:
             ctenv.attr.compare.result = "missing-result"
             return
 
@@ -28,7 +28,7 @@ class Compare(object):
                 ctenv.attr.compare.result = "missing-result"
                 return
            
-        ctenv.attr.compare.result = Compare.compare_results(renv, penv, nenv)
+        ctenv.attr.compare.result = Compare.compare_results(renv, prenv, nenv)
         
     def load_result(renv, tenv):
         def read_json(s):

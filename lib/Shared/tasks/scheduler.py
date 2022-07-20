@@ -28,16 +28,16 @@ class Scheduler(object):
 
     @staticmethod
     def task_workflow_report(env):
-        async def workflow_report(penv, senv):
+        async def workflow_report(senv):
             def write_reports():
                 print("write")
-                with Shared.File.open(penv.attr.workflow.report_path, "w") as f:
-                    f.write( str(Shared.WorkflowReport.all_workflows(penv)) )
+                with Shared.File.open(senv.attr.workflow.report_path, "w") as f:
+                    f.write( str(Shared.WorkflowReport.all_workflows(senv)) )
             try:
-                while penv.attr.scheduler.running:
+                while senv.attr.scheduler.running:
                     write_reports()
                     for i in range(0,30):
-                        if penv.attr.scheduler.running is False:
+                        if senv.attr.scheduler.running is False:
                             break
                         await asyncio.sleep(1.0)
                 write_reports()

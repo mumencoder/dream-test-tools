@@ -8,9 +8,9 @@ class CompareReport(BaseReport):
         self.prev = cenv.attr.compare.prev
         self.next = cenv.attr.compare.next
         if self.next is not None:
-            self.id = f"{self.ref.attr.install.id}.{self.prev.attr.install.id}.{self.next.attr.install.id}"
+            self.id = f"{self.ref.attr.tests.runner.id}.{self.prev.attr.tests.runner.id}.{self.next.attr.tests.runner.id}"
         else:
-            self.id = f"{self.ref.attr.install.id}.{self.prev.attr.install.id}"
+            self.id = f"{self.ref.attr.tests.runner..id}.{self.prev.attr.tests.runner.id}"
 
         self.ctenvs = []
         self.by_state = {}
@@ -67,12 +67,12 @@ class CompareReport(BaseReport):
                 pre(code(nex.attr.result.compilelog))
 
             h2(f'Reference install')
-            pre(code(f'{ref.attr.install.platform}.{ref.attr.install.id}'))
+            pre(code(f'{ref.attr.install.platform}.{ref.attr.tests.runner.id}'))
             h2(f'Base install')
-            pre(code(f'{prev.attr.install.platform}.{prev.attr.install.id}'))
+            pre(code(f'{prev.attr.install.platform}.{prev.attr.tests.runner.id}'))
             if nex is not None:
                 h2(f'Merge install')
-                pre(code(f'{nex.attr.install.platform}.{nex.attr.install.id}'))
+                pre(code(f'{nex.attr.install.platform}.{nex.attr.tests.runner.id}'))
 
             hr()
             h2("Full test")

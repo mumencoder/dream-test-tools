@@ -38,15 +38,15 @@ class WorkflowReport(object):
                 if entry['type'] == "text":
                     div(pre(code(entry["text"])), cls="text")
                 elif entry['type'] == "shell":
-                    penv = entry['env']
-                    pre(code( "shell command: " + penv.attr.shell.command ) )
-                    if penv.attr_exists(".shell.dir"):
-                        pre(code( "working dir: " + str(penv.attr.shell.dir) ) )
-                    if penv.attr_exists(".process.log_path"):
-                        a( "<Log>", href=f'../../{os.path.relpath(penv.attr.process.log_path, penv.attr.dirs.root)}')
+                    env = entry['env']
+                    pre(code( "shell command: " + env.attr.shell.command ) )
+                    if env.attr_exists(".shell.dir"):
+                        pre(code( "working dir: " + str(env.attr.shell.dir) ) )
+                    if env.attr_exists(".process.log_path"):
+                        a( "<Log>", href=f'../../{os.path.relpath(env.attr.process.log_path, env.attr.dirs.root)}')
                     br()
-                    if penv.attr_exists('.process.p'):
-                        pre(code( "result: " + str(penv.attr.process.p.returncode) ))
+                    if env.attr_exists('.process.p'):
+                        pre(code( "result: " + str(env.attr.process.p.returncode) ))
         return doc
 
     @staticmethod

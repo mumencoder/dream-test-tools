@@ -450,6 +450,15 @@ class Task(object):
         return Shared.TaskBound(top, bottom)
 
     @staticmethod
+    def top(env, senv):
+        async def task(penv, senv):
+            pass
+        task = Shared.Task(env, task, ptags={'action':'top_task'}, unique=False)
+        task.initialize(senv)
+        Shared.Task.link( env.attr.scheduler.top_task, task, ltype="exec" )
+        return task
+
+    @staticmethod
     async def empty_task_fn(penv, senv):
         pass
 

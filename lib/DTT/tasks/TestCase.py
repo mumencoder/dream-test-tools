@@ -30,7 +30,7 @@ class TestCase(object):
         env.attr.test.root_dir = env.attr.tests.dirs.output / env.attr.test.id
 
     def prepare_exec(env):
-        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
+        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.tests.runner.id}'
         env.attr.test.files.fin = env.attr.test.base_dir / 'fin.out'
         env.attr.test.files.run_log = env.attr.test.base_dir / 'run_log.out'
         env.attr.test.files.run_unexpected = env.attr.test.base_dir / 'run_unexpected.out'

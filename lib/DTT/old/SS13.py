@@ -100,7 +100,7 @@ class SS13App(object):
 
     def load_ss13_test(self, env):
         env.attr.test.root_dir = env.attr.tests.dirs.output / f'ss13.{env.attr.ss13.repo_name}'
-        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
+        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.tests.runner.id}'
 
     def iter_ss13_tests(self, env):
         for repo_name, repo in env.attr.ss13.sources.items():

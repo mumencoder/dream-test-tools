@@ -7,133 +7,45 @@ import DTT
 from DTT.base import *
 
 class Main(DTT.App):
-    def run_common(self):
-        self.env.attr.byond.install.version = '514.1566'
-        self.init_top()
-        self.env.attr.named_tasks = {}
-        DTT.tasks.Monitoring.register_metrics(self.env)
+    def monitor_target(env):
+        DTT.tasks.Monitoring.register_metrics(env)
 
-    def run_byond(self, env):
-        env = env.branch()
-        tasks = [
-            DTT.Byond.Setup.install(env),
-            DTT.Byond.Setup.tests(env)
-        ]
-        return Shared.Task.bounded_tasks( *tasks )
+    def byond_env(env):
+        benv = env.branch()
+        benv.attr.byond.install.version = '514.1566'
+        return benv
 
-    def run_opendream(self, env):
-        env = env.branch()
-
-        gh_task = DTT.tasks.OpenDream.Setup.github(env)
-
-        pr_task = DTT.tasks.OpenDream.Setup.update_pull_requests(env)
-        Shared.Task.link( gh_task, pr_task )
-
-        ch_task = DTT.tasks.OpenDream.Setup.update_commit_history(env, n=env.attr.history.n)
-        Shared.Task.link( gh_task, ch_task )
-        Shared.Task.link( pr_task, ch_task, ltype="exec" )
-      
-        return Shared.TaskBound(gh_task, ch_task)
-
-    def run_wix_main(self):
-        env = self.env.branch()
-        env.attr.history.n = 16
-        async def set_github(penv, senv):
-            senv.attr.github.owner = 'wixoaGit'
-            senv.attr.github.repo = 'OpenDream'
-            senv.attr.github.tag = ''
-        Shared.Task.chain( env.attr.scheduler.top_task, self.run_byond(env) )
-        Shared.Task.chain( env.attr.scheduler.top_task,
-            Shared.Task(env, set_github, ptags={'action':'set_senv'}, unique=False),
-            self.run_opendream(env)
-        )
+    def wix_github_env(env):
+        ghenv = env.branch()
+        ghenv.attr.github.owner = 'wixoaGit'
+        ghenv.attr.github.repo = 'OpenDream'
+        ghenv.attr.github.tag = ''
+        ghenv.attr.github.repo.dir = env.attr.opendream.dirs.repos
+        return ghenv
 
     def run_local(self):
-        env = self.env.branch()
+        benv = self.byond_env(self.env)
+        ghenv = self.wix_github_env(self.env)
 
-        def byond_install_load(senv):
-            async def handler(ienv):
-                env.attr.compare.ref = ienv
-            senv.event_handlers['install.load'] = handler
+        locenv = self.env.branch()
+        locenv.attr.build.id = f"local.{self.cmd_args['id']}"
+        locenv.attr.build.dir = Shared.Path( self.cmd_args["dir"] )
 
-        byond_task = Shared.Task.bounded_tasks(
-            Shared.Task.act_senv( env, byond_install_load ),
-            self.run_byond(env)
-        )
-        Shared.Task.chain( env.attr.scheduler.top_task, byond_task )
+        targets = [
+            self.byond_target(benv),
+            DTT.tasks.Github.Targets.update_pull_requests(ghenv),
+            self.commit_history_target(ghenv),
+        ]
 
-        ### create github
-        async def set_github(penv, senv):
-            senv.attr.github.owner = 'wixoaGit'
-            senv.attr.github.repo = 'OpenDream'
-            senv.attr.github.tag = ''
-        create_github = Shared.Task.bounded_tasks( 
-            Shared.Task(env, set_github, ptags={'action':'set_senv'}, unique=False),
-            DTT.tasks.OpenDream.Setup.github(env),
-            Shared.Task.act_senv( env, Shared.Git.Repo.freshen ),
-            DTT.tasks.Git.update_commit_history(env),
-        )
-        Shared.Task.link( env.attr.scheduler.top_task, create_github )
+        base_commit = Shared.Git.search_base_commit( locenv, locenv.attr.git.commit, self.pull_request_target(ghenv).commits() )
+        baseenv = self.github_target(ghenv).get_install(base_commit)
 
-        ### create local
-        async def set_local(penv, senv):
-            senv.attr.local.id = self.cmd_args["id"]
-            senv.attr.local.dir = Shared.Path( self.cmd_args["dir"] )
-        async def get_head_commit(senv):
-            senv.attr.git.commit = str(senv.attr.git.api.repo.head.commit)
-        create_local = Shared.Task.bounded_tasks(
-            Shared.Task(env, set_local, ptags={'action':'set_senv'}, unique=False),
-            DTT.tasks.OpenDream.Setup.create_local(env),
-            Shared.Task.act_senv( env, get_head_commit ),
-        )
-        Shared.Task.link( env.attr.scheduler.top_task, create_local )
+        comp_env = self.env.branch()
+        comp_env.attr.compare.ref = self.byond_target(benv).get_install()
+        comp_env.attr.compare.prev = baseenv
+        comp_env.attr.compare.next = locenv
 
-        ### find base commit
-        async def find_history_base_import(penv, senv):
-            senv.attr.git.commit = penv.attr.self_task.links["local"].senv.attr.git.commit
-            senv.attr.history.infos = penv.attr.self_task.links["github"].senv.attr.history.infos
-        get_base = Shared.Task.bounded_tasks(
-            Shared.Task.act( env, find_history_base_import ),
-            DTT.tasks.Git.find_history_base_commit(env),
-        )
-        Shared.Task.link( create_local, get_base)
-        Shared.Task.link( create_local, get_base, ltype="exec", name="local")
-        Shared.Task.link( create_github, get_base, ltype="exec", name="github")
-
-        ### update base
-        def base_install_load(senv):
-            async def handler(ienv):
-                env.attr.compare.prev = ienv
-            senv.event_handlers['install.load'] = handler
-        def import_commit(penv, senv):
-            senv.attr.git.commits = [ penv.attr.self_task.links["base"].senv.attr.git.commit ]
-        update_base = Shared.Task.bounded_tasks(
-            Shared.Task.act_senv( env, base_install_load ),
-            Shared.Task.act( env, import_commit ),
-            DTT.tasks.OpenDream.Setup.update_commits(env)
-        )
-        Shared.Task.link( create_github, update_base)
-        Shared.Task.link( get_base, update_base, ltype="exec", name="base")
-
-        ### update local
-        def merge_install_load(senv):
-            async def handler(ienv):
-                env.attr.compare.next = ienv
-            senv.event_handlers['install.load'] = handler
-        update_local = Shared.Task.bounded_tasks(
-            Shared.Task.act_senv( env, merge_install_load ),
-            DTT.tasks.OpenDream.Setup.update_local(env)
-        )
-        Shared.Task.link( create_local, update_local )
-
-        final_task = Shared.Task.bounded_tasks(
-            Shared.Task.group(env, 'final_tasks'),
-            Shared.Task.action( env, lambda: DTT.tasks.Compare.report(env), tags={'action':'report'})
-        )
-        Shared.Task.chain( env.attr.scheduler.top_task, final_task )
-        Shared.Task.link(byond_task, final_task, ltype="exec")
-        Shared.Task.link(update_base, final_task, ltype="exec")
-        Shared.Task.link(update_local, final_task, ltype="exec")
+        self.compare_report_target(comp_env)
 
     def clean_data(self):
         import shutil

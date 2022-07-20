@@ -8,7 +8,7 @@ class Install(object):
     async def load(env):
         info = env.attr.ss13.install.info
         if info["type"] == "repo":
-            env.attr.ss13.base_dir  = env.attr.ss13.dirs.installs / env.attr.ss13.install.id
+            env.attr.ss13.base_dir  = env.attr.ss13.dirs.installs / env.attr.ss13.tests.runner.id
             env.attr.git.local_dir = env.attr.ss13.base_dir
             await Shared.Git.Repo.prepare(env, info)
         else:

@@ -56,7 +56,7 @@ class Main(App):
                 tenv = env.branch()
                 tenv.attr.test.id = Shared.Random.generate_string(12)
                 tenv.attr.test.root_dir = tenv.attr.dirs.ramdisc / 'tests' / tenv.attr.test.id
-                tenv.attr.test.base_dir = tenv.attr.test.root_dir / f'{tenv.attr.install.platform}.{tenv.attr.install.id}'
+                tenv.attr.test.base_dir = tenv.attr.test.root_dir / f'{tenv.attr.install.platform}.{tenv.attr.tests.runner.id}'
                 tenv.attr.test.text = generate_test()
 
                 test_runner.generate_test(tenv)

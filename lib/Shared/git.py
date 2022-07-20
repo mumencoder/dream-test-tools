@@ -49,10 +49,14 @@ class Git(object):
 
         @staticmethod
         async def command(env, command):
-            env = env.branch()
-            env.attr.shell.dir = env.attr.git.repo.local_dir
-            env.attr.shell.command = command
-            await Shared.Process.shell(env)
+            try:
+                env = env.branch()
+                await env.attr.git.repo.resource.acquire()
+                env.attr.shell.dir = env.attr.git.repo.local_dir
+                env.attr.shell.command = command
+                await Shared.Process.shell(env)
+            finally:
+                env.attr.git.repo.resource.release(env)
 
         @staticmethod
         def exists(env):
@@ -67,16 +71,13 @@ class Git(object):
 
         @staticmethod
         async def init_all_submodules(env):
-            res = await env.attr.resources.git.acquire()
-            try:
-                env = env.branch()
-                cmd = "git submodule update --init --recursive "
-                if env.attr_exists(".git.repo.submodule_ref"):
-                    cmd += f"--reference {env.attr.git.repo.submodule_ref} "
-                await Git.Repo.command(env, cmd)
-            finally:
-                env.attr.resources.git.release(res)
+            env = env.branch()
+            cmd = "git submodule update --init --recursive "
+            if env.attr_exists(".git.repo.submodule_ref"):
+                cmd += f"--reference {env.attr.git.repo.submodule_ref} "
+            await Git.Repo.command(env, cmd)
 
+        @staticmethod
         def search_base_commit(env, start, potential_matches, max_level=32):
             repo = env.attr.git.api.repo
             current_commits = [ repo.commit(start) ]
@@ -119,6 +120,12 @@ class Git(object):
                     raise Exception("repo head mismatch")
 
         @staticmethod
+        def reset_submodule(env):
+            await Git.Repo.command(senv, 'git submodule deinit -f --all')
+            #await Shared.Git.Repo.command(senv, 'git clean -fdx')
+            await Git.Repo.init_all_submodules(senv)
+
+        @staticmethod
         async def ensure_worktree(env):
             cmd = "git worktree add --force "
             cmd += f'-B {env.attr.git.branch} '
@@ -153,24 +160,21 @@ class Git(object):
         @staticmethod
         def load(env):
             env.attr.git.api.repo = git.Repo( env.attr.git.repo.local_dir )
+            env.attr.git.repo.resource = Shared.CountedResource(1)
 
         @staticmethod
         async def ensure(env):
             if not Git.Repo.exists(env):
                 with Shared.Workflow.status(env, "waiting git"):
-                    res = await env.attr.resources.git.acquire()
-                    try:
-                        cmd = "git clone "
-                        if env.attr_exists('.git.repo.clone_depth'):
-                            cmd += f"--depth {env.attr.git.repo.clone_depth} "
-                        if env.attr_exists('.git.repo.branch'):
-                            cmd += f"--branch {env.attr.git.repo.branch['name']} "
-                        if not env.attr_exists('.git.repo.url'):
-                            raise Exception("URL not set for ensure")
-                        cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
-                        env.attr.shell.command = cmd
-                        env.attr.wf.status[-1] = "git clone"
-                        await Shared.Process.shell(env)
-                    finally:
-                        env.attr.resources.git.release(res)
+                    cmd = "git clone "
+                    if env.attr_exists('.git.repo.clone_depth'):
+                        cmd += f"--depth {env.attr.git.repo.clone_depth} "
+                    if env.attr_exists('.git.repo.branch'):
+                        cmd += f"--branch {env.attr.git.repo.branch['name']} "
+                    if not env.attr_exists('.git.repo.url'):
+                        raise Exception("URL not set for ensure")
+                    cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
+                    env.attr.shell.command = cmd
+                    env.attr.wf.status[-1] = "git clone"
+                    await Shared.Process.shell(env)
             Git.Repo.load(env)
