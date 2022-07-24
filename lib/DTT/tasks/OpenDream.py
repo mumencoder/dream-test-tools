@@ -69,13 +69,18 @@ class OpenDream(object):
             )
 
         def update_local(env):
-            return Shared.Task.bounded_tasks(
+            tasks = [
                 Shared.Task.group(env, 'OpenDream.update_local'),
+            ]
+            if env.attr.cmd_args.experimental_preproc is True:
+                tasks.append( Shared.Task.set_senv(env, '.compilation.args', {'flags':['experimental-preproc']}) )
+            tasks += [
                 Git.reset_submodule(env),
                 OpenDream.build_opendream( env ),
                 Tests.clear_tests( env, 'default' ),
                 OpenDream.run_tests( env )
-            )
+            ]
+            return Shared.Task.bounded_tasks(*tasks)
 
     ############### Begin tasks ##############
     def load_build_from_commit(env, commit):

@@ -12,6 +12,7 @@ class Main(DTT.App):
         self.init_top()
         self.env.attr.named_tasks = {}
         DTT.tasks.Monitoring.register_metrics(self.env)
+        self.env.attr.cmd_args = self.cmd_args
 
     def run_byond(self, env):
         env = env.branch()
@@ -77,8 +78,8 @@ class Main(DTT.App):
 
         ### create local
         async def set_local(penv, senv):
-            senv.attr.local.id = self.cmd_args["id"]
-            senv.attr.local.dir = Shared.Path( self.cmd_args["dir"] )
+            senv.attr.local.id = self.cmd_args.id
+            senv.attr.local.dir = Shared.Path( self.cmd_args.dir )
         async def get_head_commit(senv):
             senv.attr.git.commit = str(senv.attr.git.api.repo.head.commit)
         create_local = Shared.Task.bounded_tasks(
@@ -147,21 +148,22 @@ class Main(DTT.App):
         await Shared.Scheduler.run( self.env )
 
     def process_args(self):
-        from optparse import OptionParser
-        parser = OptionParser()
-        self.cmd_args = {}
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--experimental-preproc', action='store_true', dest="experimental_preproc")
         if sys.argv[1] == "":
             pass
         elif sys.argv[1] == "run_wix_main":
             self.run_tasks = self.run_wix_main
         elif sys.argv[1] == "run_local":
+            parser.add_argument('id')
+            parser.add_argument('dir')
             self.run_tasks = self.run_local
-            self.cmd_args["id"] = sys.argv[2]
-            self.cmd_args["dir"] = sys.argv[3]
         elif sys.argv[1] == "clean_data":
             self.run_tasks = self.clean_data
         else:
             raise Exception("invalid command", sys.argv[1])
+        self.cmd_args = parser.parse_args(args=sys.argv[2:])
 
 main = Main()
 main.process_args()
