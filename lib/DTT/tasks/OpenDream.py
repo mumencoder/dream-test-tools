@@ -77,7 +77,6 @@ class OpenDream(object):
             tasks += [
                 Git.reset_submodule(env),
                 OpenDream.build_opendream( env ),
-                Tests.clear_tests( env, 'default' ),
                 OpenDream.run_tests( env )
             ]
             return Shared.Task.bounded_tasks(*tasks)
@@ -166,7 +165,7 @@ class OpenDream(object):
             senv.attr.git.branch = senv.attr.git.commit
             senv.attr.git.worktree.commit = senv.attr.git.commit
             senv.attr.git.worktree.path = senv.attr.build.dir
-        return Shared.Task(env, task, ptags={'action':'create_worktree'})
+        return Shared.Task(env, task, ptags={'action':'load_worktree'})
 
     def set_preproc_flags(env):
         async def task(penv, senv):
@@ -189,5 +188,5 @@ class OpenDream(object):
         async def task(penv, senv):
             if len(senv.attr.tests.incomplete) == 0:
                 penv.attr.self_task.halt()
-        return Shared.Task(env, task, ptags={'action':'process_commit'})
+        return Shared.Task(env, task, ptags={'action':'halt_if_no_incomplete_tests'})
 

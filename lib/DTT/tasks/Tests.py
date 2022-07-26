@@ -7,6 +7,9 @@ class Tests(object):
     def load_tests(env, tests_tag):
         async def task(penv, senv):
             senv.attr.tests.tag = f'{senv.attr.install.id}.{tests_tag}'
+
+            if senv.attr.test.cleared is True:
+                senv.attr.state.results.rm(f'{senv.attr.tests.tag}.tests.completed')
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
             senv.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
             senv.attr.tests.incomplete = set()
@@ -20,7 +23,7 @@ class Tests(object):
                             senv.attr.tests.incomplete.add( tenv.attr.test.id )
                             senv.attr.tests.completed.remove( tenv.attr.test.id )
 
-        return Shared.Task(env, task, ptags={'action':'load_incomplete_tests'})
+        return Shared.Task(env, task, ptags={'action':'load_tests'})
 
     def run_tests(env):
         subtasks = lambda penv, senv, tenv: Shared.Task.bounded_tasks(
@@ -49,6 +52,10 @@ class Tests(object):
         async def task(penv, senv):
             TestCase.prepare_exec(senv)
             TestCase.wrap(senv)
+
+            if senv.attr.test.cleared is True:
+                if os.path.exists(senv.attr.test.base_dir):
+                    shutil.rmtree( senv.attr.test.base_dir )
             TestCase.write(senv)
 
             compile_env = senv.branch()
@@ -75,11 +82,6 @@ class Tests(object):
             senv.attr.state.results.set(f'{senv.attr.tests.tag}.tests.completed', list(senv.attr.tests.completed))
             await senv.send_event('tests.completed', senv)
         return Shared.Task(env, task, {'action':'save_complete_tests'})
-
-    def clear_tests(env, tests_tag):
-        async def task(penv, senv):
-            senv.attr.state.results.rm(f'{senv.attr.install.id}.{tests_tag}.tests.completed')
-        return Shared.Task(env, task, ptags={'action':'clear_tests'})
 
     def prepare_compile(env):
         env.attr.process.log_mode = "file"

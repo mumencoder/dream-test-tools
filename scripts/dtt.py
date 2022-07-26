@@ -51,10 +51,11 @@ class Main(DTT.App):
 
     def run_local(self):
         env = self.env.branch()
-
+        
         def byond_install_load(senv):
             async def handler(ienv):
                 env.attr.compare.ref = ienv
+            senv.attr.test.cleared = True
             senv.event_handlers['install.load'] = handler
 
         byond_task = Shared.Task.bounded_tasks(
@@ -105,6 +106,7 @@ class Main(DTT.App):
         def base_install_load(senv):
             async def handler(ienv):
                 env.attr.compare.prev = ienv
+            senv.attr.test.cleared = True
             senv.event_handlers['install.load'] = handler
         def import_commit(penv, senv):
             senv.attr.git.commits = [ penv.attr.self_task.links["base"].senv.attr.git.commit ]
@@ -121,6 +123,7 @@ class Main(DTT.App):
             async def handler(ienv):
                 env.attr.compare.next = ienv
             senv.event_handlers['install.load'] = handler
+            senv.attr.test.cleared = True
         update_local = Shared.Task.bounded_tasks(
             Shared.Task.act_senv( env, merge_install_load ),
             DTT.tasks.OpenDream.Setup.update_local(env)
