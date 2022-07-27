@@ -13,14 +13,19 @@ class Tests(object):
             senv.attr.tests.completed = set(senv.attr.state.results.get(f'{senv.attr.tests.tag}.tests.completed', default=[]))
             senv.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
             senv.attr.tests.incomplete = set()
-            redo_tests = senv.get_attr( '.config.redo_tests', default=[])
+            redo_tests = senv.get_attr( '.config.redo_tests', default=[] )
+            include_tests = senv.get_attr( '.config.include_tests', default=[] )
             for tenv in senv.attr.tests.all_tests:
-                if tenv.attr.test.id not in senv.attr.tests.completed:
-                    senv.attr.tests.incomplete.add( tenv.attr.test.id )
+                if len(include_tests) > 0:
+                    for include_test_name in include_tests:
+                        if include_test_name in tenv.attr.test.id:
+                            senv.attr.tests.incomplete.add( tenv )
+                elif tenv.attr.test.id not in senv.attr.tests.completed:
+                    senv.attr.tests.incomplete.add( tenv )
                 else:
                     for redo_test_name in redo_tests:
                         if redo_test_name in tenv.attr.test.id:
-                            senv.attr.tests.incomplete.add( tenv.attr.test.id )
+                            senv.attr.tests.incomplete.add( tenv )
                             senv.attr.tests.completed.remove( tenv.attr.test.id )
 
         return Shared.Task(env, task, ptags={'action':'load_tests'})
@@ -31,7 +36,7 @@ class Tests(object):
             Tests.check_test_runnable(env),
             Tests.do_test(env)
         )
-        return Shared.Task.subtask_source(env, '.tests.all_tests', subtasks, limit=32, tags={'action':'run_tests'} )
+        return Shared.Task.subtask_source(env, '.tests.incomplete', subtasks, limit=32, tags={'action':'run_tests'} )
 
     def tag_test(env, tenv):
         async def task(penv, senv):
@@ -77,7 +82,6 @@ class Tests(object):
 
     def save_complete_tests(env):
         async def task(penv, senv):
-            penv.attr.self_task.log(f"incomplete {len(senv.attr.tests.incomplete)} {senv.attr.tests.incomplete}")
             penv.attr.self_task.log(f"complete {len(senv.attr.tests.completed)} {senv.attr.tests.completed}")
             senv.attr.state.results.set(f'{senv.attr.tests.tag}.tests.completed', list(senv.attr.tests.completed))
             await senv.send_event('tests.completed', senv)

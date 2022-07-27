@@ -145,6 +145,7 @@ class Main(DTT.App):
 
     async def run(self):
         self.env.attr.config.redo_tests = []
+        self.env.attr.config.include_tests = []
         Shared.Dotnet.reset()
         self.run_common()
         self.run_tasks()
