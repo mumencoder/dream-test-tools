@@ -140,6 +140,12 @@ class OpenDream(object):
         Shared.Task.link( top, bottom )
         return Shared.TaskBound(top, bottom)
 
+    def delete_install(env):
+        async def task(penv, senv):
+            if os.path.exists(senv.attr.install.dir):
+                shutil.rmtree(senv.attr.install.dir)
+        return Shared.Task(env, task, ptags={'action':'delete_install'})
+
     def process_commit(env):
         def no_incomplete_tests(penv, senv):
             return len(senv.attr.tests.incomplete) == 0
@@ -152,7 +158,7 @@ class OpenDream(object):
 
             await Shared.Path.sync_folders( penv, senv.attr.source.dir, senv.attr.install.dir )
             senv.attr.dotnet.solution.path = senv.attr.install.dir
-            senv.attr.resources.opendream_server = Shared.CountedResource(1)
+            senv.attr.resources.opendream_server = Shared.CountedResource(4)
             await base.OpenDream.Builder.build(senv)
 
             if not base.OpenDream.Builder.build_ready(senv):
@@ -279,15 +285,17 @@ class OpenDream(object):
     def write_compare_report(env, name):
         async def task(penv, senv):
             report_dir = env.attr.tests.dirs.reports / name
-            shutil.rmtree( report_dir )
+            if os.path.exists(report_dir):
+                shutil.rmtree( report_dir )
             reports.BaseReport.write_report( env.attr.tests.dirs.reports / name, senv.attr.compare.report)
         return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
 
     def write_github_report(env):
         async def task(penv, senv):
             report_dir = env.attr.tests.dirs.reports / 'github'
-            shutil.rmtree( report_dir )
-            reports.BaseReport.write_report( report_dir, senv.attr.repo_report)
+            if os.path.exists(report_dir):
+                shutil.rmtree( report_dir )
+            reports.BaseReport.write_report( env.attr.tests.dirs.reports / 'github', senv.attr.repo_report)
         return Shared.Task(env, task, ptags={'action':'write_report'}, unique=False)
     
 class OpenDreamRepoResource(Shared.ResourceTracker):

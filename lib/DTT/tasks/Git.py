@@ -101,6 +101,7 @@ class Git(object):
         async def task(penv, senv):
             prenv = senv.branch()
             prenv.attr.git.repo.commit = senv.attr.pr.info['merge_commit_sha']
+
             await Shared.Git.Repo.ensure_commit(prenv)
             if len(prenv.attr.git.api.repo.head.commit.parents) != 2:
                 raise Exception("expected 2 parent commits from PR sha", prenv.attr.git.api.repo.head.commit.parents)

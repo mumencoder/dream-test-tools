@@ -174,7 +174,7 @@ class Main(DTT.App):
         await self.prep_opendream()
         await self.prep_opendream_github()
         await self.update_pull_requests()
-        await self.update_commit_history(16)
+        await self.update_commit_history(32)
         await self.finish_opendream_github()
 
     async def run_main(self):
@@ -187,7 +187,7 @@ class Main(DTT.App):
         await self.add_byond_tests()
         await self.prep_opendream()
         await self.update_commit_history(2)
-        self.update_local('default', os.path.expanduser(self.cmd_args["dir"]) )
+        self.update_local(self.cmd_args.id, os.path.expanduser(self.cmd_args.dir) )
         await Shared.Scheduler.run( self.env )
         await self.compare_report_local()
 
@@ -199,9 +199,9 @@ class Main(DTT.App):
         await Shared.Scheduler.run( self.env )
 
     def process_args(self):
-        from optparse import OptionParser
-        parser = OptionParser()
-        self.cmd_args = {}
+        import argparse
+        parser = argparse.ArgumentParser(description='Process some integers.')
+        parser.add_argument('--experimental-preproc', dest="experimental_preproc")
         if sys.argv[1] == "run_all":
             self.run_tasks = self.run_all
         elif sys.argv[1] == "run_byond":
@@ -210,11 +210,14 @@ class Main(DTT.App):
             self.run_tasks = self.run_opendream
         elif sys.argv[1] == "run_local":
             self.run_tasks = self.run_local
-            self.cmd_args["dir"] = sys.argv[2]
+            parser.add_argument('id', dest="experimental_preproc")
+            parser.add_argument('dir', dest="experimental_preproc")
         elif sys.argv[1] == "run_main":
             self.run_tasks = self.run_main
         else:
             raise Exception("invalid command", sys.argv)
+        self.cmd_args = parser.parse_args()
+
 main = Main()
 main.process_args()
 asyncio.run( main.start() )
