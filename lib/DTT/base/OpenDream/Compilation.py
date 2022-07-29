@@ -41,6 +41,6 @@ class Compilation(object):
         if len(exe_paths) != 1:
             raise Exception("missing/ambiguous path", env.attr.build.dir, exe_paths)
 
-        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path}"
+        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path.name}"
         env.event_handlers['process.complete'] = log_returncode
         await Shared.Process.shell(env)
