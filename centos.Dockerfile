@@ -41,7 +41,7 @@ RUN python3.8 -m pip install requests
 
 # install DTT
 ADD . /DTT/src
-WORKDIR /DTT/src/lib
+WORKDIR /DTT/src
 RUN python3.8 setup.py install
 ENV DTT_CONFIG_FILE /DTT/src/box/default-config.py
 
