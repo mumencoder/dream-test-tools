@@ -9,7 +9,6 @@ class Byond(object):
             tasks = []
             tasks.append( Byond.load_install(env) )
             tasks.append( Byond.download(env).run_once() )
-            env.attr.named_tasks["byond.install"] = tasks[-1]
             return Shared.Task.bounded_tasks( *tasks )
 
         def tests(env):

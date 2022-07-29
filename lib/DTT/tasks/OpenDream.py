@@ -12,7 +12,6 @@ class OpenDream(object):
             tasks = []
             tasks.append( Shared.Task.act_senv( env, Shared.Github.prepare ) )
             tasks.append( OpenDream.repo_from_github(env) )
-            env.attr.named_tasks["OpenDream.github"] = tasks[-1]
             return Shared.Task.bounded_tasks( *tasks )
         
         def update_pull_requests(env):
