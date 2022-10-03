@@ -22,7 +22,7 @@ class Main(DTT.App):
             start_time = time.time()
             while env.attr.scheduler.running:
                 penv.attr.self_task.log( env.attr.test_counter / (time.time() - start_time) )
-                await asyncio.sleep(30.0)
+                await asyncio.sleep(60.0)
 
         Shared.Task.link( env.attr.scheduler.top_task, Shared.Task(env, report_counter, ptags={'action':'report_counter'}, background=True))
 
@@ -187,7 +187,7 @@ class Main(DTT.App):
         await self.add_byond_tests()
         await self.prep_opendream()
         await self.update_commit_history(2)
-        self.update_local(self.cmd_args.id, os.path.expanduser(self.cmd_args.dir) )
+        self.update_local(self.cmd_args["id"], os.path.expanduser(self.cmd_args["dir"]) )
         await Shared.Scheduler.run( self.env )
         await self.compare_report_local()
 
@@ -199,9 +199,7 @@ class Main(DTT.App):
         await Shared.Scheduler.run( self.env )
 
     def process_args(self):
-        import argparse
-        parser = argparse.ArgumentParser(description='Process some integers.')
-        parser.add_argument('--experimental-preproc', dest="experimental_preproc")
+        self.cmd_args = {}
         if sys.argv[1] == "run_all":
             self.run_tasks = self.run_all
         elif sys.argv[1] == "run_byond":
@@ -210,13 +208,12 @@ class Main(DTT.App):
             self.run_tasks = self.run_opendream
         elif sys.argv[1] == "run_local":
             self.run_tasks = self.run_local
-            parser.add_argument('id', dest="experimental_preproc")
-            parser.add_argument('dir', dest="experimental_preproc")
+            self.cmd_args["id"] = sys.argv[2]
+            self.cmd_args["dir"] = sys.argv[3]
         elif sys.argv[1] == "run_main":
             self.run_tasks = self.run_main
         else:
             raise Exception("invalid command", sys.argv)
-        self.cmd_args = parser.parse_args()
 
 main = Main()
 main.process_args()
