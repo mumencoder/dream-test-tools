@@ -3,35 +3,38 @@ from .common import *
 
 class App(object):
     def __init__(self):
-        pass
+        self.env = Shared.Environment()
 
     def init(self):
-        self.env = Shared.Environment()
         self.load_configs()
 
-        self.env.attr.test_mode = "all"
-
-        self.env.attr.state.tasks = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'tasks', 
+        self.env.test_mode = "all"
+        self.env.state.tasks = Shared.FilesystemState( self.env.dirs.state / 'tasks', 
             loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
-        self.env.attr.state.results = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'results',
+        self.env.state.results = Shared.FilesystemState( self.attr.dirs.state / 'results',
             loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
 
-        self.env.event_handlers['process.complete'] = self.handle_process_complete
+        async def handle_process_complete(env):
+            process = env.prefix('.process')
 
-        self.env.attr.resources.git = Shared.CountedResource(2)
-        self.env.attr.resources.build = Shared.CountedResource(2)
-        self.env.attr.resources.process = Shared.CountedResource(8)
+            if process.log_mode == "auto":
+                process.auto_logs.append( env )
+        Shared.Env.handle_event('process.complete', self.handle_process_complete)
+
+        self.env.resources.git = Shared.CountedResource(2)
+        self.env.resources.build = Shared.CountedResource(2)
+        self.env.resources.process = Shared.CountedResource(8)
 
         Shared.Workflow.init( self.env )
         Shared.Scheduler.init( self.env )
 
-        self.env.attr.dirs.ramdisc.ensure_clean_dir()
-        self.env.attr.process.log_mode = "auto"
-        self.env.attr.process.auto_log_path = self.env.attr.dirs.ramdisc / "auto_process_logs"
-        self.env.attr.process.auto_logs = []
+        self.env.dirs.ramdisc.ensure_clean_dir()
+        self.env.process.log_mode = "auto"
+        self.env.process.auto_log_path = self.env.dirs.ramdisc / "auto_process_logs"
+        self.env.process.auto_logs = []
 
-        self.env.attr.workflow.report_path = self.env.attr.dirs.ramdisc / "workflow_report.html"
-        print(f"file://{self.env.attr.workflow.report_path}")
+        self.env.workflow.report_path = self.env.dirs.ramdisc / "workflow_report.html"
+        print(f"file://{self.env.workflow.report_path}")
 
         self.load_states(self.env)
 
@@ -81,13 +84,3 @@ class App(object):
             if name.startswith('setup_'):
                 attr(self.env)
 
-    def parse_install_arg(s):
-        s = s.split(".")
-        return {'platform':s[0], 'install_id':s[1]}
-
-    @staticmethod
-    async def handle_process_complete(env):
-        process = env.prefix('.process')
-
-        if process.log_mode == "auto":
-            process.auto_logs.append( env )

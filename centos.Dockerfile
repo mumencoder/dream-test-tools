@@ -46,4 +46,4 @@ RUN python3.8 setup.py install
 ENV DTT_CONFIG_FILE /DTT/src/box/default-config.py
 
 # run DTT
-WORKDIR /DTT/src/scripts
+WORKDIR /DTT/lib

@@ -6,7 +6,7 @@ setuptools.setup(
     zip_safe = True,
     packages=setuptools.find_packages(where='./lib'),
     package_dir={
-        "DTT":"./lib/DTT",
+        "DMShared":"./lib/DMShared",
         "Shared":"./lib/Shared",
         "dream_collider":"./lib/dream_collider"
     }

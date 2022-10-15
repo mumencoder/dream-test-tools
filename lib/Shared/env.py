@@ -42,7 +42,7 @@ class Prefix(object):
 class Environment(object):
     def __init__(self, parent=None):
         self.properties = {}
-        self.branches = {}
+        self.branches = []
         self.event_handlers = {}
         self.parent = parent
         self.name = ""
@@ -119,7 +119,7 @@ class Environment(object):
 
     def all_branches(self):
         yield self
-        for branch in self.branches.values():
+        for branch in self.branches:
             yield from branch.all_branches()
 
     def unique_properties(self):
@@ -166,24 +166,6 @@ class Environment(object):
         else:
             return default
 
-    def upwards(self, name):
-        while self.name != name:
-            if self.parent is None:
-                return None
-            self = self.parent
-        return self
-
-    def downwards(self, name):
-        for key, branch in self.branches.items():
-            if key == name:
-                return self.branches[name]
-            
-    def branch_segment(self, segment):
-        if segment not in self.branches:
-            self.branches[segment] = Environment(parent=self)
-            self.branches[segment].name = segment
-        return self.branches[segment]
-
     def merge(self, config, inplace=False):
         if inplace:
             new_env = self
@@ -194,32 +176,8 @@ class Environment(object):
             new_env.event_handlers.update(parent.event_handlers)
         return new_env
 
-    def branch(self, path=None):
-        if path is None:
-            path = ''.join(random.choice("012345679") for i in range(12))
-        if path in self.branches:
-            raise Exception("branch exists", path)
-        here = self
-        path_segments = list(self.parse_path(path))
-        if path_segments[0] == "/":
-            here = self.root()
-            path_segments = path_segments[1:]
-        i = 0
-        while i < len(path_segments):
-            segment = path_segments[i]
-            if segment == ".":
-                here = here.upwards(path_segments[i+1])
-                i += 2
-            elif segment == ":":
-                here = here.downwards(path_segments[i+1])
-                i += 2
-            elif segment == "/":
-                here = here.branch_segment(path_segments[i+1])
-                i += 2
-            else:
-                here = here.branch_segment(segment)
-                i += 1
-        return here
-
-    def pop(self):
-        return self.parent
+    def branch(self):
+        env = Environment()
+        self.branches.append( env )
+        env.parent = self
+        return env

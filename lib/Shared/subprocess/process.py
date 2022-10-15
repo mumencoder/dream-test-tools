@@ -5,52 +5,52 @@ import sys
 import Shared
 
 class Process(object):
+    ### Inputs
+    # .shell.dir - sets current working directory for process
+    # .shell.env - environment variables to launch process with
+    # .process.stdout - a stream to log process stdout
+    # .process.stderr - a stream to log process stderr, if missing will use same stream as .process.stdout
+    ### Outputs
+    # .process.instance
+    # .shell.start_time
+    # .shell.finish_time
+    ### Notes
+    # This can only be called in an environment once, multiple runs with the same inputs must use a freshly branched environment
     @staticmethod
-    async def split_stream_filename(prefix, postfix):
-        out = f"{prefix}out{postfix}"
-        err = f"{prefix}err{postfix}"
-        return out, err
-    
-    @staticmethod
-    @Shared.Workflow.Decorators.status('Process.shell')
     async def shell(env):
         env = env.branch()
-        res = await env.attr.resources.process.acquire()
+        process = env.prefix('.process')
+        shell = env.prefix('.shell')
+
+        if not env.attr_exists('.shell.env'):
+            raise Exception(".shell.env not set")
+        if not env.attr_exists('.process.stdout'):
+            raise Exception(".process.stdout not set")
+        if not env.attr_exists( ".process.stderr" ):
+            process.stderr = process.stdout
+
+        if env.attr_exists('.process.instance'):
+            raise Exception(".process.instance already exists") 
+
+        await env.send_event("process.initialize", env)
         try:
-            process = env.prefix('.process')
-            shell = env.prefix('.shell')
+            if env.attr_exists( ".shell.dir" ):
+                pushd = shell.dir
+            else:
+                pushd = os.getcwd()
 
-            if process.log_mode == "auto":
-                process.log_path = process.auto_log_path / Shared.Random.generate_string(16)
-                
-            if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
-                process.stdout = process.stderr = Shared.File.open(process.log_path, "w")
+            with Shared.folder.Push( pushd ):
+                await env.send_event("process.starting", env)
+                process.start_time = time.time()
+                process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=process.stdout, stderr=process.stderr, env=shell.env)
+                await env.send_event("process.started", env)
 
-            with Shared.Workflow.status(env, "launching process"):
-                shell_env = dict(os.environ)
-                shell_env.update( env.get_dict('.process.env') )
-
-                if env.attr_exists( ".shell.dir" ):
-                    pushd = shell.dir
+                if env.event_defined('process.wait'):
+                    await env.send_event("process.wait", env)
                 else:
-                    pushd = os.getcwd()
+                    await asyncio.wait_for(process.instance.wait(), timeout=None)
 
-                with Shared.folder.Push( pushd ):
-                    if env.attr_exists('.process.p'):
-                        raise Exception("process already exists") 
-                    env.attr.wf.log.append( {'type':'shell', 'env':env} )
-                    process.start_time = time.time()
-                    process.p = await asyncio.create_subprocess_shell(env.attr.shell.command, stdout=process.stdout, stderr=process.stderr, env=shell_env)
-                    env.attr.wf.status[-1] = "process running"
-
-                    if env.event_defined('process.wait'):
-                        await env.send_event("process.wait", env)
-                    else:
-                        await asyncio.wait_for(process.p.wait(), timeout=None)
-
-                if type(process.log_path) in [str, Shared.filesystem.folder.Path]:
-                    process.stdout.close()
-
-                await env.send_event("process.complete", env)
+                process.finish_time = time.time()
+                await env.send_event("process.finished", env)
         finally:
-            env.attr.resources.process.release(res)
+            await env.send_event("process.cleanup")
