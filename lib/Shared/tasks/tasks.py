@@ -33,10 +33,6 @@ class Task(object):
         self.exports = []
         self.links = {}
 
-        self.wf = Shared.Workflow(penv)
-        self.wf.task = self
-        penv.attr.workflows.append(self.wf)
-
         self.forward_senv_links = set()
         self.backward_senv_links = set()
 
@@ -66,7 +62,7 @@ class Task(object):
         self.fn = fn
 
     def log(self, text):
-        self.wf.log.append( {'type':'text', 'text':text} )
+        Shared.Workflow.log( text )
 
     def view(self):
         import jaal
@@ -241,8 +237,6 @@ class Task(object):
                 props = set(self.senv.unique_properties())
 
                 self.penv.attr.self_task = self
-                self.penv.attr.wf = self.wf
-                self.senv.attr.wf = self.wf
                 await self.fn(self.penv, self.senv)
                 self.state = "complete"
             except KeyboardInterrupt:
@@ -568,8 +562,6 @@ class Task(object):
                 penv.attr.final_state = {}
 
             try:
-                self.penv.attr.wf = self.wf
-                self.senv.attr.wf = self.wf
                 if do_task:
                     await self.run_once_fn(penv, senv)
                     result = {"update_time":time.time(), "result":self.state, "final_state":penv.attr.final_state }
@@ -601,8 +593,6 @@ class Task(object):
             else:
                 do_task = False
 
-            self.penv.attr.wf = self.wf
-            self.senv.attr.wf = self.wf
             if do_task:
                 await self.run_fresh_fn(penv, senv)
                 result = {"update_time":time.time()}

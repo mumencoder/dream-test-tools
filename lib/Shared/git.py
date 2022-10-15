@@ -120,7 +120,7 @@ class Git(object):
                     raise Exception("repo head mismatch")
 
         @staticmethod
-        def reset_submodule(env):
+        async def reset_submodule(env):
             await Git.Repo.command(senv, 'git submodule deinit -f --all')
             #await Shared.Git.Repo.command(senv, 'git clean -fdx')
             await Git.Repo.init_all_submodules(senv)
@@ -134,7 +134,7 @@ class Git(object):
             await Git.Repo.command(env, cmd)
 
         @staticmethod
-        async def ref(env, ref, remote=None):
+        def ref(env, ref, remote=None):
             repo = env.attr.git.api.repo
             if remote is None:
                 return repo.refs[ref]
@@ -142,7 +142,7 @@ class Git(object):
                 return repo.remote(remote).refs[ref]
 
         @staticmethod
-        async def ensure_commit(env):
+        def ensure_commit(env):
             repo = env.attr.git.api.repo
             try:
                 repo.commit( env.attr.git.commit )
@@ -175,6 +175,6 @@ class Git(object):
                         raise Exception("URL not set for ensure")
                     cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.local_dir} "
                     env.attr.shell.command = cmd
-                    env.attr.wf.status[-1] = "git clone"
+                    Shared.Workflow.update_status( "git clone" )
                     await Shared.Process.shell(env)
             Git.Repo.load(env)

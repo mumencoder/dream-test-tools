@@ -18,7 +18,7 @@ class Git(object):
         def ensure_exist(self, data):
             data["path"].ensure_folder()
 
-    def create_shared_repos(env):
+    async def create_shared_repos(env):
         env.attr.shared_repo.source = Git.RepoSource(env, 
             env.attr.shared_repo.root_dir, 
             env.attr.shared_repo.name,
@@ -28,7 +28,7 @@ class Git(object):
             await Shared.Path.full_sync_folders(env, env.attr.git.repo.local_dir, res['path'])
         env.attr.task.export( env, ".shared_repo.source" )
 
-    def acquire_shared_repo(env):
+    async def acquire_shared_repo(env):
         while True:
             repo = await senv.attr.shared_repo.source.acquire()
             if repo is not None:

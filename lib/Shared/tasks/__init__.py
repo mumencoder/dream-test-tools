@@ -1,6 +1,6 @@
 
 from .graph import *
-from .scheduler import *
 from .tasks import *
+from .Scheduler import *
 from .workflow import *
 from .WorkflowReport import *

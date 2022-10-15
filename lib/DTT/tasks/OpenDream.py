@@ -1,7 +1,6 @@
 
 from .common import *
 
-from .Tests import *
 from .Git import *
 from .Compare import *
 from .TestCase import *
@@ -13,7 +12,7 @@ class OpenDream(object):
         OpenDream.build_from_github(env),
         OpenDream.load_build(env) 
 
-    def build_opendream(env):
+    async def build_opendream(env):
         if env.attr.opendream.last_build is not None:
             return
         if not env.attr.opendream.submodules_ready:
@@ -23,22 +22,12 @@ class OpenDream(object):
             return
         await env.send_event("opendream.build_ready", senv)
 
-    class Providers(object):
-        def 
-    class OpenDreamProviders(object):
-        def provide_github_repo_dir(env):
-            return env.attr.opendream.dirs.repos / f'github.{env.attr.github.repo_id}.{env.attr.github.tag}'
-
-    class OpenDreamBuildable(object):
-        def provide_repo_dir(env):
-            senv.attr.git.repo.local_dir = senv.attr.build.dir
-
-    ####### loading tasks ######
+     ####### loading tasks ######
     def build_from_github(env):
         env.attr.build.id = f"github.{env.attr.github.owner}.{env.attr.github.repo}.{env.attr.git.commit}.{env.attr.github.tag}"
         env.attr.build.dir = env.attr.opendream.dirs.installs / env.attr.build.id
 
-    def build_from_local(env):
+    async def build_from_local(env):
         env.attr.build.id = f"local.{env.attr.local.id}"
         env.attr.build.dir = env.attr.opendream.dirs.installs / env.attr.build.id
         await Shared.Path.full_sync_folders( env, env.attr.local.dir, env.attr.build.dir )

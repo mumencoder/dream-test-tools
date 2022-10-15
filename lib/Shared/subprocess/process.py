@@ -38,10 +38,10 @@ class Process(object):
                 with Shared.folder.Push( pushd ):
                     if env.attr_exists('.process.p'):
                         raise Exception("process already exists") 
-                    env.attr.wf.log.append( {'type':'shell', 'env':env} )
+                    Shared.Workflow.log_shell( env )
                     process.start_time = time.time()
                     process.p = await asyncio.create_subprocess_shell(env.attr.shell.command, stdout=process.stdout, stderr=process.stderr, env=shell_env)
-                    env.attr.wf.status[-1] = "process running"
+                    Shared.Workflow.update_status( "process running" )
 
                     if env.event_defined('process.wait'):
                         await env.send_event("process.wait", env)

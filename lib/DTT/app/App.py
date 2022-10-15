@@ -11,18 +11,14 @@ class App(object):
 
         self.env.attr.test_mode = "all"
 
-        self.env.attr.state.tasks = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'tasks', 
-            loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
-        self.env.attr.state.results = Shared.FilesystemState( self.env.attr.dirs.state / 'scheduler' / 'results',
-            loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js) )
-
         self.env.event_handlers['process.complete'] = self.handle_process_complete
-
-        self.env.attr.resources.build = Shared.CountedResource(2)
         self.env.attr.resources.process = Shared.CountedResource(8)
 
+        self.env.attr.resources.build = Shared.CountedResource(2)
+        self.env.attr.state = Shared.FilesystemState(self.env.attr.dirs.state, 
+            loader=lambda s: json.loads(s), saver=lambda js: json.dumps(js))
+
         Shared.Workflow.init( self.env )
-        Shared.Scheduler.init( self.env )
 
         self.env.attr.dirs.ramdisc.ensure_clean_dir()
         self.env.attr.process.log_mode = "auto"
@@ -32,36 +28,14 @@ class App(object):
         self.env.attr.workflow.report_path = self.env.attr.dirs.ramdisc / "workflow_report.html"
         print(f"file://{self.env.attr.workflow.report_path}")
 
-        self.load_states(self.env)
-
-    def load_states(self, env):
-        for name in os.listdir(env.attr.dirs.state + 'app'):
-            state_filename = env.attr.dirs.state / 'app' / f'{name}.json'
-            state = Shared.InfiniteDefaultDict()
-            with Shared.File.open(state_filename, "r") as f:
-                try:
-                    state.initialize( json.load(f) )
-                except json.decoder.JSONDecodeError:
-                    raise Exception(f"State decode error: {name}")
-            env.set_attr(name, state)
-
-    def save_states(self, env):
-        for name in env.filter_properties(".state.app.*"):
-            state_filename = env.attr.dirs.state / 'app' / f'{name}.json'
-            result = json.dumps( env.get_attr(name).finitize(), cls=Shared.Json.BetterEncoder)
-            with Shared.File.open(state_filename, "w") as f:
-                f.write( result )
-
     async def deinit(self):
-        self.save_states(self.env)
-        Shared.Scheduler.deinit(self.env)
+        pass
 
     async def start(self):
         self.init()
         try:
             await self.run()
         finally:
-            await self.deinit()
             os.system('stty sane')
 
     def load_configs(self):

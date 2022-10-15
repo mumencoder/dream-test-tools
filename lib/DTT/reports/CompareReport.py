@@ -10,7 +10,7 @@ class CompareReport(BaseReport):
         if self.next is not None:
             self.id = f"{self.ref.attr.tests.runner.id}.{self.prev.attr.tests.runner.id}.{self.next.attr.tests.runner.id}"
         else:
-            self.id = f"{self.ref.attr.tests.runner..id}.{self.prev.attr.tests.runner.id}"
+            self.id = f"{self.ref.attr.tests.runner.id}.{self.prev.attr.tests.runner.id}"
 
         self.ctenvs = []
         self.by_state = {}

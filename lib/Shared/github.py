@@ -95,18 +95,3 @@ class Github(object):
                 add_commits(more_commits)
             time.sleep(1.0)
         return commits
-
-    @staticmethod
-    def pull_request_buildable(env):
-        env.attr.scheduler.event_name = f'{env.attr.pull.id}.build'
-        pull_info = env.attr.pull.info
-        build_result = Shared.Scheduler.get_result(env)
-
-        if build_result is None or 'recent_build_sha' not in build_result:
-            build = True
-        elif build_result['recent_build_sha'] != pull_info['merge_commit_sha']:
-            build = True
-        else: 
-            build = False
-
-        return build

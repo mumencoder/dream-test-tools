@@ -4,14 +4,12 @@ from .common import *
 from .TestCase import *
 
 class Tests(object):
-    def get_tag(env):
-        env.attr.tests.runner.tag = f'{env.attr.tests.runner.id}.{tests_tag}'
-
-    def load_tests(env):
+    def load_all_tests(env):
+        env.attr.workflow.open( {'tests':'all'} )
         env.attr.tests.all_tests = list(TestCase.list_all(env, env.attr.tests.dirs.dm_files))
 
     def check_complete_tests(env):
-        env.attr.state.get(env, '.tests.completed', default=[])
+        env.attr.state('tests.completed').get(default=[])
         env.attr.tests.incomplete = set()
         redo_tests = env.get_attr( '.tests.config.redo_tests', default=[])
         for tenv in env.attr.tests.all_tests:
@@ -23,15 +21,14 @@ class Tests(object):
                         env.attr.tests.incomplete.add( tenv.attr.test.id )
                         env.attr.tests.completed.remove( tenv.attr.test.id )
 
-    def run_tests(env):
-        await Shared.Task.subtask_source(env, '.tests.incomplete', do_test, limit=32, tags={'action':'run_tests'} )
+    async def run_tests(env):
+        await Shared.fork(env, '.tests.runnable', '.test.id', do_test, limit=32)
         env.attr.task.log(f"incomplete {len(env.attr.tests.incomplete)} {env.attr.tests.incomplete}")
         env.attr.task.log(f"complete {len(env.attr.tests.completed)} {env.attr.tests.completed}")
-        env.attr.state.set(f'.tests.completed', list(env.attr.tests.completed))
+        env.attr.state('tests.completed').set(list(env.attr.tests.completed))
         await env.send_event('tests.completed', env)
 
-    def do_test(env):
-        env.attr.workflow.open({'test_id':tenv.attr.test.id})
+    async def do_test(env):
         env.merge(env.attr.tests.tenv, inplace=True)
 
         TestCase.prepare_exec(env)
@@ -39,22 +36,22 @@ class Tests(object):
         TestCase.write(env)
 
         compile_env = env.branch()
-        Tests.prepare_compile(compile_env)
-        await env.attr.platform_cls.Compilation.compile(compile_env)
+        TestRunner.prepare_compile(compile_env)
+        await env.attr.runner.compile(compile_env)
 
         with Shared.File.open(compile_env.attr.test.base_dir / "compile.returncode.log", "w") as o:
             o.write( str(compile_env.attr.compilation.returncode) )
 
         if compile_env.attr.compilation.returncode == 0:
             run_env = env.branch()
-            Tests.prepare_run(run_env)
-            await env.attr.platform_cls.Run.run(run_env)
+            TestRunner.prepare_run(run_env)
+            await env.attr.runner.start_server(run_env)
 
         env.attr.tests.completed.add(env.attr.test.id)
         await env.send_event('test.complete', env)
 
     def clear_tests(env):
-        senv.attr.state.rm(f'.tests.completed')
+        senv.attr.state('tests.completed').remove()
 
     def prepare_compile(env):
         env.attr.process.log_mode = "file"
@@ -64,7 +61,7 @@ class Tests(object):
     def prepare_run(env):
         env.attr.process.log_mode = "file"
         env.attr.process.log_path = env.attr.test.base_dir / 'run.log.txt'
-        env.attr.run.dm_file_path = env.attr.platform_cls.Run.get_bytecode_file(env.attr.test.dm_file_path)
+        env.attr.run.dm_file_path = env.attr.runner.get_bytecode_file(env.attr.test.dm_file_path)
         env.attr.run.args = {'trusted':True}
         env.event_handlers['process.wait'] = Tests.wait_run_complete
 

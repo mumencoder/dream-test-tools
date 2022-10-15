@@ -7,46 +7,35 @@ import DTT
 from DTT.base import *
 
 class Main(DTT.App):
-    def monitor_target(env):
-        DTT.tasks.Monitoring.register_metrics(env)
-
-    def byond_env(env):
+    def byond_env(self, env):
         benv = env.branch()
-        benv.attr.byond.install.version = '514.1566'
+        benv.attr.install.version = '514.1566'
+        benv.attr.install.id = benv.attr.install.version
+        DTT.tasks.Byond.load_install(benv)
         return benv
 
-    def wix_github_env(env):
+    def wix_github_env(self, env):
         ghenv = env.branch()
-        ghenv.attr.github.owner = 'wixoaGit'
-        ghenv.attr.github.repo = 'OpenDream'
-        ghenv.attr.github.tag = ''
+        ghenv.attr.github.repo.owner = 'wixoaGit'
+        ghenv.attr.github.repo.name = 'OpenDream'
+        ghenv.attr.github.repo.tag = ''
         ghenv.attr.github.repo.dir = env.attr.opendream.dirs.repos
         return ghenv
 
-    def run_local(self):
-        benv = self.byond_env(self.env)
-        ghenv = self.wix_github_env(self.env)
-
-        locenv = self.env.branch()
+    def local_opendream_env(self, env):
+        locenv = env.branch()
         locenv.attr.build.id = f"local.{self.cmd_args['id']}"
         locenv.attr.build.dir = Shared.Path( self.cmd_args["dir"] )
+        return locenv
 
-        targets = [
-            self.byond_target(benv),
-            DTT.tasks.Github.Targets.update_pull_requests(ghenv),
-            self.commit_history_target(ghenv),
-        ]
+    async def run_local(self):
+        benv = self.byond_env(self.env)
+        ghenv = self.wix_github_env(self.env)
+        locenv = self.local_opendream_env(self.env)
 
-        base_commit = Shared.Git.search_base_commit( locenv, locenv.attr.git.commit, self.pull_request_target(ghenv).commits() )
-        baseenv = self.github_target(ghenv).get_install(base_commit)
-
-        comp_env = self.env.branch()
-        comp_env.attr.compare.ref = self.byond_target(benv).get_install()
-        comp_env.attr.compare.prev = baseenv
-        comp_env.attr.compare.next = locenv
-
-        self.compare_report_target(comp_env)
-
+        await DTT.tasks.Byond.ensure_install(benv)
+        return
+        
     def clean_data(self):
         import shutil
         shutil.rmtree( self.env.attr.dirs.root )
@@ -54,9 +43,7 @@ class Main(DTT.App):
     async def run(self):
         self.env.attr.config.redo_tests = []
         Shared.Dotnet.reset()
-        self.run_common()
-        self.run_tasks()
-        await Shared.Scheduler.run( self.env )
+        await self.run_tasks()
 
     def process_args(self):
         from optparse import OptionParser
@@ -64,8 +51,6 @@ class Main(DTT.App):
         self.cmd_args = {}
         if sys.argv[1] == "":
             pass
-        elif sys.argv[1] == "run_wix_main":
-            self.run_tasks = self.run_wix_main
         elif sys.argv[1] == "run_local":
             self.run_tasks = self.run_local
             self.cmd_args["id"] = sys.argv[2]

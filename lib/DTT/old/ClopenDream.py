@@ -17,7 +17,6 @@ class ClopenDreamApp(object):
             tenv.attr.byond.compilation.file_path = tenv.attr.test.dm_file_path
             tenv.attr.clopendream.install.working_dir = tenv.attr.test.base_dir
 
-            Shared.TaskGraph.Build.open(tenv, f"clopendream.test.{tenv.attr.test.id}")
             Shared.Workflow.set_task(tenv, self.parse_clopendream_test(tenv, 'currentdev') )
 
         await Shared.Workflow.run_all(self.env)

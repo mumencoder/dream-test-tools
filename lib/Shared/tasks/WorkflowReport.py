@@ -28,6 +28,25 @@ class WorkflowReport(object):
             style(raw(stylesheet))
 
     @staticmethod
+    def task(env):
+        async def workflow_report(senv):
+            def write_reports():
+                print("write")
+                with Shared.File.open(senv.attr.workflow.report_path, "w") as f:
+                    f.write( str(Shared.WorkflowReport.all_workflows(senv)) )
+            try:
+                while senv.attr.scheduler.running is True:
+                    write_reports()
+                    for i in range(0,30):
+                        if senv.attr.scheduler.running is False:
+                            break
+                        await asyncio.sleep(1.0)
+                write_reports()
+            except:
+                write_reports()
+        return Shared.Task(env, workflow_report, ptags={'action':'workflow_report'}, background=True)
+
+    @staticmethod
     def log(wf):
         doc = dom.document(title='WF Log')
         WorkflowReport.common(doc)
