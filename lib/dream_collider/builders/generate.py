@@ -7,8 +7,8 @@ import Shared
 class Generator:
     def Toplevel(env):
         env.attr.gen.splits = random.randint(1, 8)
-        env.attr.gen.vars = random.randint( 0, env.attr.gen.splits*2 + 2)
-        env.attr.gen.procs = random.randint( 0, int(env.attr.gen.splits/2) + 2)
+        env.attr.gen.vars = random.randint(0, env.attr.gen.splits*2 + 2)
+        env.attr.gen.procs = random.randint(0, int(env.attr.gen.splits/2) + 2)
 
         env.attr.gen.object_block_names = ['datum', 'atom', 'area', 'turf', 'obj', 'mob', 'ty1', 'ty2', 'ty3', 'ob_only']
         tl_node = AST.Toplevel()
@@ -36,10 +36,13 @@ class Generator:
                 expr = None
                 while expr is None:
                     try:
-                        expr = Generator.expression(env, var_decl, depth=5, arity="rval") 
+                        expr = Generator.expression(env, var_decl, depth=5, arity="rval")
+                        if var_decl.validate_expression( expr ) is False:
+                            expr = None
+                            continue
+                        var_decl.set_expression( expr )
                     except GenerationError:
                         pass
-                var_decl.expression = expr
 
         return tl_node
 

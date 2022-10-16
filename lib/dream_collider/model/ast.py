@@ -13,12 +13,17 @@ class AST(object):
             self.parent = None
 
             # local indices
+            # TODO: these need to be ordered by tree position
             self.object_blocks_by_name = collections.defaultdict(list)
             self.global_vars_by_name = collections.defaultdict(list)
             self.global_procs_by_name = collections.defaultdict(list)
 
             # toplevel indices
+            # TODO: these need to be ordered by tree position
             self.object_blocks_by_path = collections.defaultdict(list)
+
+            self.decl_deps = collections.defaultdict(set)
+            self.decl_cycles = collections.defaultdict(set)
 
         def get_vars(self):
             return self.global_vars_by_name.values()
@@ -28,6 +33,7 @@ class AST(object):
                 self.object_blocks_by_name[leaf.name].append( leaf )
             elif type(leaf) is AST.GlobalVarDefine:
                 self.global_vars_by_name[leaf.name].append( leaf )
+                leaf.assign_block( self )
             elif type(leaf) is AST.GlobalProcDefine:
                 self.global_procs_by_name[leaf.name].append( leaf )
             else:
@@ -41,6 +47,24 @@ class AST(object):
         def note_object_block(self, leaf):
             self.object_blocks_by_path[leaf.path].append( leaf )
 
+        def resolve_usage(self, block, use):
+            if type(block) is AST.Toplevel:
+                if type(use) is AST.Expr.Identifier:
+                    return self.global_vars_by_name[ use.name ][0]
+                elif type(use) is AST.Expr.GlobalIdentifier:
+                    return self.global_vars_by_name[ use.name ][0]
+                else:
+                    raise UsageError(block, use)
+            elif type(block) is AST.ObjectBlock:
+                if type(use) is AST.Expr.Identifier:
+                    return self.object_blocks_by_path[block.path][0].object_vars_by_name[ use.name ][0]
+                elif type(use) is AST.Expr.GlobalIdentifier:
+                    return self.global_vars_by_name[ use.name ][0]
+                else:
+                    raise UsageError(block, use)
+            else:
+                raise UsageError(block, use)
+
     class ObjectBlock(object):
         attrs = ["name"]
         subtree = ["leaves"]
@@ -48,11 +72,28 @@ class AST(object):
             self.name = None
             self.leaves = []
 
+            self.root = None
             self.parent = None
 
+            # TODO: these need to be ordered by tree position
             self.object_blocks_by_name = collections.defaultdict(list)
             self.object_vars_by_name = collections.defaultdict(list)
             self.object_procs_by_name = collections.defaultdict(list)
+
+        # TODO: compare set() performance
+        def dfs_compare(nodel, noder):
+            lpath = []
+            cnode = nodel
+            while cnode is not None:
+                lpath.append(cnode)
+                cnode = cnode.parent
+            cnode = noder
+            while cnode is not None and cnode not in lpath:
+                cnode = cnode.parent
+            if cnode is None:
+                block = nodel.root
+            else:
+                block = cnode
 
         def get_vars(self):
             return self.object_vars_by_name.values()
@@ -62,6 +103,7 @@ class AST(object):
                 self.object_blocks_by_name[leaf.name].append( leaf )
             elif type(leaf) is AST.ObjectVarDefine:
                 self.object_vars_by_name[leaf.name].append( leaf )
+                leaf.assign_block(self)
             elif type(leaf) is AST.ObjectProcDefine:
                 self.object_procs_by_name[leaf.name].append( leaf )
             else:
@@ -103,6 +145,31 @@ class AST(object):
 
             self.allow_override = True
 
+        def __str__(self):
+            return f"global.{self.name}"
+
+        def get_storage_id(self):
+            return f"gvd@{self.name}"
+
+        def assign_block(self, block):
+            self.block = block
+
+        def get_usage(self, use):
+            return self.block.resolve_usage(self.block, use)
+            
+        def validate_expression(self, expr):
+            for node in AST.iter_subtree(expr):
+                if node.is_usage():
+                    if self.block.check_usage_cycle( self, self.get_usage(node) ) is True:
+                        return False
+            return True
+
+        def set_expression(self, expr):
+            self.expression = expr
+            for node in AST.iter_subtree(expr):
+                if node.is_usage():
+                    self.block.add_dependency( self, self.get_usage(node) )
+
     class ObjectVarDefine(object):
         attrs = ["name", "var_path"]
         subtree = ["expression"]
@@ -112,6 +179,31 @@ class AST(object):
             self.expression = None      # AST.Expr
 
             self.allow_override = True
+
+        def __str__(self):
+            return f"{self.block.path}.{self.name}"
+
+        def get_storage_id(self):
+            return f"ovd@{self.block.path}@{self.name}"
+
+        def assign_block(self, block):
+            self.block = block
+
+        def get_usage(self, use):
+            return self.block.root.resolve_usage(self.block, use)
+
+        def validate_expression(self, expr):
+            for node in AST.iter_subtree(expr):
+                if node.is_usage():
+                    if self.block.root.check_usage_cycle( self, self.get_usage(node) ) is True:
+                        return False
+            return True
+
+        def set_expression(self, expr):
+            self.expression = expr
+            for node in AST.iter_subtree(expr):
+                if node.is_usage():
+                    self.block.root.add_dependency( self, self.get_usage(node) )
 
     #AST.Type("object_multivar_define", node_type=["object_define"], 
     #    attrs=AST.Attrs(defines=AST.List("object_var_define")) )
@@ -519,41 +611,6 @@ class AST(object):
         def from_string(path):
             return Path( [seg for seg in path.split("/") if seg != ""] )
 
-    class ObjectVarDecl(object):
-        def initialization_mode(self, config):
-            dmobj = config['model'].ensure_object(self.path)
-
-            for o in dmobj.parent_chain(include_self=False):
-                if self.name in o.scope.vars:
-                    override_decl = o.scope.vars[self.name]
-                    return override_decl.initialization_mode(config)
-
-            if "const" in self.flags:
-                return "const"
-
-            if str(self.path) == "/":
-                return "dynamic"
-            elif "static" in self.flags:
-                return "dynamic"
-            else:
-                return "const"
-
-    def compute_overrides(self):
-        known_vars = {}
-        known_procs = {}
-        for decl in self.vars:
-            decl.is_override = False
-        for decl in self.procs:
-            if decl.name in known_procs:
-                decl.is_override = True
-            else:
-                decl.is_override = False 
-            known_procs[decl.name] = decl
-
-        for path, dmobj in self.objects_by_path.items():
-            if dmobj.obj_trunk is None:
-                dmobj.compute_overrides()
-
     def print(node, s, depth=0, seen=None):
         if id(node) in seen:
             print( s.getvalue() )
@@ -577,6 +634,17 @@ class AST(object):
                     st = getattr(node, st_attr)
                     AST.print(st, s, depth+2, seen=seen)
 
+    def iter_subtree(node):
+        yield node
+        if hasattr(node, 'subtree'):
+            for st_attr in node.subtree:
+                st = getattr(node, st_attr)
+                if type(st) is list:
+                    for snode in st:
+                        yield from AST.iter_subtree(snode)
+                else:
+                    yield from AST.iter_subtree(st)
+
 AST.Op.create_ops()
 
 for ty in iter_types(AST):
@@ -585,9 +653,27 @@ for ty in iter_types(AST):
     if getattr(ty, 'nonterminal', None):
         AST.nonterminal_exprs.append(ty)
 
+for ty in iter_types(AST.Expr):
+    if not hasattr(ty, 'is_usage'):
+        ty.is_usage = lambda self: False
+for ty in iter_types(AST.Op):
+    if not hasattr(ty, 'is_usage'):
+        ty.is_usage = lambda self: False
+
+for ty in [AST.Expr.Identifier, AST.Expr.GlobalIdentifier]:
+    ty.is_usage = lambda self: True
+
+#AST.Op.Deref.is_usage = lambda self: True
+#AST.Op.MaybeDeref.is_usage = lambda self: True
+#AST.Op.Index.is_usage = lambda self: True
+#AST.Op.MaybeIndex.is_usage = lambda self: True
+
 def mix():
     from .Unparse import Unparse
     mix_fn(AST, Unparse, 'unparse')
     mix_fn(AST, Unparse, 'unparse_expr')
+    from .Dependency import Dependency
+    AST.Toplevel.check_usage_cycle = Dependency.Toplevel.check_usage_cycle
+    AST.Toplevel.add_dependency = Dependency.Toplevel.add_dependency
 
 mix()

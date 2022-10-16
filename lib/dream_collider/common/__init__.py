@@ -8,5 +8,5 @@ from .mix import *
 class GenerationError(Exception):
     pass
 
-class ConstEvalError(Exception):
+class UsageError(Exception):
     pass
