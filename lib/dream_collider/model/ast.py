@@ -25,6 +25,9 @@ class AST(object):
             self.decl_deps = collections.defaultdict(set)
             self.decl_cycles = collections.defaultdict(set)
 
+        def get_error_count(self):
+            return len(self.decl_cycles)
+            
         def get_vars(self):
             return self.global_vars_by_name.values()
 

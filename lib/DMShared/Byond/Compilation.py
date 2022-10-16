@@ -15,20 +15,20 @@ class Compilation(object):
 
     @staticmethod
     async def compile(env):
-        async def log_returncode(env):
-            env.attr.compilation.returncode = env.attr.process.p.returncode
+        async def log_returncode(eenv):
+            env.attr.compilation.returncode = eenv.attr.process.instance.returncode
 
-        env = env.branch()
-        if not env.attr_exists('.compilation.args'):
-            env.attr.compilation.args = {}
+        penv = env.branch()
+        if not penv.attr_exists('.compilation.args'):
+            penv.attr.compilation.args = {}
 
         proc_env = os.environ
-        proc_env.update( {'LD_LIBRARY_PATH':f"{env.attr.install.dir}/byond/bin"} )
-        env.attr.shell.env = proc_env
-        preargs, postargs = Compilation.convert_args(env.attr.compilation.args)
-        env.attr.shell.command = f"{env.attr.install.dir}/byond/bin/DreamMaker {preargs} {env.attr.compilation.dm_file_path} {postargs}"
-        env.event_handlers['process.finished'] = log_returncode
-        await Shared.Process.shell(env)
+        proc_env.update( {'LD_LIBRARY_PATH':f"{penv.attr.install.dir}/byond/bin"} )
+        penv.attr.shell.env = proc_env
+        preargs, postargs = Compilation.convert_args(penv.attr.compilation.args)
+        penv.attr.shell.command = f"{penv.attr.install.dir}/byond/bin/DreamMaker {preargs} {penv.attr.compilation.dm_file_path} {postargs}"
+        penv.event_handlers['process.finished'] = log_returncode
+        await Shared.Process.shell(penv)
 
     @staticmethod
     async def generate_code_tree(env):
