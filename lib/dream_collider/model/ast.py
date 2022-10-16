@@ -94,6 +94,7 @@ class AST(object):
                 block = nodel.root
             else:
                 block = cnode
+            #TODO
 
         def get_vars(self):
             return self.object_vars_by_name.values()
@@ -154,11 +155,18 @@ class AST(object):
         def assign_block(self, block):
             self.block = block
 
+        def initialization_mode(self):
+            #TODO: if override, inherits mode of overriden
+            if "const" in self.var_path:
+                return "const"
+
+            return "dynamic"
+
         def get_usage(self, use):
             return self.block.resolve_usage(self.block, use)
             
         def validate_expression(self, expr):
-            for node in AST.iter_subtree(expr):
+            for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     if self.block.check_usage_cycle( self, self.get_usage(node) ) is True:
                         return False
@@ -166,7 +174,7 @@ class AST(object):
 
         def set_expression(self, expr):
             self.expression = expr
-            for node in AST.iter_subtree(expr):
+            for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     self.block.add_dependency( self, self.get_usage(node) )
 
@@ -189,11 +197,18 @@ class AST(object):
         def assign_block(self, block):
             self.block = block
 
+        def initialization_mode(self):
+            #TODO: if override, inherits mode of overriden
+            if "static" in self.var_path:
+                return "dynamic"
+            else:
+                return "const"
+
         def get_usage(self, use):
             return self.block.root.resolve_usage(self.block, use)
 
         def validate_expression(self, expr):
-            for node in AST.iter_subtree(expr):
+            for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     if self.block.root.check_usage_cycle( self, self.get_usage(node) ) is True:
                         return False
@@ -201,7 +216,7 @@ class AST(object):
 
         def set_expression(self, expr):
             self.expression = expr
-            for node in AST.iter_subtree(expr):
+            for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     self.block.root.add_dependency( self, self.get_usage(node) )
 
@@ -526,6 +541,7 @@ class AST(object):
             h.op("Postinc", fixity="_++", arity=["lval"], prec=330)
             h.op("Postdec", fixity="_--", arity=["lval"], prec=330)
 
+            # TODO: limit on size of exponent
             h.op("Power", fixity="_**_", arity=bin_expr, prec=320)
 
             h.op("Multiply", fixity="_*_", arity=bin_expr, prec=310)
@@ -635,15 +651,24 @@ class AST(object):
                     AST.print(st, s, depth+2, seen=seen)
 
     def iter_subtree(node):
+        if hasattr(node, 'subtree'):
+            for st_attr in node.subtree:
+                st = getattr(node, st_attr)
+                if type(st) is list:
+                    yield from st
+                else:
+                    yield from [st]
+
+    def walk_subtree(node):
         yield node
         if hasattr(node, 'subtree'):
             for st_attr in node.subtree:
                 st = getattr(node, st_attr)
                 if type(st) is list:
                     for snode in st:
-                        yield from AST.iter_subtree(snode)
+                        yield from AST.walk_subtree(snode)
                 else:
-                    yield from AST.iter_subtree(st)
+                    yield from AST.walk_subtree(st)
 
 AST.Op.create_ops()
 

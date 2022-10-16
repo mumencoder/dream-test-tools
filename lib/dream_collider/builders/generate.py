@@ -37,12 +37,14 @@ class Generator:
                 while expr is None:
                     try:
                         expr = Generator.expression(env, var_decl, depth=5, arity="rval")
-                        if var_decl.validate_expression( expr ) is False:
+                        if not expr.is_const(var_decl) and var_decl.initialization_mode() == "const":
                             expr = None
-                            continue
-                        var_decl.set_expression( expr )
+                        elif var_decl.validate_expression( expr ) is False:
+                            expr = None
+                        else:
+                            var_decl.set_expression( expr )
                     except GenerationError:
-                        pass
+                        expr = None
 
         return tl_node
 

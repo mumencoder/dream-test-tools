@@ -2,7 +2,6 @@
 class Dependency(object):
     class Toplevel(object):
         def check_usage_cycle(self, define_user, define_usee):
-            print(define_user, define_usee)
             if define_user.get_storage_id() == define_usee.get_storage_id(): 
                 return True
 
