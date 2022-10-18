@@ -5,6 +5,8 @@ class AST(object):
     terminal_exprs = []
     nonterminal_exprs = []
 
+    keywords = ["do"]
+    
     class Toplevel(object):
         subtree = ["leaves"]
 
@@ -168,12 +170,17 @@ class AST(object):
         def get_usage(self, use):
             return self.block.resolve_usage(self.block, use)
             
+        def validate_name(self):
+            if self.name in AST.keywords:
+                return False
+            return True
+
         def validate_expression(self, expr):
             for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     if self.block.check_usage_cycle( self, self.get_usage(node) ) is True:
                         return False
-            return True
+            return expr.validate( self.block )
 
         def set_expression(self, expr):
             self.expression = expr
@@ -210,12 +217,17 @@ class AST(object):
         def get_usage(self, use):
             return self.block.root.resolve_usage(self.block, use)
 
+        def validate_name(self):
+            if self.name in AST.keywords:
+                return False
+            return True
+
         def validate_expression(self, expr):
             for node in AST.walk_subtree(expr):
                 if node.is_usage():
                     if self.block.root.check_usage_cycle( self, self.get_usage(node) ) is True:
                         return False
-            return True
+            return expr.validate( self.block )
 
         def set_expression(self, expr):
             self.expression = expr
@@ -703,5 +715,13 @@ def mix():
     from .Dependency import Dependency
     AST.Toplevel.check_usage_cycle = Dependency.Toplevel.check_usage_cycle
     AST.Toplevel.add_dependency = Dependency.Toplevel.add_dependency
+    from .Validation import Validation
+    mix_fn(AST, Validation, 'validate')
+    for ty in iter_types(AST.Expr):
+        if not hasattr(ty, 'validate'):
+            ty.validate = Validation.validate_subtree
+    for ty in iter_types(AST.Op):
+        if not hasattr(ty, 'validate'):
+            ty.validate = Validation.validate_subtree
 
 mix()

@@ -25,4 +25,7 @@ class Dependency(object):
             return False
 
         def add_dependency(self, define_user, define_usee):
+            if self.check_usage_cycle(define_user, define_usee):
+                self.decl_cycles.add( (define_user, define_usee) )
             self.decl_deps[define_user.get_storage_id()].add( define_usee.get_storage_id() )
+

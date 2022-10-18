@@ -28,7 +28,11 @@ class Generator:
         env.attr.gen.var_decls = []
         for i in range(0, env.attr.gen.vars):
             block = random.choice( env.attr.gen.blocks )
-            var_decl = Generator.VarDefine(env, block)
+            var_decl = None
+            while var_decl is None:
+                var_decl = Generator.VarDefine(env, block)
+                if var_decl.validate_name() is False:
+                    var_decl = None
             block.add_leaf( var_decl )
             env.attr.gen.var_decls.append( var_decl )
 
