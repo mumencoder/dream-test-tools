@@ -665,6 +665,11 @@ class AST(object):
                     st = getattr(node, st_attr)
                     AST.print(st, s, depth+2, seen=seen)
 
+    def to_str(node):
+        s = io.StringIO()
+        AST.print( node, s, seen=set() )
+        return s.getvalue()
+
     def iter_subtree(node):
         if hasattr(node, 'subtree'):
             for st_attr in node.subtree:
@@ -710,11 +715,22 @@ for ty in [AST.Expr.Identifier, AST.Expr.GlobalIdentifier]:
 
 def mix():
     from .Unparse import Unparse
+    for ty in iter_types(AST.Op):
+        if ty is AST.Op:
+            continue
+        ty.unparse = Unparse.op_unparse
+        ty.unparse_expr = Unparse.unparse_expr
+
+    for ty_name in ["PathUpwards", "PathDownwards", "Path", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
+        op = getattr(AST.Op, ty_name)
+        op.unparse_expr = lambda self, upar, parent_op=None: Unparse.unparse_expr(self, upar, parent_op=parent_op, spacing=False)
     mix_fn(AST, Unparse, 'unparse')
     mix_fn(AST, Unparse, 'unparse_expr')
+
     from .Dependency import Dependency
     AST.Toplevel.check_usage_cycle = Dependency.Toplevel.check_usage_cycle
     AST.Toplevel.add_dependency = Dependency.Toplevel.add_dependency
+
     from .Validation import Validation
     mix_fn(AST, Validation, 'validate')
     for ty in iter_types(AST.Expr):
@@ -723,5 +739,36 @@ def mix():
     for ty in iter_types(AST.Op):
         if not hasattr(ty, 'validate'):
             ty.validate = Validation.validate_subtree
+
+    from .Const import Const
+    for ty in iter_types(AST.Expr):
+        ty.is_const = Const.never_const
+
+    for ty in iter_types(AST.Op):
+        ty.is_const = Const.subtree_const
+        
+    for ty in [AST.Expr.Integer, AST.Expr.Float]:
+        ty.is_const = Const.always_const
+
+    for ty_name in ["LessThan", "LessEqualThan", "GreaterThan", "GreaterEqualThan", 
+        "Equals", "NotEquals", "NotEquals2", "Equivalent", "NotEquivalent"]:
+        ty = getattr(AST.Op, ty_name)
+        ty.is_const = Const.never_const
+
+    AST.Op.To.is_const = Const.never_const
+    AST.Op.In.is_const = Const.never_const  
+
+    from .Simplify import Simplify  
+    for ty in iter_types(AST.Expr):
+        ty.simplify = lambda self, scope: self
+        
+    for ty in iter_types(AST.Op):
+        if ty is AST.Op:
+            continue
+        ty.simplify = Simplify.Op.simplify
+        if not hasattr(ty, 'before_subtree_simplify'):
+            ty.before_subtree_simplify = lambda self, scope: None
+        if not hasattr(ty, 'after_subtree_simplify'):
+            ty.after_subtree_simplify = lambda self, scope: None
 
 mix()

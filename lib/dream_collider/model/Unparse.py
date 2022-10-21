@@ -151,13 +151,3 @@ class Unparse(object):
 
     def op_unparse(self, upar):
         self.unparse_expr(upar)
-
-for ty in iter_types(AST.Op):
-    if ty is AST.Op:
-        continue
-    ty.unparse = Unparse.op_unparse
-    ty.unparse_expr = Unparse.unparse_expr
-
-for ty_name in ["PathUpwards", "PathDownwards", "Path", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
-    op = getattr(AST.Op, ty_name)
-    op.unparse_expr = lambda self, upar, parent_op=None: Unparse.unparse_expr(self, upar, parent_op=parent_op, spacing=False)
