@@ -19,12 +19,7 @@ async def main():
         with open(cenv.attr.compilation.dm_file_path, "w") as f:
             f.write( top.unparse().s.getvalue() )
 
-        cenv.attr.process.stdout = open(cenv.attr.test.path / 'compile.stdout.txt', "w")
-        await DMShared.Byond.Compilation.compile(cenv)
-
-        with open(cenv.attr.test.path / "compile.returncode.txt", "w") as f:
-            f.write( str(cenv.attr.compilation.returncode) )
-        cenv.attr.process.stdout.close()
+        cenv, renv = await run_byond()
 
         if cenv.attr.compilation.returncode == 0 and top.get_error_count() == 0:
             result = "match"
@@ -38,31 +33,56 @@ async def main():
         else:
             mismatch_ct += 1
 
-    async def expr_main():
-        gen = ExprGenerator()
-
+    async def run_byond():
         cenv = tenv.branch()
-        cenv.attr.compilation.dm_file_path = cenv.attr.test.path / "test.dm" 
 
-        with open(cenv.attr.compilation.dm_file_path, "w") as f:
-            f.write( gen.test() )
-
-        cenv.attr.process.stdout = open(cenv.attr.test.path / 'compile.stdout.txt', "w")
+        cenv.attr.process.stdout = open(cenv.attr.test.path / 'byond.compile.stdout.txt', "w")
         await DMShared.Byond.Compilation.compile(cenv)
 
-        with open(cenv.attr.test.path / "compile.returncode.txt", "w") as f:
+        with open(cenv.attr.test.path / "byond.compile.returncode.txt", "w") as f:
             f.write( str(cenv.attr.compilation.returncode) )
         cenv.attr.process.stdout.close()
 
         if cenv.attr.compilation.returncode == 0:
             renv = tenv.branch()
-            renv.attr.process.stdout = open(renv.attr.test.path / 'run.stdout.txt', "w")
+            renv.attr.process.stdout = open(renv.attr.test.path / 'byond.run.stdout.txt', "w")
             renv.attr.run.dm_file_path = DMShared.Byond.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             renv.attr.run.args = {}
             await DMShared.Byond.Run.run(renv)
             renv.attr.process.stdout.close()
 
+        return (cenv, renv)
+
+    async def run_opendream():
+        cenv = tenv.branch()
+        cenv.attr.build.dir = Shared.Path( config["opendream"]["repo_dir"] ) / 'DMCompiler'
+        cenv.attr.process.stdout = open(cenv.attr.test.path / 'opendream.compile.stdout.txt', "w")
+        await DMShared.OpenDream.Compilation.compile( cenv )
+        with open(cenv.attr.test.path / "opendream.compile.returncode.txt", "w") as f:
+            f.write( str(cenv.attr.compilation.returncode) )
+        cenv.attr.process.stdout.close()
+
+        if cenv.attr.compilation.returncode == 0:
+            renv = tenv.branch()
+            renv.attr.build.dir = Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Server'
+            renv.attr.process.stdout = open(renv.attr.test.path / 'opendream.run.stdout.txt', "w")
+            renv.attr.run.dm_file_path = DMShared.OpenDream.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
+            renv.attr.run.args = {}
+            await DMShared.OpenDream.Run.run(renv)
+            renv.attr.process.stdout.close()
+        
+        return (cenv, renv)
+
+    async def expr_main():
+        gen = ExprGenerator()
+        tenv.attr.compilation.dm_file_path = tenv.attr.test.path / "test.dm" 
+        with open(tenv.attr.compilation.dm_file_path, "w") as f:
+            f.write( gen.test() )
+        await run_byond()
+
     env = Shared.Environment()
+    env.attr.shell.env = os.environ
+    env.attr.process.stdout = sys.stdout
 
     benv = env.branch()
     benv.attr.version = {

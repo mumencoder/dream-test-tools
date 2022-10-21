@@ -18,7 +18,6 @@ class Builder(object):
         env.attr.dotnet.project.path = env.attr.dotnet.solution.path / 'OpenDreamServer' / 'OpenDreamServer.csproj'
 
     @staticmethod
-    @Shared.Workflow.Decorators.status('opendream.build')
     async def build(env):
         build = env.prefix('.opendream.build')
         dotnet = env.prefix('.dotnet')
@@ -30,24 +29,25 @@ class Builder(object):
 
         dotnet.build.params['configuration'] = 'Release'
 
-        env2 = env.branch()
-        Builder.prepare_compiler_project( env2 )
+        cenv = env.branch()
+        Builder.prepare_compiler_project( cenv )
 
-        env3 = env2.branch()
-        await Shared.Dotnet.Project.restore( env3 )
-        env3 = env2.branch()
+        crenv = cenv.branch()
+        await Shared.Dotnet.Project.restore( crenv )
+
+        cbenv = cenv.branch()
         if build.mode == "publish":
-            await Shared.Dotnet.Project.publish( env2 )
+            await Shared.Dotnet.Project.publish( cbenv )
         else:
-            await Shared.Dotnet.Project.build( env2 )
+            await Shared.Dotnet.Project.build( cbenv )
 
-        env2 = env.branch()
-        Builder.prepare_server_project( env2 )
+        senv = env.branch()
+        Builder.prepare_server_project( senv )
 
         if build.mode == "publish":
-            await Shared.Dotnet.Project.publish( env2 )
+            await Shared.Dotnet.Project.publish( senv )
         else:
-            await Shared.Dotnet.Project.build( env2 )
+            await Shared.Dotnet.Project.build( senv )
 
     @staticmethod
     def build_ready(env):

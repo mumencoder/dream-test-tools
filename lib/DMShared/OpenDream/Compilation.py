@@ -27,7 +27,7 @@ class Compilation(object):
         compilation = env.attr.compilation
 
         async def log_returncode(env):
-            compilation.returncode = env.attr.process.p.returncode
+            compilation.returncode = env.attr.process.instance.returncode
 
         if not env.attr_exists('.compilation.args'):
             compilation.args = {}
@@ -42,5 +42,6 @@ class Compilation(object):
             raise Exception("missing/ambiguous path", env.attr.build.dir, exe_paths)
 
         env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path.name}"
-        env.event_handlers['process.complete'] = log_returncode
+        env.attr.shell.env = {}
+        env.event_handlers['process.finished'] = log_returncode
         await Shared.Process.shell(env)
