@@ -33,6 +33,7 @@ class Run(object):
         install_dir = env.attr.install.dir
 
         penv.attr.process.env = {'LD_LIBRARY_PATH':f"{install_dir}/byond/bin"}
+        penv.attr.shell.dir = os.path.dirname( penv.attr.run.dm_file_path )
         penv.attr.shell.command = f"{install_dir}/byond/bin/DreamDaemon {preargs} {penv.attr.run.dm_file_path} {postargs}"
         penv.attr.shell.env = os.environ
         await Shared.Process.shell(penv)

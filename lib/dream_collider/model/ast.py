@@ -740,6 +740,15 @@ def mix():
         if not hasattr(ty, 'validate'):
             ty.validate = Validation.validate_subtree
 
+    from .ODValidate import ODValidate
+    mix_fn(AST, ODValidate, 'od_validate')
+    for ty in iter_types(AST.Expr):
+        if not hasattr(ty, 'od_validate'):
+            ty.validate = ODValidate.od_validate_subtree
+    for ty in iter_types(AST.Op):
+        if not hasattr(ty, 'od_validate'):
+            ty.validate = ODValidate.od_validate_subtree
+
     from .Const import Const
     for ty in iter_types(AST.Expr):
         ty.is_const = Const.never_const

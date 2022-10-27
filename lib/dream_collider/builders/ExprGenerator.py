@@ -26,7 +26,8 @@ class ExprGenerator:
     world.log << "isnum: [isnum(v)]"
     world.log << "isnull: [isnull(v)]"
     world.log << "ispath: [ispath(v)]"
-    shutdown()
+    text2file("[json_encode(v)]", "test.out.json")
+    return json_encode(v)
 """
 
     def randomString(self, env, lo, hi):
