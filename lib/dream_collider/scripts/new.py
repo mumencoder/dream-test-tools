@@ -53,8 +53,8 @@ async def main():
             renv.attr.run.args = {'trusted':True}
             await DMShared.Byond.Run.run(renv)
             renv.attr.process.stdout.close()
-            with open(cenv.attr.test.path / 'byond.run.stdout.txt', "r") as f:
-                cenv.attr.run.log = f.read()
+            with open(renv.attr.test.path / 'byond.run.stdout.txt', "r") as f:
+                renv.attr.run.log = f.read()
             if os.path.exists( renv.attr.test.path / 'test.out.json'):
                 with open( renv.attr.test.path / 'test.out.json', "r" ) as f:
                     renv.attr.run.output = json.load(f)
@@ -87,7 +87,10 @@ async def main():
             renv.attr.run.log = str(t.Item3)
             if os.path.exists( renv.attr.test.path / 'test.out.json'):
                 with open( renv.attr.test.path / 'test.out.json', "r" ) as f:
-                    renv.attr.run.output = json.load(f)
+                    try:
+                        renv.attr.run.output = json.load(f)
+                    except json.decoder.JSONDecodeError:
+                        pass
                 os.remove( renv.attr.test.path / 'test.out.json')
         
         return (cenv, renv)
@@ -107,7 +110,14 @@ async def main():
         if result["compile_match"] is True and bcenv.attr.compilation.returncode == 0:
             if brenv.attr_exists('.run.output') and orenv.attr_exists('.run.output'):
                 # TODO: support list, dict
-                result["match"] = brenv.attr.run.output == orenv.attr.run.output
+                if type(brenv.attr.run.output) is float and type(orenv.attr.run.output) is float:
+                    ratio = brenv.attr.run.output / orenv.attr.run.output
+                    if ratio > 0.99 and ratio < 1.01:
+                        result["match"] = True
+                    else:
+                        result["match"] = False
+                else:
+                    result["match"] = brenv.attr.run.output == orenv.attr.run.output
             elif not brenv.attr_exists('.run.output') and not orenv.attr_exists('.run.output'):
                 result["match"] = True
             else:
@@ -185,7 +195,7 @@ async def main():
     await DMShared.Byond.Install.from_zip(ienv)
 
     ct = 0
-    while ct < 10:
+    while True:
         tenv = benv.branch()
         tenv.attr.test.path = Shared.Path( config["test_dir"] ) / f"{Shared.Random.generate_string(16)}"
 
@@ -197,6 +207,7 @@ async def main():
             print(result["output"])
             return
         ct += 1
+        print(ct)
 
 import pythonnet
 pythonnet.load("coreclr")

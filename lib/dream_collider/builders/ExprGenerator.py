@@ -15,6 +15,8 @@ class ExprGenerator:
         while expr is None:
             try:
                 expr = self.expression(Shared.Environment(), depth=2, arity="rval")
+                if expr.od_validate() is False:
+                    expr = None
             except GenerationError:
                 expr = None
         upar = Unparser()

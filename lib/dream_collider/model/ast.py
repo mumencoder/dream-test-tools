@@ -549,7 +549,7 @@ class AST(object):
             h.op("MaybeLaxDeref", fixity="_?:_", arity=["storage", "prop"], prec=340)
 
             h.op("Not", fixity="!_", arity=["rval"], prec=330)
-            h.op("Bitnot", fixity="~_", arity=["rval"], prec=330)
+            h.op("BitNot", fixity="~_", arity=["rval"], prec=330)
             h.op("Negate", fixity="-_", arity=["rval"], prec=330)
             h.op("Preinc", fixity="++_", arity=["lval"], prec=330)
             h.op("Predec", fixity="--_", arity=["lval"], prec=330)
@@ -744,10 +744,10 @@ def mix():
     mix_fn(AST, ODValidate, 'od_validate')
     for ty in iter_types(AST.Expr):
         if not hasattr(ty, 'od_validate'):
-            ty.validate = ODValidate.od_validate_subtree
+            ty.od_validate = ODValidate.od_validate_subtree
     for ty in iter_types(AST.Op):
         if not hasattr(ty, 'od_validate'):
-            ty.validate = ODValidate.od_validate_subtree
+            ty.od_validate = ODValidate.od_validate_subtree
 
     from .Const import Const
     for ty in iter_types(AST.Expr):
