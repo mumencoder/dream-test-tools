@@ -1,14 +1,19 @@
 
-import sys, os, io, time, asyncio, pathlib
-import pymongo, yaml
+from common import *
 
-sys.path.append( os.path.join( os.path.dirname(__file__),"..","..") )
+env = Shared.Environment()
 
-import Shared, DMShared
-from dream_collider import *
+load_config(env)
+load_dotnet(env)
 
-with open(os.environ["COLLIDER_CONFIG"]) as f:
-    config = yaml.safe_load(f)
+from DMCompiler import *
+from System import *
+import System.Threading.Tasks
+import System.IO
+from System.Collections.Generic import List
+from Content.Tests import DMTests
+from Robust.Shared.IoC import IoCManager
+from OpenDreamRuntime import IDreamManager
 
 async def main():
     async def full_main():
@@ -48,6 +53,8 @@ async def main():
         renv = None
         if cenv.attr.compilation.returncode == 0:
             renv = tenv.branch()
+            renv.attr.run.exit_condition = DMShared.Byond.Run.wait_test_output
+            renv.event_handlers['process.wait'] = DMShared.Byond.Run.wait_run_complete
             renv.attr.process.stdout = open(renv.attr.test.path / 'byond.run.stdout.txt', "w")
             renv.attr.run.dm_file_path = DMShared.Byond.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             renv.attr.run.args = {'trusted':True}
@@ -57,7 +64,10 @@ async def main():
                 renv.attr.run.log = f.read()
             if os.path.exists( renv.attr.test.path / 'test.out.json'):
                 with open( renv.attr.test.path / 'test.out.json', "r" ) as f:
-                    renv.attr.run.output = json.load(f)
+                    try:
+                        renv.attr.run.output = json.load(f)
+                    except json.decoder.JSONDecodeError:
+                        pass
                 os.remove( renv.attr.test.path / 'test.out.json')
 
         return (cenv, renv)
@@ -72,19 +82,29 @@ async def main():
         prevout = Console.Out
         stdout = System.IO.StringWriter(System.Text.StringBuilder())
         Console.SetOut(stdout)
-        cenv.attr.compilation.returncode = DMCompiler.Compile(settings)
+        try:
+            cenv.attr.compilation.returncode = DMCompiler.Compile(settings)
+        except Exception as e:
+            cenv.attr.compilation.returncode = False
         Console.SetOut(prevout)
         cenv.attr.compilation.log = stdout.ToString()
+        with open( cenv.attr.test.path / 'opendream.compile.stdout.txt', "w" ) as f:
+            f.write( cenv.attr.compilation.log )
 
         renv = None
         if cenv.attr.compilation.returncode is True:
             renv = tenv.branch()
             renv.attr.run.dm_file_path = DMShared.OpenDream.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             dreamman.LoadJson( str(renv.attr.run.dm_file_path) )
-            t = tests.RunNewTest()
-            success = t.Item1
-            rval = t.Item2
-            renv.attr.run.log = str(t.Item3)
+
+            try:
+                t = tests.RunNewTest()
+                success = t.Item1
+                rval = t.Item2
+                renv.attr.run.log = str(t.Item3)
+            except Exception as e:
+                pass
+
             if os.path.exists( renv.attr.test.path / 'test.out.json'):
                 with open( renv.attr.test.path / 'test.out.json', "r" ) as f:
                     try:
@@ -177,7 +197,14 @@ async def main():
         with open(tenv.attr.compilation.dm_file_path, "w") as f:
             f.write( tenv.attr.dmtest.test )
 
-    env = Shared.Environment()
+    savedir = os.getcwd()
+    os.chdir( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' / 'DMProject' ) )
+    tests = DMTests()
+    tests.BaseSetup()
+    tests.OneTimeSetup()
+    os.chdir( savedir )
+    dreamman = IoCManager.Resolve[IDreamManager]()
+
     env.attr.shell.env = os.environ
     env.attr.process.stdout = sys.stdout
 
@@ -197,43 +224,21 @@ async def main():
     ct = 0
     while True:
         tenv = benv.branch()
-        tenv.attr.test.path = Shared.Path( config["test_dir"] ) / f"{Shared.Random.generate_string(16)}"
+
+        test_id = f"{Shared.Random.generate_string(16)}"
+        tenv.attr.test.path = Shared.Path( config["test_dir"] ) / test_id
+        tenv.attr.shell.dir = tenv.attr.test.path
 
         await expr_main()
         (bcenv, brenv) = await run_byond()
-        (ocenv, orenv) = await run_opendream_pnet()
+        with Shared.folder.Push( os.getcwd() ):
+            (ocenv, orenv) = await run_opendream_pnet()
         result = compare_report(bcenv, brenv, ocenv, orenv)
         if result["match"] is False:
-            print(result["output"])
-            return
+            with open( Shared.Path( config["test_dir"] ) / f"{test_id}.txt", "w" ) as f:
+                f.write(result["output"])
+        shutil.rmtree( tenv.attr.test.path )
         ct += 1
         print(ct)
 
-import pythonnet
-pythonnet.load("coreclr")
-import clr
-sys.path.append( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'DMCompiler' / 'bin' / 'Debug' / 'net6.0') )
-sys.path.append( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Server' ) )
-sys.path.append( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' ) )
-clr.AddReference("DMCompiler")
-clr.AddReference("OpenDreamServer")
-clr.AddReference("OpenDreamRuntime")
-clr.AddReference("Content.Tests")
-clr.AddReference("Robust.Shared")
-from DMCompiler import *
-from System import *
-import System.Threading.Tasks
-import System.IO
-from System.Collections.Generic import List
-from Content.Tests import DMTests
-from Robust.Shared.IoC import IoCManager
-from OpenDreamRuntime import IDreamManager
-
-savedir = os.getcwd()
-os.chdir( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' / 'DMProject' ) )
-tests = DMTests()
-tests.BaseSetup()
-tests.OneTimeSetup()
-os.chdir( savedir )
-dreamman = IoCManager.Resolve[IDreamManager]()
 asyncio.run( main() )

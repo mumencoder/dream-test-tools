@@ -63,11 +63,17 @@ class ExprGenerator:
 
     def initialize_terminal(self, env, expr):
         if type(expr) is AST.Expr.Integer:
-            expr.n = random.randint(-100,100)
+            if random.random() < 0.05:
+                expr.n = 0
+            else:
+                expr.n = random.randint(-100,100)
         elif type(expr) is AST.Expr.Float:
-            expr.n = 100 - 200*random.random()
+            if random.random() < 0.05:
+                expr.n = 1 - 2*random.random()
+            else:
+                expr.n = 100 - 200*random.random()
         elif type(expr) in [AST.Expr.String, AST.Expr.Resource]:
-            expr.s = self.randomString(env, 0, 6)
+            expr.s = self.randomString(env, 0, 3)
         # TODO: fuzz AST.Expr.Super
         elif type(expr) in [AST.Expr.Self, AST.Expr.Null]:
             pass

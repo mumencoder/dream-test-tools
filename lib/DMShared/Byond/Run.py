@@ -16,19 +16,30 @@ class Run(object):
         return filename.with_suffix('.dmb')
 
     @staticmethod
-    async def run(env):
-        async def wait(eenv):
-            start_time = time.time()
-            while eenv.attr.process.instance.returncode is None:
-                if time.time() - start_time > 2.0:
-                    eenv.attr.process.instance.kill()
-                try:
-                    await asyncio.wait_for(eenv.attr.process.instance.wait(), timeout=0.1)
-                except asyncio.TimeoutError:
-                    pass
+    def wait_test_output(env):
+        path = os.path.join( env.attr.shell.dir, 'test.out.json' )
+        return os.path.exists( path ) and os.stat( path ).st_mtime > env.attr.process.start_time
 
+    @staticmethod
+    async def wait_run_complete(env):
+        kill_proc = False
+        while env.attr.process.instance.returncode is None:
+            if time.time() - env.attr.process.start_time > 2.0 or env.attr.run.exit_condition(env):
+                kill_proc = True
+            if kill_proc:
+                try:
+                    env.attr.process.instance.kill()
+                    await asyncio.wait_for(env.attr.process.instance.wait(), timeout=0.500)
+                except asyncio.exceptions.TimeoutError:
+                    pass
+            try:
+                await asyncio.wait_for(env.attr.process.instance.wait(), timeout=0.050)
+            except asyncio.exceptions.TimeoutError:
+                pass
+
+    @staticmethod
+    async def run(env):
         penv = env.branch()
-        penv.event_handlers['process.wait'] = wait
         preargs, postargs = Run.get_args(env.attr.run.args)
         install_dir = env.attr.install.dir
 
