@@ -1,34 +1,100 @@
 
+class Expr:
+    class Integer:
+        def initialize(self, env, expr):
+            expr.n = random.randint(-100,100)
+    class Float:
+        def initialize(self, env, expr):
+            expr.n = 100 - 200*random.random()
+    class Identifier:
+        def initialize(self, env, expr):
+            expr.name = self.choose_scoped_identifier(env, expr)
+    class GlobalIdentifier:
+        def initialize(self, env, expr):
+            expr.name = self.choose_scoped_identifier(env, expr)
+    class String:
+        def initialize(self, env, expr):
+            expr.s = self.randomString(env, 0, 6)
+            
+    def create_var_expr(self, env, var_define, depth=None, arity=None):
+        if depth == 1:
+            expr = None
+            while expr is None:
+                expr = self.generate_terminal( var_decl, arity )
+            self.initialize_terminal( env, var_decl, expr )
+            return expr
+        else:
+            expr = None
+            while expr is None:
+                expr = self.generate_nonterminal( var_decl, arity )
+            if getattr(expr, 'terminal', None):
+                self.initialize_terminal( env, var_decl, expr )
+            if getattr(expr, 'nonterminal', None):
+                leaf_arity = expr.arity
+                if leaf_arity == "vararg":
+                    leaf_arity = random.randint(1,3)*["rval"]
+                for arity in leaf_arity:
+                    new_depth = random.randint(1, depth-1)
+                    expr.exprs.append( self.expression(env, var_decl, new_depth, arity) )
+        return expr
 
-class Evaluate(object):
-    class ConstExpression(object):
-        def eval(self, config):
-            return self.value
+    def generate_terminal(self, parent_node, pos):
+        if arity == "rval":
+            return random.choice( AST.terminal_exprs )()
+        elif arity == "lval":
+            return AST.Expr.Identifier()
+        elif arity == "storage":
+            return AST.Expr.Identifier()
+        elif arity == "path":
+            # TODO: allow paths
+            raise GenerationError()
+        elif arity == "prop":
+            raise GenerationError()
+        else:
+            raise Exception("unknown arity", arity)
 
-    class OpExpression(object):
-        def eval(self, config):
-            if self.op.display == "+":
-                return self.leaves[0].eval(config) + self.leaves[1].eval(config)
-            if self.op.display== "-":
-                return self.leaves[0].eval(config) - self.leaves[1].eval(config)
-            if self.op.display == "*":
-                return self.leaves[0].eval(config) * self.leaves[1].eval(config)
-            if self.op.display == "/":
-                if self.leaves[1].eval(config) in [0, -0, 0.0, -0.0]:
-                    raise GenerationError()
-                return self.leaves[0].eval(config) / self.leaves[1].eval(config)
-            raise Exception("cannot evaluate")
+    def generate_nonterminal(self, parent_node, pos):
+        if arity == "rval":
+            return random.choice( AST.nonterminal_exprs )()
+        elif arity == "lval":
+            return AST.Expr.Identifier()
+        elif arity == "storage":
+            return AST.Expr.Identifier()
+        elif arity == "path":
+            # TODO: allow paths
+            raise GenerationError()
+        elif arity == "prop":
+            raise GenerationError()
+        else:
+            raise Exception("unknown arity", arity)
 
-    class Identifier(object):
-        def eval(self, config):
-            if self.decl.value is None:
+    def choose_scoped_identifier(self, env, expr):
+        scope = env.attr.gen.scope
+        if type(scope) is AST.Toplevel:
+            var_defines = list(scope.get_vars())
+            if len(var_defines) == 0:
                 raise GenerationError()
-            else:
-                return self.decl.value
-
-    class CallExpression(object):
-        def eval(self, config):
-            return 1
+            var_decl = random.choice( random.choice( var_defines ) )
+            return var_decl.name
+        elif type(expr) is AST.Expr.GlobalIdentifier:
+            var_defines = list(scope.root.get_vars())
+            if len(var_defines) == 0:
+                raise GenerationError()
+            var_decl = random.choice( random.choice( var_defines ) )
+            return var_decl.name
+        elif type(scope) is AST.ObjectBlock:
+            blocks = scope.root.object_blocks_by_path[scope.path]
+            if len(blocks) == 0:
+                raise GenerationError()
+            block = random.choice( blocks )
+            block = random.choice( list(block.parent_chain()) )
+            var_defines = list(scope.get_vars()) 
+            if len(var_defines) == 0:
+                raise GenerationError()
+            var_decl = random.choice( random.choice( var_defines ) )
+            return var_decl.name
+        else:
+            raise Exception("bad scope")
             
 class ObjectVarDecl(object):
     def compute_overrides(self):
@@ -46,7 +112,6 @@ class ObjectVarDecl(object):
         for path, dmobj in self.objects_by_path.items():
             if dmobj.obj_trunk is None:
                 dmobj.compute_overrides()
-
 
 class ValidationRandomizer(object):
     def __init__(self, pass_chance=None):

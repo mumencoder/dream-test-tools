@@ -4,8 +4,6 @@ from ..common import *
 class AST(object):
     terminal_exprs = []
     nonterminal_exprs = []
-
-    keywords = ["do"]
     
     class Toplevel(object):
         subtree = ["leaves"]
@@ -33,6 +31,32 @@ class AST(object):
         def get_vars(self):
             return self.global_vars_by_name.values()
 
+        def iter_blocks(self):
+            yield self
+            for leaf_list in self.object_blocks_by_name.values():
+                for leaf in leaf_list:
+                    yield leaf
+
+        def iter_vars(self):
+            for var_list in self.global_vars_by_name.values():
+                for var in var_list:
+                    yield var
+
+        def iter_procs(self):
+            for proc_list in self.global_procs_by_name.values():
+                for proc in proc_list:
+                    yield proc
+
+        def iter_var_defines(self):
+            for block in self.iter_blocks():
+                for var in block.iter_vars():
+                    yield var
+
+        def iter_proc_defines(self):
+            for block in self.iter_blocks():
+                for proc in block.iter_procs():
+                    yield proc
+
         def add_leaf(self, leaf):
             if type(leaf) is AST.ObjectBlock:
                 self.object_blocks_by_name[leaf.name].append( leaf )
@@ -44,6 +68,7 @@ class AST(object):
             else:
                 raise Exception("invalid leaf", leaf)
             leaf.root = self
+            leaf.parent = None
             self.leaves.append( leaf )
             if type(leaf) is AST.ObjectBlock:
                 leaf.compute_path()
@@ -101,8 +126,15 @@ class AST(object):
                 block = cnode
             #TODO
 
-        def get_vars(self):
-            return self.object_vars_by_name.values()
+        def iter_vars(self):
+            for var_list in self.object_vars_by_name.values():
+                for var in var_list:
+                    yield var
+
+        def iter_procs(self):
+            for proc_list in self.object_procs_by_name.values():
+                for proc in proc_list:
+                    yield proc
 
         def add_leaf(self, leaf):
             if type(leaf) is AST.ObjectBlock:
@@ -170,11 +202,6 @@ class AST(object):
         def get_usage(self, use):
             return self.block.resolve_usage(self.block, use)
             
-        def validate_name(self):
-            if self.name in AST.keywords:
-                return False
-            return True
-
         def validate_expression(self, expr):
             for node in AST.walk_subtree(expr):
                 if node.is_usage():
@@ -217,11 +244,6 @@ class AST(object):
         def get_usage(self, use):
             return self.block.root.resolve_usage(self.block, use)
 
-        def validate_name(self):
-            if self.name in AST.keywords:
-                return False
-            return True
-
         def validate_expression(self, expr):
             for node in AST.walk_subtree(expr):
                 if node.is_usage():
@@ -249,6 +271,12 @@ class AST(object):
             self.allow_override = True
             self.allow_verb = True
 
+        def set_params(self, params):
+            self.params = params
+
+        def set_body(self, body):
+            self.body = body
+
     #AST.Type("proc_multivar_define", node_type=["proc_stmt"],
     #    attrs=AST.Attrs(defines=AST.List("proc_var_define")))
 
@@ -262,6 +290,12 @@ class AST(object):
 
             self.allow_override = True
             self.allow_verb = True
+
+        def set_params(self, params):
+            self.params = params
+
+        def set_body(self, body):
+            self.body = body
 
     class ProcArgument(object):
         attrs = ["name", "param_type"]
@@ -588,7 +622,6 @@ class AST(object):
 
             h.op("Ternary", fixity="_?_:_", arity=["rval", "rval", "rval"], prec=210)
 
-        def create_stmts():
             h.op("Assign", fixity="_=_", arity=["lval", "rval"], prec=200)
             h.op("AssignAdd", fixity="_+=_", arity=["lval", "rval"], prec=200)
             h.op("AssignSubtract", fixity="_-=_", arity=["lval", "rval"], prec=200)
@@ -614,13 +647,7 @@ class AST(object):
             cpath = []
             for segment in self.segments:
                 cpath.append(segment)
-                yield Path(cpath)
-
-        def parent_type(trunk_path, leaf_path):
-            old_trunk = leaf.obj_trunk
-            if old_trunk is not None:
-                old_trunk.remove_child( leaf )
-            leaf.new_parent( trunk )
+                yield AST.Path(cpath)
 
         def contains(self, path):
             for i, segment in enumerate(path.segments):
@@ -640,7 +667,7 @@ class AST(object):
             return hash(self.segments)
 
         def from_string(path):
-            return Path( [seg for seg in path.split("/") if seg != ""] )
+            return AST.Path( [seg for seg in path.split("/") if seg != ""] )
 
     def print(node, s, depth=0, seen=None):
         if id(node) in seen:
@@ -714,19 +741,6 @@ for ty in [AST.Expr.Identifier, AST.Expr.GlobalIdentifier]:
 #AST.Op.MaybeIndex.is_usage = lambda self: True
 
 def mix():
-    from .Unparse import Unparse
-    for ty in iter_types(AST.Op):
-        if ty is AST.Op:
-            continue
-        ty.unparse = Unparse.op_unparse
-        ty.unparse_expr = Unparse.unparse_expr
-
-    for ty_name in ["PathUpwards", "PathDownwards", "Path", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
-        op = getattr(AST.Op, ty_name)
-        op.unparse_expr = lambda self, upar, parent_op=None: Unparse.unparse_expr(self, upar, parent_op=parent_op, spacing=False)
-    mix_fn(AST, Unparse, 'unparse')
-    mix_fn(AST, Unparse, 'unparse_expr')
-
     from .Dependency import Dependency
     AST.Toplevel.check_usage_cycle = Dependency.Toplevel.check_usage_cycle
     AST.Toplevel.add_dependency = Dependency.Toplevel.add_dependency

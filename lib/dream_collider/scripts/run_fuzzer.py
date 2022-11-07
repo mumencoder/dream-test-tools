@@ -16,28 +16,6 @@ from Robust.Shared.IoC import IoCManager
 from OpenDreamRuntime import IDreamManager
 
 async def main():
-    async def full_main():
-        gen = FullGenerator()
-        top = gen.Toplevel( Shared.Environment() )
-        with open( cenv.attr.test.path / "ast.txt", "w") as f:
-            f.write( AST.to_str(top) )
-        with open(cenv.attr.compilation.dm_file_path, "w") as f:
-            f.write( top.unparse().s.getvalue() )
-
-        cenv, renv = await run_byond()
-
-        if cenv.attr.compilation.returncode == 0 and top.get_error_count() == 0:
-            result = "match"
-        elif cenv.attr.compilation.returncode != 0 and top.get_error_count() != 0:
-            result = "match"
-        else:
-            result = "mismatch"
-
-        if result == "match":
-            shutil.rmtree( cenv.attr.test.path )
-        else:
-            mismatch_ct += 1
-
     async def run_byond():
         cenv = tenv.branch()
 
@@ -172,7 +150,7 @@ async def main():
     async def run_opendream():
         cenv = tenv.branch()
         
-        cenv.attr.build.dir = Shared.Path( config["opendream"]["repo_dir"] ) / 'DMCompiler'
+        cenv.attr.build.dir = Shared.Path( env.attr.collider.config["opendream"]["repo_dir"] ) / 'DMCompiler'
         cenv.attr.process.stdout = open(cenv.attr.test.path / 'opendream.compile.stdout.txt', "w")
         await DMShared.OpenDream.Compilation.compile( cenv )
         with open(cenv.attr.test.path / "opendream.compile.returncode.txt", "w") as f:
@@ -181,7 +159,7 @@ async def main():
 
         if cenv.attr.compilation.returncode == 0:
             renv = tenv.branch()
-            renv.attr.build.dir = Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Server'
+            renv.attr.build.dir = Shared.Path( env.attr.collider.config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Server'
             renv.attr.process.stdout = open(renv.attr.test.path / 'opendream.run.stdout.txt', "w")
             renv.attr.run.dm_file_path = DMShared.OpenDream.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             renv.attr.run.args = {}
@@ -191,14 +169,14 @@ async def main():
         return (cenv, renv)
 
     async def expr_main():
-        gen = ExprGenerator()
+        gen = TreeGenerator()
         tenv.attr.compilation.dm_file_path = tenv.attr.test.path / "test.dm" 
-        tenv.attr.dmtest.test = gen.test()
+        tenv.attr.dmtest.test = gen.test_string(env)
         with open(tenv.attr.compilation.dm_file_path, "w") as f:
             f.write( tenv.attr.dmtest.test )
 
     savedir = os.getcwd()
-    os.chdir( str( Shared.Path( config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' / 'DMProject' ) )
+    os.chdir( str( Shared.Path( env.attr.collider.config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' / 'DMProject' ) )
     tests = DMTests()
     tests.BaseSetup()
     tests.OneTimeSetup()
@@ -210,23 +188,23 @@ async def main():
 
     benv = env.branch()
     benv.attr.version = {
-        'full': config["byond"]["version"]["full"], 
-        'major': config["byond"]["version"]["major"], 
-        'minor': config["byond"]["version"]["minor"]
+        'full': env.attr.collider.config["byond"]["version"]["full"], 
+        'major': env.attr.collider.config["byond"]["version"]["major"], 
+        'minor': env.attr.collider.config["byond"]["version"]["minor"]
     }
-    benv.attr.install.dir = Shared.Path( config["byond"]["install_dir"] )
+    benv.attr.install.dir = Shared.Path( env.attr.collider.config["byond"]["install_dir"] )
 
     ienv = benv.branch()
-    ienv.attr.save_path = Shared.Path( config["tmp_dir"] ) / 'byond.zip'
+    ienv.attr.save_path = Shared.Path( env.attr.collider.config["tmp_dir"] ) / 'byond.zip'
     await DMShared.Byond.Download.linux(ienv)
     await DMShared.Byond.Install.from_zip(ienv)
 
     ct = 0
-    while True:
+    while ct == 0:
         tenv = benv.branch()
 
         test_id = f"{Shared.Random.generate_string(16)}"
-        tenv.attr.test.path = Shared.Path( config["test_dir"] ) / test_id
+        tenv.attr.test.path = Shared.Path( env.attr.collider.config["test_dir"] ) / test_id
         tenv.attr.shell.dir = tenv.attr.test.path
 
         await expr_main()
@@ -235,7 +213,7 @@ async def main():
             (ocenv, orenv) = await run_opendream_pnet()
         result = compare_report(bcenv, brenv, ocenv, orenv)
         if result["match"] is False:
-            with open( Shared.Path( config["test_dir"] ) / f"{test_id}.txt", "w" ) as f:
+            with open( Shared.Path( env.attr.collider.config["test_dir"] ) / f"{test_id}.txt", "w" ) as f:
                 f.write(result["output"])
         shutil.rmtree( tenv.attr.test.path )
         ct += 1
