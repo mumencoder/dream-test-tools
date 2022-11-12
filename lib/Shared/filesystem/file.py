@@ -59,4 +59,3 @@ class File(type(pathlib.Path())):
             return os.stat(file).st_mtime
         else:
             return 0
-

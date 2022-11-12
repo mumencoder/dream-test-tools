@@ -5,7 +5,7 @@ import pymongo, yaml
 sys.path.append( os.path.join( os.path.dirname(__file__),"..","..") )
 
 import Shared, DMShared
-from dream_collider import *
+
 
 def load_config(env):
     with open(os.environ["COLLIDER_CONFIG"]) as f:
