@@ -8,5 +8,4 @@ services:
             hard: 0
             soft: 0
     volumes:
-      - /host/data:/DTT/data
-      - /host/repos:/DTT/repos
+      - ./output:/DTT/output

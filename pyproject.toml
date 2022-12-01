@@ -1,0 +1,20 @@
+
+[build-system]
+requires = ["poetry"]
+
+[tool.poetry]
+name = "dream-test-tools"
+description = "tools for running tests involving DreamMaker code"
+version = "1.0.0a"
+authors = [ "mumencoder" ]
+repository = "https://github.com/mumencoder/dream-test-tools"
+license = "MIT"
+packages = [
+    {include = "DMShared", from = "src"},
+    {include = "DMTestRunner", from = "src"},
+    {include = "DreamCollider", from = "src"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+mumenrepo = { git = "http://github.com/mumencoder/mumenrepo.git" }
