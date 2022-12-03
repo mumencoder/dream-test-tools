@@ -127,7 +127,8 @@ class Unparse(object):
 
     class ObjectVarDefine(object):
         def unparse(self, upar):
-            upar.begin_line( self.get_ws() )
+            if len(self.parent.leaves) != 1:
+                upar.begin_line( self.get_ws() )
             upar.write('var')
             upar.write( self.get_ws() )
             upar.write( "/" )
@@ -144,13 +145,20 @@ class Unparse(object):
                 upar.write('=')
                 upar.write( self.get_ws() )
                 self.expression.unparse(upar)
-            upar.end_line( self.get_ws() )
+            if len(self.parent.leaves) != 1:
+                upar.end_line( self.get_ws() )
                 
         def default_ws(self):
-            ws = [ "\n", "", "" ]
+            ws = []
+            if len(self.parent.leaves) != 1:
+                ws += ['\n']
+            ws += [ "", "" ]
             for seg in self.var_path:
                 ws += ["", ""]
-            ws += [" ", " ", "\n"]
+            if self.expression is not None:
+                ws += [" ", " "]
+            if len(self.parent.leaves) != 1:
+                ws += ['\n']
             return ws
 
     class ObjectProcDefine(object):
@@ -697,13 +705,13 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 if self.prefix is not None:
-                    self.prefix.unparse(upar)
+                    upar.write( self.prefix )
                 i = 0
                 while i < len(self.ops):
-                    self.types[i].unparse(upar)
-                    self.ops[i].unparse(upar)
+                    upar.write( self.types[i] )
+                    upar.write( self.ops[i] )
                     i += 1
-                self.types[i].unparse(upar)
+                upar.write( self.types[i] )
                 upar.write( self.get_ws() )
             def unparse_expr(self, upar, parent_op=None):
                 self.unparse(upar)
@@ -836,7 +844,6 @@ class Unparse(object):
             if ty in [AST.Op, AST.Expr]:
                 continue
             ty.join_path = False
-            ty.stmt_only = False
             ty.get_ws = Unparse.get_ws
 
         AST.ObjectBlock.join_path = True
@@ -864,12 +871,6 @@ class Unparse(object):
         for ty_name in ["PathUpwards", "PathDownwards", "Path", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
             op = getattr(AST.Op, ty_name)
             op.spacing = False
-        for ty_name in [
-            "Assign", "AssignAdd", "AssignSubtract", "AssignMultiply", "AssignDivide", "AssignModulus", 
-            "AssignBitAnd", "AssignBitOr", "AssignBitXor", "AssignShiftLeft", "AssignShiftRight",
-            "AssignInto", "AssignAnd", "AssignOr"]:
-            op = getattr(AST.Op, ty_name)
-            op.stmt_only = True
 
         Shared.Type.mix_fn(AST, Unparse, 'unparse')
         Shared.Type.mix_fn(AST, Unparse, 'unparse_expr')
