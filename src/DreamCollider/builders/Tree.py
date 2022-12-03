@@ -17,8 +17,17 @@ class RandomBlocks(object):
             new_block.name = random.choice( ['ty1', 'ty2', 'ty3'])
         else:
             new_block.name = current_block.name + random.choice( ['1', '2', '3'])
-        new_block.init_ws = Unparse.ObjectBlock.default_ws
         return new_block
+
+    def random_path(self):
+        path = AST.Expr.Path()
+        path.prefix = random.choice( ['.', '/', ':'] )
+        path.types = [ random.choice( ['ty1', 'ty2', 'ty3'] ) ]
+        path.ops = []
+        for i in range(0, random.randint(0, 2)):
+            path.ops.append( random.choice( ['.', '/', ':'] ) )
+            path.types.append( path.types[i] + random.choice( ['1', '2', '3'] ) )
+        return path
     
 class Toplevel(object):
     def __init__(self):

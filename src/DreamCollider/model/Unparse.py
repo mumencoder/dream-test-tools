@@ -67,6 +67,7 @@ class Unparse(object):
     class ObjectBlock(object):
         def unparse(self, upar):
             if self.parent is None:
+                upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
                 upar.write("/")
             if len(self.leaves) == 1 and self.leaves[0].join_path:
@@ -77,6 +78,7 @@ class Unparse(object):
                 upar.write( self.get_ws() )
                 self.leaves[0].unparse( upar )
             else:
+                upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
                 upar.write( self.name )
                 upar.write( self.get_ws() )
@@ -89,11 +91,11 @@ class Unparse(object):
         def default_ws(self):
             ws = []
             if self.parent is None:
-                ws += [ "" ]
+                ws += [ "", "" ]
             if len(self.leaves) == 1 and self.leaves[0].join_path:
                 ws += [ "", "", "" ]
             else:
-                ws += [ "", "" ]
+                ws += [ "", "", "" ]
                 ws += [ Block(1), Block(-1) ]
             return ws
 
@@ -625,40 +627,30 @@ class Unparse(object):
                 upar.write( self.get_ws() )
                 upar.write( self.name )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class GlobalIdentifier(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write( f"global.{self.name}" )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
                 
         class Integer(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write( str(self.n) )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class Float(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write( str(self.n) )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
                 
         class String(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write( f'"{self.s}"')
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class FormatString(object):
             def unparse(self, upar):
@@ -676,8 +668,6 @@ class Unparse(object):
                 upar.write( self.strings[i] )
                 upar.write( '"' )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
             def default_ws(self):
                 ws = [ "" ]
                 for i in range(0, len(self.exprs)):
@@ -690,16 +680,20 @@ class Unparse(object):
                 upar.write( self.get_ws() )
                 upar.write( f"'{self.s}'" )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class Null(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write('null')
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
+
+        class Property(object):
+            def unparse(self, upar):
+                upar.write( self.get_ws() )
+                upar.write( self.name )
+                upar.write( self.get_ws() )
+            def default_ws(self):
+                return ["", ""]
 
         class Path(object):
             def unparse(self, upar):
@@ -713,8 +707,6 @@ class Unparse(object):
                     i += 1
                 upar.write( self.types[i] )
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class Call(object):
             class Identifier(object):
@@ -728,8 +720,6 @@ class Unparse(object):
                         arg.unparse(upar)
                     upar.write( ")" )
                     upar.write( self.get_ws() )
-                def unparse_expr(self, upar, parent_op=None):
-                    self.unparse(upar)
                 def default_ws(self):
                     return [ "", "", "", "" ]
 
@@ -744,8 +734,6 @@ class Unparse(object):
                         arg.unparse(upar)
                     upar.write( self.get_ws() )
                     upar.write( ")" )
-                def unparse_expr(self, upar, parent_op=None):
-                    self.unparse(upar)
                 def default_ws(self):
                     return [ "", "", "", "" ]
 
@@ -759,8 +747,6 @@ class Unparse(object):
                         upar.write( self.get_ws() )
                     self.value.unparse(upar)
                     upar.write( self.get_ws() )
-                def unparse_expr(self, upar, parent_op=None):
-                    self.unparse(upar)
                 def default_ws(self):
                     ws = [ "" ]
                     if self.name is not None:
@@ -773,63 +759,54 @@ class Unparse(object):
                 upar.write( self.get_ws() )
                 upar.write('..')
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
         class Self(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 upar.write('.')
                 upar.write( self.get_ws() )
-            def unparse_expr(self, upar, parent_op=None):
-                self.unparse(upar)
 
+    @staticmethod
     def unparse_op(self, upar):
-        def unparse(self, upar, parent_op=None):
-            if parent_op and parent_op.prec >= self.prec:
-                upar.write( self.get_ws() )
-                upar.write("(")
-                upar.write( self.get_ws() )
+        if self.parent and self.parent.prec >= self.prec:
+            upar.write( self.get_ws() )
+            upar.write("(")
+            upar.write( self.get_ws() )
 
-            cleaf = 0
-            for e in self.fixity:
-                if e == "_":
-                    expr = self.exprs[cleaf]
-                    if hasattr(expr, 'unparse_op'):
-                        expr.unparse_op(upar, parent_op=self)
-                    elif hasattr(expr, 'unparse_expr'):
-                        expr.unparse_expr(upar, parent_op=self)
-                    else:
-                        raise Exception()
-                    cleaf += 1
-                elif type(e) is str:
-                    if self.spacing:
-                        upar.write( self.get_ws() )
-                        upar.write(f"{e}")
-                        upar.write( self.get_ws() )
-                    else:
-                        upar.write(f"{e}")
+        cleaf = 0
+        for e in self.fixity:
+            if e == "_":
+                expr = self.exprs[cleaf]
+                expr.unparse(upar)
+                cleaf += 1
+            elif type(e) is str:
+                if self.spacing:
+                    upar.write( self.get_ws() )
+                    upar.write(f"{e}")
+                    upar.write( self.get_ws() )
                 else:
-                    raise Exception("bad fixity")
+                    upar.write(f"{e}")
+            else:
+                raise Exception("bad fixity")
 
-            if parent_op and parent_op.prec >= self.prec:
-                upar.write( self.get_ws() )
-                upar.write(")")
-                upar.write( self.get_ws() )
-        return unparse(self, upar)
+        if self.parent and self.parent.prec >= self.prec:
+            upar.write( self.get_ws() )
+            upar.write(")")
+            upar.write( self.get_ws() )
 
     def default_op_ws(self):
-        def default_ws(self, parent_op=None):
-            ws = []
-            if parent_op and parent_op.prec >= self.prec:
-                ws += ["", ""]
-            for e in self.fixity:
-                if type(e) is str and self.spacing:
+        ws = []
+        if self.parent and self.parent.prec >= self.prec:
+            ws += ["", ""]
+        for e in self.fixity:
+            if e == "_":
+                pass
+            if type(e) is str:
+                if self.spacing:
                     ws += [" ", " "]
-            if parent_op and parent_op.prec >= self.prec:
-                ws += ["", ""]
-            return ws
-        return default_ws(self)
+        if self.parent and self.parent.prec >= self.prec:
+            ws += ["", ""]
+        return ws
 
     def default_expr_ws(self):
         return ["", ""]
@@ -853,14 +830,14 @@ class Unparse(object):
         for ty in Shared.Type.iter_types(AST.Op):
             if ty is AST.Op:
                 continue
-            ty.unparse = Unparse.unparse_op
+            ty.unparse_op = Unparse.unparse_op
+            ty.unparse = lambda self, upar: Unparse.unparse_op( self, upar )
             ty.spacing = True
             Unparse.default_ws_types[ty] = Unparse.default_op_ws
 
         for ty in Shared.Type.iter_types(AST.Expr):
             if ty is AST.Expr:
                 continue
-            ty.unparse = Unparse.unparse_op
             ty.spacing = True
             Unparse.default_ws_types[ty] = Unparse.default_expr_ws
 
@@ -873,6 +850,5 @@ class Unparse(object):
             op.spacing = False
 
         Shared.Type.mix_fn(AST, Unparse, 'unparse')
-        Shared.Type.mix_fn(AST, Unparse, 'unparse_expr')
 
 Unparse.initialize()

@@ -38,36 +38,6 @@ class Expr:
                     expr.exprs.append( self.expression(env, var_decl, new_depth, arity) )
         return expr
 
-    def generate_terminal(self, parent_node, pos):
-        if arity == "rval":
-            return random.choice( AST.terminal_exprs )()
-        elif arity == "lval":
-            return AST.Expr.Identifier()
-        elif arity == "storage":
-            return AST.Expr.Identifier()
-        elif arity == "path":
-            # TODO: allow paths
-            raise GenerationError()
-        elif arity == "prop":
-            raise GenerationError()
-        else:
-            raise Exception("unknown arity", arity)
-
-    def generate_nonterminal(self, parent_node, pos):
-        if arity == "rval":
-            return random.choice( AST.nonterminal_exprs )()
-        elif arity == "lval":
-            return AST.Expr.Identifier()
-        elif arity == "storage":
-            return AST.Expr.Identifier()
-        elif arity == "path":
-            # TODO: allow paths
-            raise GenerationError()
-        elif arity == "prop":
-            raise GenerationError()
-        else:
-            raise Exception("unknown arity", arity)
-
     def choose_scoped_identifier(self, env, expr):
         scope = env.attr.gen.scope
         if type(scope) is AST.Toplevel:

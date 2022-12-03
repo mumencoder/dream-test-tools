@@ -464,6 +464,7 @@ class AST(object):
             attrs = ["strings"]
             subtree = ["exprs"]
             arity = "vararg"
+            nonterminal = True
             def __init__(self):
                 self.strings = None     # List[str]
                 self.exprs = None       # List[AST.Expr]
@@ -479,6 +480,11 @@ class AST(object):
             def __init__(self):
                 pass
 
+        class Property(object):
+            attrs = ["name"]
+            terminal = True
+            def __init__(self):
+                self.name = None
         class Path(object):
             attrs = ["prefix", "ops", "types"]
             terminal = True
@@ -496,17 +502,20 @@ class AST(object):
 
             class Identifier(object):
                 arity = "vararg"
+                nonterminal = True
                 def __init__(self):
                     self.name = None        # str
                     self.args = None        # List[AST.Call.Param]
 
             class Expr(object):
                 arity = "vararg"
+                nonterminal = True
                 def __init__(self):
                     self.expr = None        # AST.Expr
                     self.args = None        # List[AST.Call.Param]
 
         class Super(object):
+            terminal = True
             def __init__(self):
                 pass
 
@@ -518,6 +527,12 @@ class AST(object):
     class Op(object):
         def __init__(self):
             self.exprs = []
+            self.parent = None
+
+        @staticmethod
+        def add_expr(self, expr):
+            self.exprs.append( expr )
+            expr.parent = self
 
         def op_class(name, fixity, arity, prec):
             return type(name, (object,), {'fixity':fixity, 'arity':arity, 'prec':prec, '__init__':AST.Op.__init__} )
@@ -542,6 +557,7 @@ class AST(object):
             op_cls = AST.Op.op_class(name, pfixity, arity, prec)
             op_cls.nonterminal = True
             op_cls.subtree = ["exprs"]
+            op_cls.add_expr = AST.Op.add_expr
             setattr(AST.Op, name, op_cls)
 
         def create_ops():
@@ -703,9 +719,26 @@ class AST(object):
         AST.Op.create_ops()
 
         for ty in Shared.Type.iter_types(AST):
+            if ty in [AST.Op, AST.Expr]:
+                continue
             if getattr(ty, 'terminal', None):
                 AST.terminal_exprs.append(ty)
             if getattr(ty, 'nonterminal', None):
                 AST.nonterminal_exprs.append(ty)
+            ty.stmt_only = False
+            ty.is_op = False
+
+        for ty in Shared.Type.iter_types(AST.Op):
+            if ty is AST.Op:
+                continue
+            ty.is_op = True
+
+        for ty_name in [
+            "Assign", "AssignAdd", "AssignSubtract", "AssignMultiply", "AssignDivide", "AssignModulus", 
+            "AssignBitAnd", "AssignBitOr", "AssignBitXor", "AssignShiftLeft", "AssignShiftRight",
+            "AssignInto", "AssignAnd", "AssignOr"]:
+            op = getattr(AST.Op, ty_name)
+            op.stmt_only = True
+
 
 AST.initialize()

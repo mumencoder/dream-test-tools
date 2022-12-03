@@ -2,8 +2,6 @@
 from ..common import *
 from ..model import *
 
-from . import Names
-
 class GenerationError(Exception):
     pass
 
@@ -23,27 +21,48 @@ class RandomExprGenerator(object):
                 pass
         return expr
 
+    def randomString(self, lo, hi):
+        letters = random.randint(lo,hi)
+        vn = ""
+        for i in range(0, letters):
+            vn += random.choice(string.ascii_lowercase)
+        return vn
+
     def expression(self, env, depth=None, arity=None):
-        if depth == 1:
-            expr = None
-            while expr is None:
-                expr = self.generate_terminal( arity )
-        else:
-            expr = None
-            while expr is None:
-                expr = self.generate_nonterminal( arity )
+        tries = 0
+        expr = None
+        while expr is None:
+            if tries > 5:
+                raise GenerationError()
+
+            if arity == "rval":
+                if depth == 1:
+                    expr = random.choice( AST.terminal_exprs )()
+                else:
+                    expr = random.choice( AST.nonterminal_exprs )()
+            elif arity == "lval":
+                expr = AST.Expr.GlobalIdentifier()
+            elif arity == "storage":
+                expr = AST.Expr.GlobalIdentifier()
+            elif arity == "path":
+                expr = AST.Expr.Path()
+            elif arity == "prop":
+                expr = AST.Expr.Property()
+            else:
+                raise Exception("unknown arity", arity)
+
+            if expr is None:
+                pass
+            elif expr.stmt_only:
+                expr = None
+            elif depth > 1 and expr.is_op:
                 leaf_arity = expr.arity
                 if leaf_arity == "vararg":
                     leaf_arity = random.randint(1,3)*["rval"]
                 for arity in leaf_arity:
                     new_depth = random.randint(1, depth-1)
-                    expr.exprs.append( self.expression(env, new_depth, arity) )
-        return expr
-
-    def generate_terminal(self, arity):
-        if arity == "rval":
-            expr = random.choice( [AST.Expr.Integer, AST.Expr.Float, AST.Expr.String, AST.Expr.Null] )()
-            if type(expr) is AST.Expr.Integer:
+                    expr.add_expr( self.expression(env, new_depth, arity) )
+            elif type(expr) is AST.Expr.Integer:
                 if random.random() < 0.05:
                     expr.n = 0
                 else:
@@ -53,37 +72,26 @@ class RandomExprGenerator(object):
                     expr.n = 1 - 2*random.random()
                 else:
                     expr.n = 100 - 200*random.random()
-            elif type(expr) in [AST.Expr.String, AST.Expr.Resource]:
-                expr.s = Names.randomString(0, 3)
-            # TODO: fuzz AST.Expr.Super
-            elif type(expr) in [AST.Expr.Self, AST.Expr.Null]:
+            elif type(expr) is AST.Expr.Resource:
+                expr = None
+            elif type(expr) is AST.Expr.String:
+                expr.s = self.randomString(0, 3)
+            elif type(expr) is AST.Expr.GlobalIdentifier:
+                expr.name = random.choice( ['a', 'b', 'c'] )
+            elif type(expr) is AST.Expr.Identifier:
+                expr.name = random.choice( ['a', 'b', 'c'] )
+            elif type(expr) is AST.Expr.Property:
+                expr.name = random.choice( ['a', 'b', 'c'] )
+            elif type(expr) is AST.Expr.Path:
+                expr = self.random_path()
+            elif type(expr) in [AST.Expr.Null, AST.Expr.Super, AST.Expr.Self]:
                 pass
+            elif type(expr) in [AST.Expr.FormatString, AST.Expr.Call.Expr, AST.Expr.Call.Identifier]:
+                # TODO: things that could be initialized
+                expr = None
             else:
                 raise Exception("cannot initialize", type(expr))
-            return expr
-        elif arity == "lval":
-            raise GenerationError()
-        elif arity == "storage":
-            raise GenerationError()
-        elif arity == "path":
-            # TODO: allow paths
-            raise GenerationError()
-        elif arity == "prop":
-            raise GenerationError()
-        else:
-            raise Exception("unknown arity", arity)
 
-    def generate_nonterminal(self, arity):
-        if arity == "rval":
-            return random.choice( AST.nonterminal_exprs )()
-        elif arity == "lval":
-            raise GenerationError()
-        elif arity == "storage":
-            raise GenerationError()
-        elif arity == "path":
-            # TODO: allow paths
-            raise GenerationError()
-        elif arity == "prop":
-            raise GenerationError()
-        else:
-            raise Exception("unknown arity", arity)
+            tries += 1
+
+        return expr

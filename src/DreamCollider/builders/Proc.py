@@ -2,8 +2,6 @@
 from ..common import *
 from ..model import *
 
-from . import Names
-
 class RandomProcs(object):
     def procs_remaining(self, env):
         if not env.attr_exists('.gen.procs_left'):
@@ -17,8 +15,15 @@ class RandomProcs(object):
             proc_define = AST.ObjectProcDefine()
         else:
             raise Exception("bad block")
-        proc_define.name = Names.randomProcName()
+        proc_define.name = self.get_proc_name(env, current_block, proc_define)
         return proc_define
+
+    def get_proc_name(self, env, object_block, proc_define):
+        letters = random.randint(2,3)
+        vn = ""
+        for i in range(0, letters):
+            vn += random.choice(string.ascii_lowercase)
+        return vn
 
 class SimpleProcCreator(object):
     def create_proc_params(self, env, proc_define):

@@ -14,15 +14,28 @@ from System.Collections.Generic import List
 #from Robust.Shared.IoC import IoCManager
 #from OpenDreamRuntime import IDreamManager
 
-async def test_main():
+def generate_test():
     env = Shared.Environment()
-    env.attr.expr.depth = 2
+    env.attr.expr.depth = 3
     builder = DreamCollider.FullRandomBuilder( )
     builder.generate( env )
+    return builder
+
+async def print_main():
+    builder = generate_test()
     print("====================================")
     builder.print( sys.stdout )
     print("====================================")
     print( builder.unparse() )
+
+async def many_main():
+    for i in range(0, 10000):
+        if i % 1000 == 0:
+            print(i)
+        builder = generate_test()
+        if random.random() < 0.001:
+            print("====================================")
+            print( builder.unparse() )
 
 async def OD_main():
     async def expr_main():
@@ -60,4 +73,4 @@ async def OD_main():
         ct += 1
         print(ct)
 
-asyncio.run( test_main() )
+asyncio.run( many_main() )
