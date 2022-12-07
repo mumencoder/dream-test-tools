@@ -1,7 +1,5 @@
 
-import os
-import textwrap
-
+from .common import *
 class TestCase(object):
     @staticmethod
     def list_all(env, input_dir):

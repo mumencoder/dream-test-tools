@@ -1,7 +1,5 @@
 
-from .tasks.common import *
-
-from .tasks.TestCase import *
+from .common import *
 
 class Compare(object):
     @staticmethod

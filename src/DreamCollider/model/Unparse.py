@@ -91,7 +91,7 @@ class Unparse(object):
         def default_ws(self):
             ws = []
             if self.parent is None:
-                ws += [ "", "" ]
+                ws += [ "\n", "" ]
             if len(self.leaves) == 1 and self.leaves[0].join_path:
                 ws += [ "", "", "" ]
             else:
@@ -196,6 +196,7 @@ class Unparse(object):
 
     class GlobalProcDefine(object):
         def unparse(self, upar):
+            upar.begin_line( self.get_ws() )
             upar.write( "/proc/")
             upar.write( self.name )
             upar.write( self.get_ws() )
@@ -211,7 +212,7 @@ class Unparse(object):
             upar.end_block( self.get_ws() )
 
         def default_ws(self):
-            return [ "", "", "", Block(1), Block(-1) ]
+            return [ "\n", "", "", "", Block(1), Block(-1) ]
 
     class ProcArgument(object):
         def unparse(self, upar):

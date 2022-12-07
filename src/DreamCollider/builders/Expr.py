@@ -84,7 +84,9 @@ class RandomExprGenerator(object):
                 expr.name = random.choice( ['a', 'b', 'c'] )
             elif type(expr) is AST.Expr.Path:
                 expr = self.random_path()
-            elif type(expr) in [AST.Expr.Null, AST.Expr.Super, AST.Expr.Self]:
+            elif type(expr) is AST.Expr.Super:
+                expr = None
+            elif type(expr) in [AST.Expr.Null, AST.Expr.Self]:
                 pass
             elif type(expr) in [AST.Expr.FormatString, AST.Expr.Call.Expr, AST.Expr.Call.Identifier]:
                 # TODO: things that could be initialized
