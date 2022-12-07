@@ -51,7 +51,7 @@ requests = "*"
 type = "git"
 url = "http://github.com/mumencoder/mumenrepo.git"
 reference = "HEAD"
-resolved_reference = "05d395d7c7ad87f330ed854c81da2bb6cca403ed"
+resolved_reference = "bf9c1f4a3828de0d2dc732cb785976ef68fd328d"
 
 [[package]]
 name = "psutil"
