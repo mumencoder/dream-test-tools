@@ -5,9 +5,10 @@ class Compilation(object):
     @staticmethod
     def convert_args(args):
         s = ""
-        if "flags" in args:
-            for flag in args["flags"]:
-                s += f"--{flag} "
+        for arg in args:
+            if type(arg) is dict and arg["type"] == "flags":
+                for flag in arg["flags"]:
+                    s += f"--{flag} "
         return s
 
     @staticmethod
@@ -28,7 +29,7 @@ class Compilation(object):
             compilation.returncode = env.attr.process.instance.returncode
 
         if not env.attr_exists('.compilation.args'):
-            compilation.args = {}
+            compilation.args = []
 
         await env.send_event('opendream.before_compile', env)
 

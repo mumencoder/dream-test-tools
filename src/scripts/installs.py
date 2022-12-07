@@ -33,7 +33,7 @@ class OpenDream:
         await DMShared.OpenDream.Builder.build( benv )
 
 async def main():
-    env = base_setup()
+    env = base_setup( Shared.Environment() )
     await Byond.install(env.attr.envs.byond)
     await OpenDream.install(env.attr.envs.opendream)
     await ClopenDream.install(env.attr.envs.clopendream)

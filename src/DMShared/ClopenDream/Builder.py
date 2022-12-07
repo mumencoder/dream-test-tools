@@ -9,16 +9,17 @@ class Builder(object):
     @staticmethod
     async def build(env):
         renv = env.branch()
+        Builder.prepare_solution(renv)
         await Shared.Dotnet.Project.restore( renv )
 
-        if env.attr_exists('.clopendream.build.params'):
-            env.attr.dotnet.build.params = Shared.Dotnet.Project.default_params(env.attr.clopendream.build.params)
-        else:
-            env.attr.dotnet.build.params = {}
-
-        if 'configuration' not in env.attr.dotnet.build.params:
-            env.attr.dotnet.build.params['configuration'] = "Debug"
-
         benv = env.branch()
+        if benv.attr_exists('.clopendream.build.params'):
+            benv.attr.dotnet.build.params = Shared.Dotnet.Project.default_params(benv.attr.clopendream.build.params)
+        else:
+            benv.attr.dotnet.build.params = {}
+
+        if 'configuration' not in benv.attr.dotnet.build.params:
+            benv.attr.dotnet.build.params['configuration'] = "Debug"
+
         Builder.prepare_solution(benv)
         await Shared.Dotnet.Project.build( benv )

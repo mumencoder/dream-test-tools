@@ -3,13 +3,14 @@ from ..common import *
 
 class Compilation(object):
     @staticmethod
-    def create_dreammaker_command(penv, args={}):
+    def create_dreammaker_command(penv, args=[]):
         preargs = ""
         postargs = ""
-        if "code_tree" in args:
-            preargs += "-code_tree "
-        if "obj_tree" in args:
-            preargs += "-o "
+        for arg in args:
+            if arg == "code_tree":
+                preargs += "-code_tree "
+            if arg == "obj_tree":
+                preargs += "-o "
         return f"{penv.attr.install.dir}/byond/bin/DreamMaker {preargs} {penv.attr.compilation.dm_file_path} {postargs}"
 
     @staticmethod
@@ -19,7 +20,7 @@ class Compilation(object):
 
         penv = env.branch()
         if not penv.attr_exists('.compilation.args'):
-            penv.attr.compilation.args = {}
+            penv.attr.compilation.args = []
 
         proc_env = os.environ
         proc_env.update( {'LD_LIBRARY_PATH':f"{penv.attr.install.dir}/byond/bin"} )
