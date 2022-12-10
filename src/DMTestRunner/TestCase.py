@@ -1,19 +1,7 @@
 
 from .common import *
-class TestCase(object):
-    @staticmethod
-    def list_all(env, input_dir):
-        env = env.branch()
-        env.attr.tests.dirs.root = input_dir
-        for root_dir, dirnames, filenames in os.walk( input_dir ):
-            for filename in filenames:
-                if filename.endswith('.dm') or filename.endswith('.dme'):
-                    tenv = env.branch()
-                    tenv.attr.test.source_file = Shared.Path( root_dir ) / filename
-                    tenv.attr.test.groups = []
-                    TestCase.prepare_task(tenv)
-                    yield tenv
 
+class TestCase(object):
     @staticmethod
     def prepare_task(env):
         relpath = os.path.relpath(env.attr.test.source_file.parent, env.attr.tests.dirs.root)

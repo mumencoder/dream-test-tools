@@ -94,19 +94,6 @@ class Compare(object):
 
         return result
 
-    def report(env):
-        cenv = env.branch()
-        report = reports.CompareReport(cenv)
-        for tenv in TestCase.list_all(env.branch(), env.attr.tests.dirs.dm_files):
-            TestCase.load_test_text(tenv)
-            TestCase.wrap(tenv)
-
-            ctenv = cenv.branch()
-            ctenv.merge(tenv, inplace=True)
-            Compare.compare_test(ctenv)
-            report.add_compare_test( ctenv )
-        reports.BaseReport.write_report(env.attr.tests.dirs.reports / 'test', report)
-
     def compare_report(tenv, bcenv, brenv, ocenv, orenv):
         result = {}
         output = ""

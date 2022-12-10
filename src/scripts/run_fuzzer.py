@@ -36,29 +36,10 @@ async def print_many_main():
             print("====================================")
             print( builder.unparse() )
 
-def load_test_metadata(env):
-    env.attr.test.metadata_path = env.attr.test.root_dir / 'test.metadata.json'
-    if os.path.exists( env.attr.test.metadata_path ):
-        with open(env.attr.test.metadata_path, "r") as f:
-            md = json.load(f)
-            for attr, value in md.items():
-                env.properties[attr] = value
-
-def save_test_metadata(env):
-    env.attr.test.metadata_path = env.attr.test.root_dir / 'test.metadata.json'
-
-    md = {}
-    for attr in env.unique_properties():
-        if attr.startswith( '.test.metadata.' ):
-            md[attr] = env.properties[attr]
-
-    with open( env.attr.test.metadata_path, "w" ) as f:
-        f.write( json.dumps(md) )
-
 def try_init_test_instance(env):
-    env.attr.test.name = Shared.Random.generate_string(24)
-    env.attr.test.root_dir = env.attr.tests.root_dir / env.attr.test.name
-    load_test_metadata(env)
+    env.attr.test.metadata.name = Shared.Random.generate_string(24)
+    env.attr.test.root_dir = env.attr.tests.root_dir / env.attr.test.metadata.name
+    DMTestRunner.Metadata.load_test(env)
 
 def is_generated(env):
     if env.attr_exists('.test.metadata.paths.dm_file'):
@@ -70,31 +51,66 @@ def generate_test_and_save(tenv):
     if is_generated(tenv):
         return
     builder = generate_test()
-    tenv.attr.test.metadata.paths.dm_file = 'test.dm'    
+    tenv.attr.test.metadata.paths.dm_file = 'test.dm'
     with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "w") as f:
         f.write( builder.unparse() )
 
-    save_test_metadata(tenv)
+    DMTestRunner.Metadata.save_test(tenv)
+
+async def clopen_ast(tenv):
+    env = tenv.branch()
+    codetree = System.IO.StringReader( env.attr.test.byond_codetree )
+
+    result = ClopenDream.ClopenDream.PrepareAST( codetree, tenv.attr.empty.root )
+
+    if "parser_exc" in result:
+        tenv.attr.test.metadata.paths.clparser_throw = 'clparser_throw.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_throw, "w") as f:
+            f.write( result["parser_exc"].StackTrace + '\n')
+            f.write( "===\n" )
+    if len(result["parser"].errors) > 0:
+        tenv.attr.test.metadata.paths.clparser_errors = 'clparser_errors.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_errors, "w") as f:
+            for error in result["parser"].errors:
+                f.write( error.Test + '\n' )
+                f.write( "===\n" )
+    if len(result["parser"].byond_errors) > 0:
+        tenv.attr.test.metadata.paths.byond_errors = 'byond_errors.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "w") as f:
+            for error in result["parser"].byond_errors:
+                f.write( error.Text + '\n' )
+    if "root_node" in result:
+        tenv.attr.test.metadata.paths.clparser_tree = 'clparser_tree.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_tree, "w") as f:
+            f.write( result["root_node"].PrintLeaves(128) )
+
+    if "convert_exc" in result:
+        tenv.attr.test.metadata.paths.clconvert_throw = 'clconvert_throw.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_throw, "w") as f:
+            f.write( result["convert_exc"].StackTrace + '\n')
+            f.write( "===\n" )
+    if len(result["converter"].errors) > 0:
+        tenv.attr.test.metadata.paths.clconvert_errors = 'clconvert_errors.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_errors, "w") as f:
+            for error in result["converter"].errors:
+                f.write( error.Text + '\n' )
+                f.write( "===\n" )
+
+    DMTestRunner.Metadata.save_test(tenv)
+
+async def opendream_ast(tenv):
+    env = tenv.branch()
+    env.attr.compilation.dm_file_path = env.attr.test.root_dir / env.attr.test.metadata.paths.dm_file
+
+    l = List[System.String]()
+    l.Add( str(env.attr.compilation.dm_file_path) )
+    tenv.attr.test.open_compile = DMCompiler.DMCompiler.GetAST( l )
 
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
     await byond_codetree(ctenv)
-
-    codetree = System.IO.StringReader( ctenv.attr.test.byond_codetree )
-    empty_codetree = System.IO.StringReader( env.attr.empty.codetree )
-    empty_compile = env.attr.empty.open_compile
-
-    output = System.IO.StringWriter()
-    (result, clopen_ast) = ClopenDream.ClopenDream.PrepareAST( output, codetree, empty_codetree, empty_compile )
-    if result is False:
-        print( output.ToString() )
-
-    env.attr.compilation.dm_file_path = env.attr.test.root_dir / env.attr.test.metadata.paths.dm_file
-    l = List[System.String]()
-    l.Add( str(env.attr.compilation.dm_file_path) )
-    open_state = DMCompiler.DMCompiler.GetAST( l )
-
-    # TODO: dump open errors
+    await clopen_ast(ctenv)
+    await opendream_ast(ctenv)
 
 async def prepare_empty(ienv, oenv):
     with open( ienv.attr.test.root_dir / 'empty.dm', "w") as f:
@@ -106,12 +122,17 @@ async def prepare_empty(ienv, oenv):
 
     with open( ienv.attr.test.root_dir / 'byond.compile.stdout.txt', "r") as f:
         codetree = f.read()
+    oenv.attr.empty.codetree = codetree
+
+    p = ClopenDream.Parser()
+    empty_root = p.BeginParse( System.IO.StringReader( oenv.attr.empty.codetree ) )
+    empty_root.FixLabels()
+    oenv.attr.empty.root = empty_root
 
     l = List[System.String]()
     l.Add( str(ienv.attr.compilation.dm_file_path) )
     state = DMCompiler.DMCompiler.GetAST( l )
 
-    oenv.attr.empty.codetree = codetree
     oenv.attr.empty.open_compile = state
 
 async def byond_codetree(benv):
@@ -121,7 +142,9 @@ async def byond_codetree(benv):
     await DMTestRunner.compile_byond(tenv)
 
     os.rename( tenv.attr.test.root_dir / 'byond.compile.stdout.txt', tenv.attr.test.root_dir / 'byond.codetree.stdout.txt')
+    os.rename( tenv.attr.test.root_dir / 'byond.compile.returncode.txt', tenv.attr.test.root_dir / 'byond.codetree.returncode.txt')
     benv.attr.test.metadata.paths.codetree = 'byond.codetree.stdout.txt'
+    benv.attr.test.metadata.paths.codetree_return = 'byond.codetree.returncode.txt'
     with open( tenv.attr.test.root_dir / benv.attr.test.metadata.paths.codetree, "r") as f:
         benv.attr.test.byond_codetree = f.read()
 
@@ -138,7 +161,7 @@ async def run_test_batch(path, tmp_path):
     for path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch().merge(empenv)
         tenv.attr.test.root_dir = Shared.Path( path )
-        load_test_metadata(tenv)
+        DMTestRunner.Metadata.load_test(tenv)
         if is_generated(tenv):
             await run_test(tenv)
 
@@ -151,7 +174,7 @@ async def generate_batch(path, n, *args):
     for path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch()
         env.attr.test.root_dir = Shared.Path( path )
-        load_test_metadata(tenv)
+        DMTestRunner.Metadata.load_test(tenv)
         if is_generated(tenv):
             current_test_count += 1
     print( f"found {current_test_count} existing tests" )
