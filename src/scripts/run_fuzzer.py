@@ -68,33 +68,57 @@ async def clopen_ast(tenv):
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_throw, "w") as f:
             f.write( result["parser_exc"].StackTrace + '\n')
             f.write( "===\n" )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.clparser_throw' ):
+            del tenv.attr.test.metadata.paths.clparser_throw
+
     if len(result["parser"].errors) > 0:
         tenv.attr.test.metadata.paths.clparser_errors = 'clparser_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_errors, "w") as f:
             for error in result["parser"].errors:
                 f.write( error.Test + '\n' )
                 f.write( "===\n" )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.clparser_errors' ):
+            del tenv.attr.test.metadata.paths.clparser_errors
+
     if len(result["parser"].byond_errors) > 0:
         tenv.attr.test.metadata.paths.byond_errors = 'byond_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "w") as f:
             for error in result["parser"].byond_errors:
                 f.write( error.Text + '\n' )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.byond_errors' ):
+            del tenv.attr.test.metadata.paths.byond_errors
+
     if "root_node" in result:
         tenv.attr.test.metadata.paths.clparser_tree = 'clparser_tree.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_tree, "w") as f:
             f.write( result["root_node"].PrintLeaves(128) )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.clparser_tree' ):
+            del tenv.attr.test.metadata.paths.clparser_tree
 
     if "convert_exc" in result:
         tenv.attr.test.metadata.paths.clconvert_throw = 'clconvert_throw.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_throw, "w") as f:
+            f.write( result["convert_exc"].Source + '\n')
+            f.write( result["convert_exc"].Message + '\n')
             f.write( result["convert_exc"].StackTrace + '\n')
             f.write( "===\n" )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.clconvert_throw' ):
+            del tenv.attr.test.metadata.paths.clconvert_throw
+
     if len(result["converter"].errors) > 0:
         tenv.attr.test.metadata.paths.clconvert_errors = 'clconvert_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_errors, "w") as f:
             for error in result["converter"].errors:
                 f.write( error.Text + '\n' )
                 f.write( "===\n" )
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.clconvert_errors' ):
+            del tenv.attr.test.metadata.paths.clconvert_errors
 
     DMTestRunner.Metadata.save_test(tenv)
 
@@ -105,6 +129,29 @@ async def opendream_ast(tenv):
     l = List[System.String]()
     l.Add( str(env.attr.compilation.dm_file_path) )
     tenv.attr.test.open_compile = DMCompiler.DMCompiler.GetAST( l )
+
+    #DMAST.DMASTNodePrinter().Print(tenv.attr.test.open_compile.ast, System.Console.Out)
+    errors = DMCompiler.DMCompiler.errors
+    if errors.Count > 0:
+        tenv.attr.test.metadata.paths.opendream_errors = 'opendream_errors.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_errors, "w") as f:
+            for error in errors:
+                f.write( error.ToString() + '\n')
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.opendream_errors' ):
+            del tenv.attr.test.metadata.paths.opendream_errors
+
+    warnings = DMCompiler.DMCompiler.warnings
+    if warnings.Count > 0:
+        tenv.attr.test.metadata.paths.opendream_warnings = 'opendream_warnings.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_warnings, "w") as f:
+            for warning in warnings:
+                f.write( warning.ToString() + '\n')
+    else:
+        if tenv.attr_exists( '.test.metadata.paths.opendream_warnings' ):
+            del tenv.attr.test.metadata.paths.opendream_warnings
+
+    DMTestRunner.Metadata.save_test(tenv)
 
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
