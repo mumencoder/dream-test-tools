@@ -1,5 +1,5 @@
 
-import os, json, textwrap
+import os, json, textwrap, collections
 
 import mumenrepo as Shared
 import DMShared

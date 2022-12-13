@@ -39,7 +39,7 @@ async def print_many_main():
 def try_init_test_instance(env):
     env.attr.test.metadata.name = Shared.Random.generate_string(24)
     env.attr.test.root_dir = env.attr.tests.root_dir / env.attr.test.metadata.name
-    DMTestRunner.Metadata.load_test(env)
+    DMTR.Metadata.load_test(env)
 
 def is_generated(env):
     if env.attr_exists('.test.metadata.paths.dm_file'):
@@ -53,9 +53,11 @@ def generate_test_and_save(tenv):
     builder = generate_test()
     tenv.attr.test.metadata.paths.dm_file = 'test.dm'
     with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "w") as f:
-        f.write( builder.unparse() )
+        source = builder.unparse()
+        f.write( source  )
+        #print( source )
 
-    DMTestRunner.Metadata.save_test(tenv)
+    DMTR.Metadata.save_test(tenv)
 
 async def clopen_ast(tenv):
     env = tenv.branch()
@@ -76,7 +78,8 @@ async def clopen_ast(tenv):
         tenv.attr.test.metadata.paths.clparser_errors = 'clparser_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_errors, "w") as f:
             for error in result["parser"].errors:
-                f.write( error.Test + '\n' )
+                print( type(error) )
+                f.write( error + '\n' )
                 f.write( "===\n" )
     else:
         if tenv.attr_exists( '.test.metadata.paths.clparser_errors' ):
@@ -91,7 +94,7 @@ async def clopen_ast(tenv):
         if tenv.attr_exists( '.test.metadata.paths.byond_errors' ):
             del tenv.attr.test.metadata.paths.byond_errors
 
-    if "root_node" in result:
+    if "root_node" in result and result["root_node"] is not None:
         tenv.attr.test.metadata.paths.clparser_tree = 'clparser_tree.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_tree, "w") as f:
             f.write( result["root_node"].PrintLeaves(128) )
@@ -120,7 +123,7 @@ async def clopen_ast(tenv):
         if tenv.attr_exists( '.test.metadata.paths.clconvert_errors' ):
             del tenv.attr.test.metadata.paths.clconvert_errors
 
-    DMTestRunner.Metadata.save_test(tenv)
+    DMTR.Metadata.save_test(tenv)
 
 async def opendream_ast(tenv):
     env = tenv.branch()
@@ -151,12 +154,12 @@ async def opendream_ast(tenv):
         if tenv.attr_exists( '.test.metadata.paths.opendream_warnings' ):
             del tenv.attr.test.metadata.paths.opendream_warnings
 
-    DMTestRunner.Metadata.save_test(tenv)
+    DMTR.Metadata.save_test(tenv)
 
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
     await byond_codetree(ctenv)
-    await clopen_ast(ctenv)
+    #await clopen_ast(ctenv)
     await opendream_ast(ctenv)
 
 async def prepare_empty(ienv, oenv):
@@ -165,7 +168,7 @@ async def prepare_empty(ienv, oenv):
 
     ienv.attr.compilation.dm_file_path = ienv.attr.test.root_dir / 'empty.dm'
     ienv.attr.compilation.args = ["code_tree"]
-    await DMTestRunner.compile_byond(ienv)
+    await DMTR.compile_byond(ienv)
 
     with open( ienv.attr.test.root_dir / 'byond.compile.stdout.txt', "r") as f:
         codetree = f.read()
@@ -186,7 +189,7 @@ async def byond_codetree(benv):
     tenv = benv.branch()
     tenv.attr.compilation.dm_file_path = tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file
     tenv.attr.compilation.args = ["code_tree"]
-    await DMTestRunner.compile_byond(tenv)
+    await DMTR.compile_byond(tenv)
 
     os.rename( tenv.attr.test.root_dir / 'byond.compile.stdout.txt', tenv.attr.test.root_dir / 'byond.codetree.stdout.txt')
     os.rename( tenv.attr.test.root_dir / 'byond.compile.returncode.txt', tenv.attr.test.root_dir / 'byond.codetree.returncode.txt')
@@ -194,6 +197,45 @@ async def byond_codetree(benv):
     benv.attr.test.metadata.paths.codetree_return = 'byond.codetree.returncode.txt'
     with open( tenv.attr.test.root_dir / benv.attr.test.metadata.paths.codetree, "r") as f:
         benv.attr.test.byond_codetree = f.read()
+
+async def find_new_errors(path, tmp_path):
+    env = Shared.Environment()
+    env.attr.tests.root_dir = Shared.Path( path )
+
+    # copy DMStandard and DLLs
+    empenv = Shared.Environment()
+    benv = baseenv.attr.envs.byond.branch()
+    benv.attr.test.root_dir = Shared.Path( tmp_path ) / 'empty' 
+    await prepare_empty(benv, empenv)
+
+    c = 0
+    start_time = time.time()
+    print_c = [2 ** x for x in range(0,11)]
+    while True:
+        tenv = env.branch().merge(empenv)
+        try_init_test_instance(tenv)
+        generate_test_and_save(tenv)
+        if is_generated(tenv):
+            await run_test(tenv)
+
+        DMTR.Metadata.load_test(tenv)
+        if tenv.attr_exists('.test.metadata.paths.byond_errors'):
+            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "r") as f:
+                byond_errors = DMTR.Display.byond_errors_info( f.read() )
+                for line in byond_errors["lines"]:
+                    DMTR.Errors.byond_category(line)
+        if tenv.attr_exists('.test.metadata.paths.opendream_errors'):
+            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_errors, "r") as f:
+                opendream_errors = DMTR.Display.opendream_errors_info( f.read() )
+                for line in opendream_errors["lines"]:
+                    DMTR.Errors.opendream_category(line)
+           
+        c += 1
+        if c % 1024 == 0 or c in print_c:
+            print(f"{c} {c / (time.time() - start_time)} tests/sec")
+
+        shutil.rmtree( tenv.attr.test.root_dir )
+        env.branches = []
 
 async def run_test_batch(path, tmp_path):
     env = Shared.Environment()
@@ -205,10 +247,10 @@ async def run_test_batch(path, tmp_path):
     benv.attr.test.root_dir = Shared.Path( tmp_path ) / 'empty' 
     await prepare_empty(benv, empenv)
 
-    for path, dirs, files in os.walk(env.attr.tests.root_dir):
+    for test_path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch().merge(empenv)
-        tenv.attr.test.root_dir = Shared.Path( path )
-        DMTestRunner.Metadata.load_test(tenv)
+        tenv.attr.test.root_dir = Shared.Path( test_path )
+        DMTR.Metadata.load_test(tenv)
         if is_generated(tenv):
             await run_test(tenv)
 
@@ -221,7 +263,7 @@ async def generate_batch(path, n, *args):
     for path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch()
         env.attr.test.root_dir = Shared.Path( path )
-        DMTestRunner.Metadata.load_test(tenv)
+        DMTR.Metadata.load_test(tenv)
         if is_generated(tenv):
             current_test_count += 1
     print( f"found {current_test_count} existing tests" )

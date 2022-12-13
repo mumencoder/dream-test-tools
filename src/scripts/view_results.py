@@ -37,58 +37,49 @@ def render_summary(tenv):
     if not tenv.attr_exists('.test.metadata.paths.dm_file'):
         return "DM missing"
     if tenv.attr_exists('.test.metadata.paths.byond_errors'):
-        result += "byond errors, "
+        result += "byond errors - "
     if not tenv.attr_exists('.test.metadata.paths.clparser_tree'):
         return "ClParser tree missing"
     if tenv.attr_exists('.test.metadata.paths.clparser_throw'):
-        result += "ClParser threw, "
+        result += "ClParser threw - "
     if tenv.attr_exists('.test.metadata.paths.clconvert_throw'):
-        result += "ClConvert threw, "
+        result += "ClConvert threw - "
     if tenv.attr_exists('.test.metadata.paths.clconvert_errors'):
-        result += "Clconvert errors, "
+        result += "Clconvert errors - "
     return result
-
-def dm_file_info( text ):
-    info = {"lines": list(DMTestRunner.Display.raw_lines( text )) }
-    info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
-    return info
-
-def byond_errors_info( text ):
-    info = {"lines": list(DMTestRunner.Display.byond_errors(text)) }
-    info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
-    return info
-
-def clparser_tree_info( text ):
-    info = {"lines": list(DMTestRunner.Display.clparse_tree(text)) }
-    info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
-    for i in range(0, len(info["lines"])-1):
-        if info["lines"][i+1]["lineno"] == 0:
-            info["lines"][i+1]["lineno"] = info["lines"][i]["lineno"]
-    return info
 
 def format_code( text ):
     return html.Div( text, style={"white-space":"pre-wrap", "font-family":"monospace"} )
+
+#        list( DMTR.Errors.compare_byond_opendream( byond_errors["lines"], opendream_errors["lines"] ) )
 
 def render_test(tenv):
     result = []
     dm_file = None
     if tenv.attr_exists('.test.metadata.paths.dm_file'):
+        infos = []
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "r") as f:
             result.append( html.H3("Test DM") )
-            dm_file = dm_file_info( f.read() )
-            text = format_code( DMTestRunner.Display.merge_text( dm_file ) ) 
+            dm_file = DMTR.Display.dm_file_info( f.read() )
+            infos = [dm_file]
+            text = format_code( DMTR.Display.merge_text( dm_file ) ) 
             result += [ text, html.Hr() ]
-    if tenv.attr_exists('.test.metadata.paths.byond_errors'):
-        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "r") as f:
-            result.append( html.H3("Byond errors:") )
-            byond_errors = byond_errors_info( f.read() )
-            text = format_code( DMTestRunner.Display.merge_text( dm_file, byond_errors ) ) 
-            result += [ text , html.Hr() ]
+        if tenv.attr_exists('.test.metadata.paths.byond_errors'):
+            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "r") as f:
+                byond_errors = DMTR.Display.byond_errors_info( f.read() )
+                infos.append( byond_errors )
+        if tenv.attr_exists('.test.metadata.paths.opendream_errors'):
+            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_errors, "r") as f:
+                opendream_errors = DMTR.Display.opendream_errors_info( f.read() )
+                infos.append( opendream_errors )
+        result.append( html.H3("Compilation Errors") )
+        text = format_code( DMTR.Display.merge_text( *infos ) ) 
+        result += [ text, html.Hr() ]
     if tenv.attr_exists('.test.metadata.paths.clparser_tree'):
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_tree, "r") as f:
             result.append( html.H3("Clparser tree:") )
-            clparse_tree = clparser_tree_info( f.read() )
-            text = format_code( DMTestRunner.Display.merge_text( dm_file, clparse_tree ) ) 
+            clparse_tree = DMTR.Display.clparser_tree_info( f.read() )
+            text = format_code( DMTR.Display.merge_text( dm_file, clparse_tree ) ) 
             result += [ text , html.Hr() ]
     if tenv.attr_exists('.test.metadata.paths.clparser_throw'):
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_throw, "r") as f:
@@ -111,12 +102,12 @@ def flat_list(path, *args):
     for path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch()
         tenv.attr.test.root_dir = Shared.Path( path )
-        DMTestRunner.Metadata.load_test(tenv)
+        DMTR.Metadata.load_test(tenv)
         if tenv.attr_exists('.test.metadata.name'):
             test_metadata[tenv.attr.test.metadata.name] = tenv
             ele = html.Div([
                 dcc.Link(tenv.attr.test.metadata.name, href="/test/" + tenv.attr.test.metadata.name), " ", render_summary(tenv)
-            ])
+            ], style={"white-space":"pre-wrap", "font-family":"monospace"} )
             home_content.append( ele ) 
     app.layout = layout
 

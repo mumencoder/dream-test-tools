@@ -1,12 +1,13 @@
 
-import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random
+import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random, shutil
 
 import pythonnet
 pythonnet.load("coreclr")
 import clr
 
 import mumenrepo as Shared
-import DMShared, DMTestRunner, DreamCollider
+import DMTestRunner as DMTR
+import DMShared, DreamCollider
 
 import sys
 
