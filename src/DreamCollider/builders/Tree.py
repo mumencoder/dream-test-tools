@@ -12,7 +12,7 @@ class RandomBlocks(object):
         return random.choice( list(self.toplevel.iter_blocks()) )
 
     def create_block(self, env, current_block):
-        new_block = AST.ObjectBlock()
+        new_block = self.initialize_node( AST.ObjectBlock() )
         if type(current_block) is AST.Toplevel:
             new_block.name = random.choice( ['ty1', 'ty2', 'ty3'])
         else:
@@ -20,7 +20,7 @@ class RandomBlocks(object):
         return new_block
 
     def random_path(self):
-        path = AST.Expr.Path()
+        path = self.initialize_node( AST.Expr.Path() )
         path.prefix = random.choice( ['.', '/', ':'] )
         path.types = [ random.choice( ['ty1', 'ty2', 'ty3'] ) ]
         path.ops = []
@@ -31,7 +31,7 @@ class RandomBlocks(object):
     
 class Toplevel(object):
     def __init__(self):
-        self.toplevel = AST.Toplevel()
+        self.toplevel = self.initialize_node( AST.Toplevel() )
 
     def generate(self, env):
         while self.blocks_remaining(env):

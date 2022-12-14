@@ -10,9 +10,9 @@ class RandomProcs(object):
 
     def create_proc(self, env, current_block):
         if type(current_block) is AST.Toplevel:
-            proc_define = AST.GlobalProcDefine()
+            proc_define = self.initialize_node( AST.GlobalProcDefine() )
         elif type(current_block) is AST.ObjectBlock:
-            proc_define = AST.ObjectProcDefine()
+            proc_define = self.initialize_node( AST.ObjectProcDefine() )
         else:
             raise Exception("bad block")
         proc_define.name = self.get_proc_name(env, current_block, proc_define)
@@ -30,7 +30,7 @@ class SimpleProcCreator(object):
         return []
 
     def create_proc_body(self, env, proc_define):
-        stmt = AST.Stmt.Return()
-        stmt.expr = AST.Expr.Integer()
+        stmt = self.initialize_node( AST.Stmt.Return() )
+        stmt.expr = self.initialize_node( AST.Expr.Integer() )
         stmt.expr.n = random.randint(-100, 100)
         return [stmt]

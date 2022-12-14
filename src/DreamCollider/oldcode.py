@@ -523,36 +523,6 @@ class Const(object):
             else:
                 return False
             
-class Dependency(object):
-    class Toplevel(object):
-        def check_usage_cycle(self, define_user, define_usee):
-            if define_user.get_storage_id() == define_usee.get_storage_id(): 
-                return True
-
-            checking = set([define_usee.get_storage_id()])
-            checked = set()
-
-            while len(checking) > 0:
-                for defn in checking:
-                    if defn not in checked:
-                        next_check = defn
-                        break
-                if define_user.get_storage_id() == next_check:
-                    return True
-
-                for defn in self.decl_deps[next_check]:
-                    if defn in checked:
-                        continue
-                    checking.add(defn)
-                checked.add(next_check)
-                checking.remove(next_check)
-            return False
-
-        def add_dependency(self, define_user, define_usee):
-            if self.check_usage_cycle(define_user, define_usee):
-                self.decl_cycles.add( (define_user, define_usee) )
-            self.decl_deps[define_user.get_storage_id()].add( define_usee.get_storage_id() )
-
 class Evaluate(object):
     class Op(object):
         class LessThan(object):
@@ -663,25 +633,6 @@ class Simplify(object):
 """
 
 def ast_initialize():
-        for ty in Shared.Type.iter_types(AST.Expr):
-            if not hasattr(ty, 'is_usage'):
-                ty.is_usage = lambda self: False
-        for ty in Shared.Type.iter_types(AST.Op):
-            if not hasattr(ty, 'is_usage'):
-                ty.is_usage = lambda self: False
-
-        for ty in [AST.Expr.Identifier, AST.Expr.GlobalIdentifier]:
-            ty.is_usage = lambda self: True
-
-        #AST.Op.Deref.is_usage = lambda self: True
-        #AST.Op.MaybeDeref.is_usage = lambda self: True
-        #AST.Op.Index.is_usage = lambda self: True
-        #AST.Op.MaybeIndex.is_usage = lambda self: True
-
-        from .Dependency import Dependency
-        AST.Toplevel.check_usage_cycle = Dependency.Toplevel.check_usage_cycle
-        AST.Toplevel.add_dependency = Dependency.Toplevel.add_dependency
-
         from .Validation import Validation
         Shared.Type.mix_fn(AST, Validation, 'validate')
         for ty in Shared.Type.iter_types(AST.Expr):

@@ -1,7 +1,7 @@
 
 from ..common import *
 
-from .ast import *
+from .dmast import *
 
 class Unparser(object):
     def __init__(self):
@@ -819,7 +819,7 @@ class Unparse(object):
         
     def initialize():
         for ty in Shared.Type.iter_types(AST):
-            if ty in [AST.Op, AST.Expr]:
+            if ty in [AST, AST.Op, AST.Expr]:
                 continue
             ty.join_path = False
             ty.get_ws = Unparse.get_ws

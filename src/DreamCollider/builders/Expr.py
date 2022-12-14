@@ -7,7 +7,7 @@ class GenerationError(Exception):
 
 class SimpleVarExprCreator(object):
     def create_var_expr(self, env, var_define):
-        expr = AST.Expr.Integer()
+        expr = self.initialize_node( AST.Expr.Integer() )
         expr.n = random.randint(-100,100)
         return expr
 
@@ -37,17 +37,17 @@ class RandomExprGenerator(object):
 
             if arity == "rval":
                 if depth == 1:
-                    expr = random.choice( AST.terminal_exprs )()
+                    expr = self.initialize_node( random.choice( AST.terminal_exprs )() )
                 else:
-                    expr = random.choice( AST.nonterminal_exprs )()
+                    expr = self.initialize_node( random.choice( AST.nonterminal_exprs )() )
             elif arity == "lval":
-                expr = AST.Expr.GlobalIdentifier()
+                expr = self.initialize_node( AST.Expr.GlobalIdentifier() )
             elif arity == "storage":
-                expr = AST.Expr.GlobalIdentifier()
+                expr = self.initialize_node( AST.Expr.GlobalIdentifier() )
             elif arity == "path":
-                expr = AST.Expr.Path()
+                expr = self.initialize_node( AST.Expr.Path() )
             elif arity == "prop":
-                expr = AST.Expr.Property()
+                expr = self.initialize_node( AST.Expr.Property() )
             else:
                 raise Exception("unknown arity", arity)
 

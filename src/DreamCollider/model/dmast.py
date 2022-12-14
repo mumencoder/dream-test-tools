@@ -15,89 +15,6 @@ class AST(object):
             self.leaves = []
             self.parent = None
 
-            # local indices
-            # TODO: these need to be ordered by tree position
-            self.object_blocks_by_name = collections.defaultdict(list)
-            self.global_vars_by_name = collections.defaultdict(list)
-            self.global_procs_by_name = collections.defaultdict(list)
-
-            # toplevel indices
-            # TODO: these need to be ordered by tree position
-            self.object_blocks_by_path = collections.defaultdict(list)
-
-            self.decl_deps = collections.defaultdict(set)
-            self.decl_cycles = collections.defaultdict(set)
-
-        def get_error_count(self):
-            return len(self.decl_cycles)
-            
-        def get_vars(self):
-            return self.global_vars_by_name.values()
-
-        def iter_blocks(self):
-            yield self
-            for leaf_list in self.object_blocks_by_name.values():
-                for leaf in leaf_list:
-                    yield leaf
-
-        def iter_vars(self):
-            for var_list in self.global_vars_by_name.values():
-                for var in var_list:
-                    yield var
-
-        def iter_procs(self):
-            for proc_list in self.global_procs_by_name.values():
-                for proc in proc_list:
-                    yield proc
-
-        def iter_var_defines(self):
-            for block in self.iter_blocks():
-                for var in block.iter_vars():
-                    yield var
-
-        def iter_proc_defines(self):
-            for block in self.iter_blocks():
-                for proc in block.iter_procs():
-                    yield proc
-
-        def add_leaf(self, leaf):
-            if type(leaf) is AST.ObjectBlock:
-                self.object_blocks_by_name[leaf.name].append( leaf )
-            elif type(leaf) is AST.GlobalVarDefine:
-                self.global_vars_by_name[leaf.name].append( leaf )
-                leaf.assign_block( self )
-            elif type(leaf) is AST.GlobalProcDefine:
-                self.global_procs_by_name[leaf.name].append( leaf )
-            else:
-                raise Exception("invalid leaf", leaf)
-            leaf.root = self
-            leaf.parent = None
-            self.leaves.append( leaf )
-            if type(leaf) is AST.ObjectBlock:
-                leaf.compute_path()
-                self.note_object_block( leaf )
-    
-        def note_object_block(self, leaf):
-            self.object_blocks_by_path[leaf.path].append( leaf )
-
-        def resolve_usage(self, block, use):
-            if type(block) is AST.Toplevel:
-                if type(use) is AST.Expr.Identifier:
-                    return self.global_vars_by_name[ use.name ][0]
-                elif type(use) is AST.Expr.GlobalIdentifier:
-                    return self.global_vars_by_name[ use.name ][0]
-                else:
-                    raise UsageError(block, use)
-            elif type(block) is AST.ObjectBlock:
-                if type(use) is AST.Expr.Identifier:
-                    return self.object_blocks_by_path[block.path][0].object_vars_by_name[ use.name ][0]
-                elif type(use) is AST.Expr.GlobalIdentifier:
-                    return self.global_vars_by_name[ use.name ][0]
-                else:
-                    raise UsageError(block, use)
-            else:
-                raise UsageError(block, use)
-
     class TextNode(object):
         def __init__(self, text):
             self.text = text
@@ -109,77 +26,6 @@ class AST(object):
             self.name = None
             self.leaves = []
 
-            self.root = None
-            self.parent = None
-
-            # TODO: these need to be ordered by tree position
-            self.object_blocks_by_name = collections.defaultdict(list)
-            self.object_vars_by_name = collections.defaultdict(list)
-            self.object_procs_by_name = collections.defaultdict(list)
-
-        # TODO: compare set() performance
-        def dfs_compare(nodel, noder):
-            lpath = []
-            cnode = nodel
-            while cnode is not None:
-                lpath.append(cnode)
-                cnode = cnode.parent
-            cnode = noder
-            while cnode is not None and cnode not in lpath:
-                cnode = cnode.parent
-            if cnode is None:
-                block = nodel.root
-            else:
-                block = cnode
-            #TODO
-
-        def iter_vars(self):
-            for var_list in self.object_vars_by_name.values():
-                for var in var_list:
-                    yield var
-
-        def iter_procs(self):
-            for proc_list in self.object_procs_by_name.values():
-                for proc in proc_list:
-                    yield proc
-
-        def add_leaf(self, leaf):
-            if type(leaf) is AST.ObjectBlock:
-                self.object_blocks_by_name[leaf.name].append( leaf )
-            elif type(leaf) is AST.ObjectVarDefine:
-                self.object_vars_by_name[leaf.name].append( leaf )
-                leaf.assign_block(self)
-            elif type(leaf) is AST.ObjectProcDefine:
-                self.object_procs_by_name[leaf.name].append( leaf )
-            else:
-                raise Exception("invalid leaf", leaf)
-            leaf.root = self.root
-            leaf.parent = self
-            self.leaves.append( leaf )
-            if type(leaf) is AST.ObjectBlock:
-                leaf.compute_path()
-                self.root.note_object_block( leaf )
-
-        def compute_path(self):
-            path = []
-            cnode = self
-            while cnode is not None:
-                path.append(cnode.name)
-                cnode = cnode.parent
-            self.path = AST.Path( list(reversed(path)) )
-
-        # TODO: support parent_type assignment
-        def parent_chain(self, include_self=True, include_root=True):
-            if include_self:
-                cnode = self
-            else:
-                cnode = self.parent
-            while cnode is not None:
-                yield cnode
-                cnode = cnode.parent
-            if include_root:
-                yield self.root
-
     class GlobalVarDefine(object):
         attrs = ["name", "var_path"]
         subtree = ["expression"]
@@ -187,37 +33,6 @@ class AST(object):
             self.name = None            # str
             self.var_path = []          # AST.VarPath
             self.expression = None      # AST.Expr
-
-            self.allow_override = True
-
-        def get_storage_id(self):
-            return f"gvd@{self.name}"
-
-        def assign_block(self, block):
-            self.block = block
-
-        def initialization_mode(self):
-            #TODO: if override, inherits mode of overriden
-            if "const" in self.var_path:
-                return "const"
-
-            return "dynamic"
-
-        def get_usage(self, use):
-            return self.block.resolve_usage(self.block, use)
-            
-        def validate_expression(self, expr):
-            for node in AST.walk_subtree(expr):
-                if node.is_usage():
-                    if self.block.check_usage_cycle( self, self.get_usage(node) ) is True:
-                        return False
-            return expr.validate( self.block )
-
-        def set_expression(self, expr):
-            self.expression = expr
-            #for node in AST.walk_subtree(expr):
-            #    if node.is_usage():
-            #        self.block.add_dependency( self, self.get_usage(node) )
 
     class ObjectVarDefine(object):
         attrs = ["name", "var_path"]
@@ -227,37 +42,6 @@ class AST(object):
             self.var_path = []          # AST.VarPath
             self.expression = None      # AST.Expr
 
-            self.allow_override = True
-
-        def get_storage_id(self):
-            return f"ovd@{self.block.path}@{self.name}"
-
-        def assign_block(self, block):
-            self.block = block
-
-        def initialization_mode(self):
-            #TODO: if override, inherits mode of overriden
-            if "static" in self.var_path:
-                return "dynamic"
-            else:
-                return "const"
-
-        def get_usage(self, use):
-            return self.block.root.resolve_usage(self.block, use)
-
-        def validate_expression(self, expr):
-            for node in AST.walk_subtree(expr):
-                if node.is_usage():
-                    if self.block.root.check_usage_cycle( self, self.get_usage(node) ) is True:
-                        return False
-            return expr.validate( self.block )
-
-        def set_expression(self, expr):
-            self.expression = expr
-#            for node in AST.walk_subtree(expr):
-#                if node.is_usage():
-#                    self.block.root.add_dependency( self, self.get_usage(node) )
-
     class GlobalProcDefine(object):
         attrs = ["name"]
         subtree = ["params", "body"]
@@ -266,15 +50,6 @@ class AST(object):
             self.params = []            # List[AST.ProcArgument]
             self.body = None            # List[AST.Stmt]
 
-            self.allow_override = True
-            self.allow_verb = True
-
-        def set_params(self, params):
-            self.params = params
-
-        def set_body(self, body):
-            self.body = body
-
     class ObjectProcDefine(object):
         attrs = ["name"]
         subtree = ["params", "body"]
@@ -282,15 +57,6 @@ class AST(object):
             self.name = None            # str
             self.params = []            # List[AST.ProcArgument]
             self.body = None            # List[AST.Stmt]
-
-            self.allow_override = True
-            self.allow_verb = True
-
-        def set_params(self, params):
-            self.params = params
-
-        def set_body(self, body):
-            self.body = body
 
     class ProcArgument(object):
         attrs = ["name", "param_type"]

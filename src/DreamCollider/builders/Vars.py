@@ -10,9 +10,9 @@ class RandomVars(object):
             
     def declare_var(self, env, current_block):
         if type(current_block) is AST.Toplevel:
-            var_define = AST.GlobalVarDefine()
+            var_define = self.initialize_node( AST.GlobalVarDefine() )
         elif type(current_block) is AST.ObjectBlock:
-            var_define = AST.ObjectVarDefine()
+            var_define = self.initialize_node( AST.ObjectVarDefine() )
         else:
             raise Exception("bad block")
         var_define.name = self.get_var_name( env, current_block, var_define )
