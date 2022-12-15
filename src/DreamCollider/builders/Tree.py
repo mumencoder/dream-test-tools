@@ -70,5 +70,10 @@ class Toplevel(object):
         self.toplevel.unparse(upar)
         return upar.s.getvalue()        
 
+    def get_model(self):
+        m = {}
+        m["errors"] = self.toplevel.collect_errors([])
+        return m
+
     def print(self, out):
         AST.print( self.toplevel, out, seen=set() )

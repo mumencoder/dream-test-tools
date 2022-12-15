@@ -8,12 +8,21 @@ class Unparser(object):
         self.s = io.StringIO()
         self.depth = 0
         self.newline = True
+        self.current_line = 1
+
+    def raw_write(self, s):
+        self.current_line += s.count('\n')
+        self.s.write(s)
 
     def write(self, s):
         if self.newline is True:
-            self.s.write( self.depth*2*" ")
+            self.raw_write( self.depth*2*" ")
             self.newline = False
-        self.s.write(s)
+        self.raw_write(s)
+
+    def set_lineno(self, node):
+        if not hasattr(node, 'lineno'):
+            node.lineno = self.current_line
 
     def block_mode_newline(self, ws):
         if ws["block"] > 0:
@@ -24,24 +33,24 @@ class Unparser(object):
 
     def begin_line(self, ws):
         if self.newline is False:
-            self.s.write(ws)
+            self.raw_write(ws)
             self.newline = True
 
     def end_line(self, ws):
         if self.newline is False:
-            self.s.write(ws)
+            self.raw_write(ws)
             self.newline = True
 
     def begin_block(self, ws):
         if type(ws) is dict:
             ws = self.convert_block_ws(ws)
-        self.s.write(ws)
+        self.raw_write(ws)
         self.depth += 1
 
     def end_block(self, ws):
         if type(ws) is dict:
             ws = self.convert_block_ws(ws)
-        self.s.write(ws)
+        self.raw_write(ws)
         self.depth -= 1
 
 def Block(n):
@@ -50,6 +59,7 @@ def Block(n):
 class Unparse(object):
     class Toplevel(object):
         def unparse(self, upar):
+            upar.set_lineno(self)
             for leaf in self.leaves:
                 leaf.unparse(upar)
             return upar
@@ -59,6 +69,7 @@ class Unparse(object):
             
     class TextNode(object):
         def unparse(self, upar):
+            upar.set_lineno(self)
             upar.write( self.text )
 
         def default_ws(self):
@@ -69,9 +80,11 @@ class Unparse(object):
             if self.parent is None:
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write("/")
             if len(self.leaves) == 1 and self.leaves[0].join_path:
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.name )
                 upar.write( self.get_ws() )
                 upar.write("/")
@@ -80,6 +93,7 @@ class Unparse(object):
             else:
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.name )
                 upar.write( self.get_ws() )
 
@@ -102,6 +116,7 @@ class Unparse(object):
     class GlobalVarDefine(object):
         def unparse(self, upar):
             upar.begin_line( self.get_ws() )
+            upar.set_lineno(self)
             upar.write('var')
             upar.write( self.get_ws() )
             upar.write( "/" )
@@ -131,6 +146,7 @@ class Unparse(object):
         def unparse(self, upar):
             if len(self.parent.leaves) != 1:
                 upar.begin_line( self.get_ws() )
+            upar.set_lineno(self)
             upar.write('var')
             upar.write( self.get_ws() )
             upar.write( "/" )
@@ -167,9 +183,11 @@ class Unparse(object):
         def unparse(self, upar):
             if self.parent is None:
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write("/")
 
             upar.write( self.get_ws() )
+            upar.set_lineno(self)
             upar.write("proc/")
             upar.write( self.get_ws() )
             upar.write( self.name )
@@ -197,6 +215,7 @@ class Unparse(object):
     class GlobalProcDefine(object):
         def unparse(self, upar):
             upar.begin_line( self.get_ws() )
+            upar.set_lineno(self)
             upar.write( "/proc/")
             upar.write( self.name )
             upar.write( self.get_ws() )
@@ -217,6 +236,7 @@ class Unparse(object):
     class ProcArgument(object):
         def unparse(self, upar):
             upar.write( self.get_ws() )
+            upar.set_lineno(self)
             if self.param_type is not None:
                 self.param_type.unparse(upar)
                 upar.write( self.get_ws() )
@@ -248,6 +268,7 @@ class Unparse(object):
         class Expression(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.get_ws() )
                 self.expr.unparse(upar)
                 upar.write( self.get_ws() )
@@ -259,6 +280,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "var/" )
                 upar.write( self.get_ws() )
                 if self.var_type is not None:
@@ -287,6 +309,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('return')
                 upar.write( self.get_ws() )
                 self.expr.unparse(upar)
@@ -299,6 +322,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('break')
                 upar.write( self.get_ws() )
                 upar.write( self.label )
@@ -311,6 +335,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('continue')
                 upar.write( self.get_ws() )
                 upar.write( self.label )
@@ -323,6 +348,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('goto')
                 upar.write( self.get_ws() )
                 upar.write( self.label )
@@ -335,6 +361,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.label )
                 upar.write( self.get_ws() )
                 upar.write( ":" )
@@ -351,6 +378,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('del')
                 upar.write( self.get_ws() )
                 self.expr.unparse(upar)
@@ -363,6 +391,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write("set")
                 upar.write( self.get_ws() )
                 upar.write( self.attr )
@@ -379,6 +408,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "spawn" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -399,6 +429,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "if" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -430,6 +461,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "for" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -464,6 +496,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "for" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -486,6 +519,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "while" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -506,6 +540,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "do" )
                 upar.begin_block( self.get_ws() )
                 for stmt in self.body:
@@ -526,6 +561,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "switch" )
                 upar.write( self.get_ws() )
                 upar.write( "(" )
@@ -546,6 +582,7 @@ class Unparse(object):
                 def unparse(self, upar):
                     upar.begin_line( self.get_ws() )
                     upar.write( self.get_ws() )
+                    upar.set_lineno(self)
                     upar.write( "if" )
                     upar.write( self.get_ws() )
                     upar.write( "(" )
@@ -566,6 +603,7 @@ class Unparse(object):
                 def unparse(self, upar):
                     upar.begin_line( self.get_ws() )
                     upar.write( self.get_ws() )
+                    upar.set_lineno(self)
                     upar.write( "else" )
                     upar.write( self.get_ws() )
                     upar.begin_block( self.get_ws() )
@@ -581,6 +619,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "try" )
                 upar.write( self.get_ws() )
                 upar.begin_block( self.get_ws() )
@@ -614,6 +653,7 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.begin_line( self.get_ws() )
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( "throw" )
                 upar.write( self.get_ws() )
                 self.expr.unparse(upar)
@@ -626,30 +666,35 @@ class Unparse(object):
         class Identifier(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.name )
                 upar.write( self.get_ws() )
 
         class GlobalIdentifier(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( f"global.{self.name}" )
                 upar.write( self.get_ws() )
                 
         class Integer(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( str(self.n) )
                 upar.write( self.get_ws() )
 
         class Float(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( str(self.n) )
                 upar.write( self.get_ws() )
                 
         class String(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( f'"{self.s}"')
                 upar.write( self.get_ws() )
 
@@ -658,6 +703,7 @@ class Unparse(object):
                 upar.write( self.get_ws() )
                 i = 0
                 while i < len(self.exprs):
+                    upar.set_lineno(self)
                     upar.write( '"' )
                     upar.write( self.strings[i] )
                     upar.write( '[' )
@@ -679,18 +725,21 @@ class Unparse(object):
         class Resource(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( f"'{self.s}'" )
                 upar.write( self.get_ws() )
 
         class Null(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('null')
                 upar.write( self.get_ws() )
 
         class Property(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write( self.name )
                 upar.write( self.get_ws() )
             def default_ws(self):
@@ -700,12 +749,15 @@ class Unparse(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
                 if self.prefix is not None:
+                    upar.set_lineno(self)
                     upar.write( self.prefix )
                 i = 0
                 while i < len(self.ops):
+                    upar.set_lineno(self)
                     upar.write( self.types[i] )
                     upar.write( self.ops[i] )
                     i += 1
+                upar.set_lineno(self)
                 upar.write( self.types[i] )
                 upar.write( self.get_ws() )
 
@@ -713,6 +765,7 @@ class Unparse(object):
             class Identifier(object):
                 def unparse(self, upar):
                     upar.write( self.get_ws() )
+                    upar.set_lineno(self)
                     upar.write( self.name )
                     upar.write( self.get_ws() )
                     upar.write( "(" )
@@ -727,6 +780,7 @@ class Unparse(object):
             class Expr(object):
                 def unparse(self, upar):
                     upar.write( self.get_ws() )
+                    upar.set_lineno(self)
                     upar.write( self.expr )
                     upar.write( self.get_ws() )
                     upar.write( "(" )
@@ -742,12 +796,15 @@ class Unparse(object):
                 def unparse(self, upar):
                     upar.write( self.get_ws() )
                     if self.name is not None:
+                        upar.set_lineno(self)
                         upar.write( self.name )
                         upar.write( self.get_ws() )
                         upar.write( '=' )
                         upar.write( self.get_ws() )
+                    upar.set_lineno(self)
                     self.value.unparse(upar)
                     upar.write( self.get_ws() )
+
                 def default_ws(self):
                     ws = [ "" ]
                     if self.name is not None:
@@ -758,17 +815,20 @@ class Unparse(object):
         class Super(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('..')
                 upar.write( self.get_ws() )
 
         class Self(object):
             def unparse(self, upar):
                 upar.write( self.get_ws() )
+                upar.set_lineno(self)
                 upar.write('.')
                 upar.write( self.get_ws() )
 
     @staticmethod
     def unparse_op(self, upar):
+        upar.set_lineno(self)
         if self.parent and self.parent.prec >= self.prec:
             upar.write( self.get_ws() )
             upar.write("(")

@@ -1,9 +1,6 @@
 
 from ..common import *
     
-class UsageError(Exception):
-    pass
-
 class AST(object):
     terminal_exprs = []
     nonterminal_exprs = []

@@ -52,11 +52,12 @@ def generate_test_and_save(tenv):
         return
     builder = generate_test()
     tenv.attr.test.metadata.paths.dm_file = 'test.dm'
+    tenv.attr.test.metadata.paths.collider_model = 'collider_model.json'
     with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "w") as f:
         source = builder.unparse()
-        f.write( source  )
-        #print( source )
-
+        f.write( source )
+    with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.collider_model, "w") as f:
+        f.write( json.dumps(builder.get_model(), cls=DreamCollider.ModelEncoder) )
     DMTR.Metadata.save_test(tenv)
 
 async def clopen_ast(tenv):
@@ -156,11 +157,28 @@ async def opendream_ast(tenv):
 
     DMTR.Metadata.save_test(tenv)
 
+async def process_errors(env):
+    if env.attr_exists('.test.metadata.paths.byond_errors'):
+        with open( env.attr.test.root_dir / env.attr.test.metadata.paths.byond_errors, "r") as f:
+            byond_errors = DMTR.Display.byond_errors_info( f.read() )
+            for line in byond_errors["lines"]:
+                DMTR.Errors.byond_category(line)
+    if env.attr_exists('.test.metadata.paths.opendream_errors'):
+        with open( env.attr.test.root_dir / env.attr.test.metadata.paths.opendream_errors, "r") as f:
+            opendream_errors = DMTR.Display.opendream_errors_info( f.read() )
+            for line in opendream_errors["lines"]:
+                DMTR.Errors.opendream_category(line)
+
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
     await byond_codetree(ctenv)
-    #await clopen_ast(ctenv)
     await opendream_ast(ctenv)
+    await clopen_ast(ctenv)
+
+    DMTR.Metadata.load_test(ctenv)
+    await process_errors(ctenv)
+
+    return ctenv
 
 async def prepare_empty(ienv, oenv):
     with open( ienv.attr.test.root_dir / 'empty.dm', "w") as f:
@@ -218,18 +236,6 @@ async def find_new_errors(path, tmp_path):
         if is_generated(tenv):
             await run_test(tenv)
 
-        DMTR.Metadata.load_test(tenv)
-        if tenv.attr_exists('.test.metadata.paths.byond_errors'):
-            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.byond_errors, "r") as f:
-                byond_errors = DMTR.Display.byond_errors_info( f.read() )
-                for line in byond_errors["lines"]:
-                    DMTR.Errors.byond_category(line)
-        if tenv.attr_exists('.test.metadata.paths.opendream_errors'):
-            with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_errors, "r") as f:
-                opendream_errors = DMTR.Display.opendream_errors_info( f.read() )
-                for line in opendream_errors["lines"]:
-                    DMTR.Errors.opendream_category(line)
-           
         c += 1
         if c % 1024 == 0 or c in print_c:
             print(f"{c} {c / (time.time() - start_time)} tests/sec")
@@ -247,32 +253,44 @@ async def run_test_batch(path, tmp_path):
     benv.attr.test.root_dir = Shared.Path( tmp_path ) / 'empty' 
     await prepare_empty(benv, empenv)
 
+    c = 0
+    start_time = time.time()
+    print_c = [2 ** x for x in range(0,11)]
     for test_path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch().merge(empenv)
         tenv.attr.test.root_dir = Shared.Path( test_path )
         DMTR.Metadata.load_test(tenv)
         if is_generated(tenv):
             await run_test(tenv)
+        c += 1
+        if c % 1024 == 0 or c in print_c:
+            print(f"{c} {c / (time.time() - start_time)} tests/sec")
 
 async def generate_batch(path, n, *args):
     env = Shared.Environment()
     env.attr.tests.root_dir = Shared.Path( path )
     env.attr.tests.required_test_count = int(n)
+
+    if "reset" in args:
+        shutil.rmtree( env.attr.tests.root_dir )
     # count existing tests
-    current_test_count = 0
+    exist_test_count = 0
     for path, dirs, files in os.walk(env.attr.tests.root_dir):
         tenv = env.branch()
         env.attr.test.root_dir = Shared.Path( path )
         DMTR.Metadata.load_test(tenv)
         if is_generated(tenv):
-            current_test_count += 1
-    print( f"found {current_test_count} existing tests" )
+            exist_test_count += 1
+    print( f"found {exist_test_count} existing tests" )
+    current_test_count = exist_test_count
     # generate remaining
+    generated_test_count = 0
     while current_test_count < env.attr.tests.required_test_count:
-        builder = generate_test()
         tenv = env.branch()
         try_init_test_instance(tenv)
         generate_test_and_save(tenv)
         current_test_count += 1
+        generated_test_count += 1
+    print( f"generated {generated_test_count} tests")
 
 asyncio.run( globals()[sys.argv[1]]( *sys.argv[2:] ) )

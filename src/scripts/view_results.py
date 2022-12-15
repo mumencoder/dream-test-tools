@@ -51,11 +51,10 @@ def render_summary(tenv):
 def format_code( text ):
     return html.Div( text, style={"white-space":"pre-wrap", "font-family":"monospace"} )
 
-#        list( DMTR.Errors.compare_byond_opendream( byond_errors["lines"], opendream_errors["lines"] ) )
-
 def render_test(tenv):
     result = []
     dm_file = None
+    byond_errors = None
     if tenv.attr_exists('.test.metadata.paths.dm_file'):
         infos = []
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "r") as f:
@@ -93,6 +92,14 @@ def render_test(tenv):
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_errors, "r") as f:
             result.append( html.H3("Clparser errors:") )
             result += [ format_code( f.read() ) , html.Hr() ]
+    if tenv.attr_exists('.test.metadata.paths.collider_model'):
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.collider_model, "r") as f:
+            result.append( html.H3("Byond errors:") )
+            if byond_errors is not None:
+                result += [ format_code( str(DMTR.Errors.collect_errors(byond_errors, DMTR.Errors.byond_category) ) ) ]
+            result.append( html.H3("Collider model:"))
+            result += [ format_code( f.read() ) , html.Hr() ]
+
     return result
 
 def flat_list(path, *args):

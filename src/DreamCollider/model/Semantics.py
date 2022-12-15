@@ -3,6 +3,18 @@ from ..common import *
 
 from .dmast import *
 
+class UsageError(Exception):
+    def __init__(self, scope, node, error_code):
+        self.scope = scope
+        self.node = node
+        self.error_code = error_code
+
+class ModelEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UsageError):
+            return obj.error_code
+        return json.JSONEncoder.default(self, obj)
+
 class Semantics(object):
     class Toplevel:
         def init_semantics(self):
@@ -19,6 +31,13 @@ class Semantics(object):
             self.decl_deps = collections.defaultdict(set)
             self.decl_cycles = collections.defaultdict(set)
           
+        def collect_errors(self, acc_errs):
+            for node in AST.walk_subtree(self):
+                for error in node.errors:
+                    acc_errs.append( (node.lineno, error) )
+            print(acc_errs)
+            return acc_errs
+
         def get_vars(self):
             return list(self.global_vars_by_name.values())
 
@@ -71,14 +90,14 @@ class Semantics(object):
         def resolve_usage(self, use):
             if type(use) is AST.Expr.Identifier:
                 if len( self.global_vars_by_name[ use.name ] ) == 0:
-                    raise UsageError(self, use)
+                    raise UsageError(self, use, 'UNDEF_VAR')
                 return self.global_vars_by_name[ use.name ][0]
             elif type(use) is AST.Expr.GlobalIdentifier:
                 if len( self.global_vars_by_name[ use.name ] ) == 0:
-                    raise UsageError(self, use)
+                    raise UsageError(self, use, 'UNDEF_VAR')
                 return self.global_vars_by_name[ use.name ][0]
             else:
-                raise UsageError(self, use)
+                raise UsageError(self, use, 'INTERNAL')
 
     class ObjectBlock:
         def init_semantics(self):
@@ -165,7 +184,7 @@ class Semantics(object):
             elif type(use) is AST.Expr.GlobalIdentifier:
                 return self.root.resolve_usage(use)
             else:
-                raise UsageError(self, use)
+                raise UsageError(self, use, 'INTERNAL')
 
     class GlobalVarDefine:
         def init_semantics(self):

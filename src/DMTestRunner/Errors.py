@@ -3,7 +3,7 @@ from .common import *
 
 class Errors:
     @staticmethod
-    def index(lines):
+    def new_index(lines):
         index = collections.defaultdict(list)
         for line in lines:
             index[(line["file"], line["lineno"])].append( line )
@@ -42,6 +42,10 @@ class Errors:
             return "DUPLICATE_DEF"
         if "duplicate definition" in msg:
             return "DUPLICATE_DEF"
+        if "attempted division by zero" in msg:
+            return "ZERO_DIVIDE"
+        if "definition out of place" in msg:
+            return "BAD_DEFINE"
         print("unknown byond msg", msg)
         return ''
 
@@ -68,6 +72,13 @@ class Errors:
             return "DUPLICATE_DEF"
         print("unknown opendream msg", msg)
         return ''
+
+    @staticmethod 
+    def collect_errors(err_info, classify_fn):
+        cats = set()
+        for line in err_info["lines"]:
+            cats.add( (line["lineno"], classify_fn( line ) ) )
+        return sorted(cats, key=lambda e: e[0])
 
     @staticmethod
     def compare_byond_opendream(byond, opendream):
