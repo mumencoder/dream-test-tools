@@ -54,6 +54,13 @@ class Display:
         info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
         return info
 
+    def collider_errors_info( model ):
+        info = {"lines":[]}
+        for lineno, errid in model["errors"]:
+            info["lines"].append( {"lineno":lineno, "text":f"{lineno}:{errid}"} )
+        info["width"] = 20
+        return info
+
     def clparser_tree_info( text ):
         info = {"lines": sorted(list(Display.clparse_tree(text)), key=lambda line: line["lineno"]) }
         info["lines"] = [ line for line in info["lines"] if line["file"] == 'test.dm' and line["lineno"] != 0 ]

@@ -81,6 +81,12 @@ class Errors:
         return sorted(cats, key=lambda e: e[0])
 
     @staticmethod
+    def missing_errors(errs_l, errs_r):
+        for err_l in errs_l:
+            if err_l not in errs_r:
+                yield err_l
+
+    @staticmethod
     def compare_byond_opendream(byond, opendream):
         byond_index = Errors.index(byond)
         od_index = Errors.index(opendream)
