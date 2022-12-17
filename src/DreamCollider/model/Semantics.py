@@ -1,19 +1,7 @@
-
 from ..common import *
 
+from .Errors import *
 from .dmast import *
-
-class UsageError(Exception):
-    def __init__(self, scope, node, error_code):
-        self.scope = scope
-        self.node = node
-        self.error_code = error_code
-
-class ModelEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, UsageError):
-            return obj.error_code
-        return json.JSONEncoder.default(self, obj)
 
 class Semantics(object):
     class Toplevel:
@@ -35,7 +23,6 @@ class Semantics(object):
             for node in AST.walk_subtree(self):
                 for error in node.errors:
                     acc_errs.append( (node.lineno, error) )
-            print(acc_errs)
             return acc_errs
 
         def get_vars(self):
@@ -200,16 +187,18 @@ class Semantics(object):
             #TODO: if override, inherits mode of overriden
             if "const" in self.var_path:
                 return "const"
-
             return "dynamic"
 
         def set_expression(self, expr):
             self.expression = expr
+            expr.validate()
             usages = expr.get_usage(self.block)
+            if not expr.is_const(self) and self.initialization_mode() == "const":
+                self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
             for usage in usages:
                 self.block.root.add_dependency( self, usage )
                 if self.block.root.check_usage_cycle( self, usage ) is True:
-                    self.expr_errors.append( "usage cycle ")
+                    self.expr_errors.append( GeneralError('USAGE_CYCLE') )
 
     class ObjectVarDefine:
         def init_semantics(self):
@@ -230,11 +219,14 @@ class Semantics(object):
 
         def set_expression(self, expr):
             self.expression = expr
+            expr.validate()
             usages = expr.get_usage(self.block)
+            if not expr.is_const(self) and self.initialization_mode() == "const":
+                self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
             for usage in usages:
                 self.block.root.add_dependency( self, usage )
                 if self.block.root.check_usage_cycle( self, usage ) is True:
-                    self.expr_errors.append( "usage cycle ")
+                    self.expr_errors.append( GeneralError('USAGE_CYCLE') )
 
     class GlobalProcDefine:
         def init_semantics(self):
@@ -258,25 +250,20 @@ class Semantics(object):
         def set_body(self, body):
             self.body = body
 
-    class Expr:
-        class Identifier:
-            def get_usage( self, scope ):
-                try:
-                    usage = scope.resolve_usage( self )
-                except UsageError as e:
-                    self.errors.append( e )
-                    return []
-                return usage
+
 
     def initialize():
+        ### Semantics setup
         for ast_ty, sem_ty in Shared.Type.mix_types(AST, Semantics):
-            if sem_ty in [Semantics, Semantics.Expr]:
+            if sem_ty in [Semantics]:
                 continue
             for p in dir(sem_ty):
                 if p.startswith("__"):
                     continue
                 setattr(ast_ty, p, getattr(sem_ty, p))
 
+        ### Dependency Setup
+        from .Dependency import Dependency
         for ast_ty, sem_ty in Shared.Type.mix_types(AST, Dependency):
             if sem_ty in [Dependency]:
                 continue
@@ -285,55 +272,67 @@ class Semantics(object):
                     continue
                 setattr(ast_ty, p, getattr(sem_ty, p))
 
-        def no_usage(self, scope):
-            return []
-
-        def expr_usage(self, scope):
-            usages = []
-            for expr in self.exprs:
-                usages += expr.get_usage(scope)
-            return usages
+        ### Usage setup
+        from .Usage import Usage
+        for ast_ty, sem_ty in Shared.Type.mix_types(AST, Usage):
+            if sem_ty in [Usage, Usage.Expr]:
+                continue
+            for p in dir(sem_ty):
+                if p.startswith("__"):
+                    continue
+                setattr(ast_ty, p, getattr(sem_ty, p))
 
         for ty in Shared.Type.iter_types(AST.Op):
-            if ty in [AST.Expr, AST.Op]:
+            if ty in [AST, AST.Op]:
                 continue
             if not hasattr(ty, 'get_usage'):
-                ty.get_usage = expr_usage
+                ty.get_usage = Usage.op_usage
 
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
             if not hasattr(ty, 'get_usage'):
-                ty.get_usage = no_usage
+                ty.get_usage = Usage.no_usage
 
-class Dependency(object):
-    class Toplevel(object):
-        def check_usage_cycle(self, define_user, define_usee):
-            if define_user.get_storage_id() == define_usee.get_storage_id(): 
-                return True
+        ### Const setup
+        from .Const import Const
+        for ty in Shared.Type.iter_types(AST.Expr):
+            ty.is_const = Const.never_const
 
-            checking = set([define_usee.get_storage_id()])
-            checked = set()
+        for ty in Shared.Type.iter_types(AST.Op):
+            ty.is_const = Const.subtree_const
+            
+        for ty in [AST.Expr.Integer, AST.Expr.Float]:
+            ty.is_const = Const.always_const
 
-            while len(checking) > 0:
-                for defn in checking:
-                    if defn not in checked:
-                        next_check = defn
-                        break
-                if define_user.get_storage_id() == next_check:
-                    return True
+        for ty_name in ["LessThan", "LessEqualThan", "GreaterThan", "GreaterEqualThan", 
+            "Equals", "NotEquals", "NotEquals2", "Equivalent", "NotEquivalent"]:
+            ty = getattr(AST.Op, ty_name)
+            ty.is_const = Const.never_const
 
-                for defn in self.decl_deps[next_check]:
-                    if defn in checked:
-                        continue
-                    checking.add(defn)
-                checked.add(next_check)
-                checking.remove(next_check)
-            return False
+        AST.Op.To.is_const = Const.never_const
+        AST.Op.In.is_const = Const.never_const 
 
-        def add_dependency(self, define_user, define_usee):
-            if self.check_usage_cycle(define_user, define_usee):
-                self.decl_cycles.add( (define_user, define_usee) )
-            self.decl_deps[define_user.get_storage_id()].add( define_usee.get_storage_id() )
+        ### Validate setup
+        from .Validate import Validate 
+        for ty in Shared.Type.iter_types(AST):
+            if ty in [AST, AST.Op, AST.Expr]:
+                continue
+            if not hasattr(ty, 'validate'):
+                ty.validate = Validate.subtree_valid
+
+        for ast_ty, sem_ty in Shared.Type.mix_types(AST, Validate):
+            if sem_ty in [Validate, Validate.Expr, Validate.Op]:
+                continue
+            for p in dir(sem_ty):
+                if p.startswith("__"):
+                    continue
+                setattr(ast_ty, p, getattr(sem_ty, p))
+
+class ModelEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, SemanticError):
+            return obj.error_code
+        return json.JSONEncoder.default(self, obj)
 
 Semantics.initialize()

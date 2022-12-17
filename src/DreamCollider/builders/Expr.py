@@ -34,6 +34,8 @@ class RandomExprGenerator(object):
         while expr is None:
             if tries > 5:
                 raise GenerationError()
+            tries += 1
+            expr = None
 
             if arity == "rval":
                 if depth == 1:
@@ -50,6 +52,9 @@ class RandomExprGenerator(object):
                 expr = self.initialize_node( AST.Expr.Property() )
             else:
                 raise Exception("unknown arity", arity)
+
+            #if arity not in expr.traits:
+            #    expr = None
 
             if expr is None:
                 pass
@@ -77,11 +82,11 @@ class RandomExprGenerator(object):
             elif type(expr) is AST.Expr.String:
                 expr.s = self.randomString(0, 3)
             elif type(expr) is AST.Expr.GlobalIdentifier:
-                expr.name = random.choice( ['a', 'b', 'c'] )
+                expr.name = random.choice( ['ga', 'gb', 'gc'] )
             elif type(expr) is AST.Expr.Identifier:
                 expr.name = random.choice( ['a', 'b', 'c'] )
             elif type(expr) is AST.Expr.Property:
-                expr.name = random.choice( ['a', 'b', 'c'] )
+                expr.name = random.choice( ['pa', 'pb', 'pc'] )
             elif type(expr) is AST.Expr.Path:
                 expr = self.random_path()
             elif type(expr) is AST.Expr.Super:
@@ -93,7 +98,5 @@ class RandomExprGenerator(object):
                 expr = None
             else:
                 raise Exception("cannot initialize", type(expr))
-
-            tries += 1
 
         return expr

@@ -1,43 +1,4 @@
-
 class Expr:
-    class Integer:
-        def initialize(self, env, expr):
-            expr.n = random.randint(-100,100)
-    class Float:
-        def initialize(self, env, expr):
-            expr.n = 100 - 200*random.random()
-    class Identifier:
-        def initialize(self, env, expr):
-            expr.name = self.choose_scoped_identifier(env, expr)
-    class GlobalIdentifier:
-        def initialize(self, env, expr):
-            expr.name = self.choose_scoped_identifier(env, expr)
-    class String:
-        def initialize(self, env, expr):
-            expr.s = self.randomString(env, 0, 6)
-            
-    def create_var_expr(self, env, var_define, depth=None, arity=None):
-        if depth == 1:
-            expr = None
-            while expr is None:
-                expr = self.generate_terminal( var_decl, arity )
-            self.initialize_terminal( env, var_decl, expr )
-            return expr
-        else:
-            expr = None
-            while expr is None:
-                expr = self.generate_nonterminal( var_decl, arity )
-            if getattr(expr, 'terminal', None):
-                self.initialize_terminal( env, var_decl, expr )
-            if getattr(expr, 'nonterminal', None):
-                leaf_arity = expr.arity
-                if leaf_arity == "vararg":
-                    leaf_arity = random.randint(1,3)*["rval"]
-                for arity in leaf_arity:
-                    new_depth = random.randint(1, depth-1)
-                    expr.exprs.append( self.expression(env, var_decl, new_depth, arity) )
-        return expr
-
     def choose_scoped_identifier(self, env, expr):
         scope = env.attr.gen.scope
         if type(scope) is AST.Toplevel:
@@ -503,25 +464,7 @@ class FullRandomBuilder(object):
 """
         return result
     
-class Const(object):
-    def always_const(self, scope):
-        return True
 
-    def never_const(self, scope):
-        return False
-    
-    def subtree_const(self, scope):
-        for node in AST.iter_subtree(self):
-            if not node.is_const(scope):
-                return False
-        return True
-
-    class Identifier(object):
-        def is_const(self, scope):
-            if scope.get_usage(self).initialization_mode() == "const":
-                return True
-            else:
-                return False
             
 class Evaluate(object):
     class Op(object):
@@ -544,48 +487,6 @@ def sym_check_bin_op(self, ty1, ty2):
         return True
     return False
 
-class ODValidate(object):
-    def od_validate_subtree(self):
-        for snode in AST.iter_subtree(self):
-            if snode.od_validate( ) is False:
-                return False
-        return True
-
-    class Op(object):
-        class In(object):
-            def od_validate(self):
-                if type(self.exprs[1]) in [AST.Expr.String, AST.Expr.Integer, AST.Expr.Float, AST.Expr.Null]:
-                    return False
-                return ODValidate.od_validate_subtree(self)
-
-        class To(object):
-            def od_validate(self):
-                return False
-
-        class Power(object):
-            def od_validate(self):
-                return False
-
-        class Divide(object):
-            def od_validate(self):
-                if type(self.exprs[1]) is AST.Expr.Integer:
-                    if self.exprs[1].n == 0:
-                        return False
-                if type(self.exprs[1]) is AST.Expr.Float:
-                    if self.exprs[1].n == 0.0:
-                        return False
-                return True
-
-        class Modulus(object):
-            def od_validate(self):
-                if type(self.exprs[1]) is AST.Expr.Integer:
-                    if self.exprs[1].n == 0:
-                        return False
-                if type(self.exprs[1]) is AST.Expr.Float:
-                    if int(self.exprs[1].n) == 0:
-                        return False
-                return True
-            
 class Simplify(object):
     class Op(object):
         class Divide(object):
@@ -610,28 +511,6 @@ class Simplify(object):
             s = io.StringIO()
             return self.eval(scope)
         
-    def test(self):
-        expr = None
-        while expr is None:
-            try:
-                expr = self.expression(Shared.Environment(), depth=2, arity="rval")
-                if expr.od_validate() is False:
-                    expr = None
-            except GenerationError:
-                expr = None
-        upar = Unparser()
-        expr.unparse(upar)
-        return f"""
-/world/New()
-    var/v = {upar.s.getvalue()}
-    world.log << "|[v]|"
-    world.log << "isnum: [isnum(v)]"
-    world.log << "isnull: [isnull(v)]"
-    world.log << "ispath: [ispath(v)]"
-    text2file("[json_encode(v)]", "test.out.json")
-    return json_encode(v)
-"""
-
 def ast_initialize():
         from .Validation import Validation
         Shared.Type.mix_fn(AST, Validation, 'validate')
@@ -650,24 +529,6 @@ def ast_initialize():
         for ty in Shared.Type.iter_types(AST.Op):
             if not hasattr(ty, 'od_validate'):
                 ty.od_validate = ODValidate.od_validate_subtree
-
-        from .Const import Const
-        for ty in Shared.Type.iter_types(AST.Expr):
-            ty.is_const = Const.never_const
-
-        for ty in Shared.Type.iter_types(AST.Op):
-            ty.is_const = Const.subtree_const
-            
-        for ty in [AST.Expr.Integer, AST.Expr.Float]:
-            ty.is_const = Const.always_const
-
-        for ty_name in ["LessThan", "LessEqualThan", "GreaterThan", "GreaterEqualThan", 
-            "Equals", "NotEquals", "NotEquals2", "Equivalent", "NotEquivalent"]:
-            ty = getattr(AST.Op, ty_name)
-            ty.is_const = Const.never_const
-
-        AST.Op.To.is_const = Const.never_const
-        AST.Op.In.is_const = Const.never_const  
 
         from .Simplify import Simplify  
         for ty in Shared.Type.iter_types(AST.Expr):

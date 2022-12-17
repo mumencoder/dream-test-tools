@@ -196,30 +196,37 @@ class AST(object):
         class Identifier(object):
             attrs = ["name"]
             terminal = True
+            rval = True
+            lval = True
             def __init__(self):
                 self.name = None        # str
 
         class GlobalIdentifier(object):
             attrs = ["name"]
             terminal = True
+            rval = True
+            lval = True
             def __init__(self):
                 self.name = None        # str
 
         class Integer(object):
             attrs = ["n"]
             terminal = True
+            rval = True
             def __init__(self):
                 self.n = None           # int
 
         class Float(object):
             attrs = ["n"]
             terminal = True
+            rval = True
             def __init__(self):
                 self.n = None           # float
 
         class String(object):
             attrs = ["s"]
             terminal = True
+            rval = True
             def __init__(self):
                 self.s = None           # str
 
@@ -228,6 +235,7 @@ class AST(object):
             subtree = ["exprs"]
             arity = "vararg"
             nonterminal = True
+            rval = True
             def __init__(self):
                 self.strings = None     # List[str]
                 self.exprs = None       # List[AST.Expr]
@@ -235,11 +243,13 @@ class AST(object):
         class Resource(object):
             attrs = ["s"]
             terminal = True
+            rval = True
             def __init__(self):
                 self.s = None           # str
 
         class Null(object):
             terminal = True
+            rval = True
             def __init__(self):
                 pass
 
@@ -248,9 +258,11 @@ class AST(object):
             terminal = True
             def __init__(self):
                 self.name = None
+
         class Path(object):
             attrs = ["prefix", "ops", "types"]
             terminal = True
+            rval = True
             def __init__(self):
                 self.prefix = None      # str
                 self.types = None       # List[str]
@@ -266,6 +278,7 @@ class AST(object):
             class Identifier(object):
                 arity = "vararg"
                 nonterminal = True
+                rval = True
                 def __init__(self):
                     self.name = None        # str
                     self.args = None        # List[AST.Call.Param]
@@ -273,6 +286,7 @@ class AST(object):
             class Expr(object):
                 arity = "vararg"
                 nonterminal = True
+                rval = True
                 def __init__(self):
                     self.expr = None        # AST.Expr
                     self.args = None        # List[AST.Call.Param]
@@ -284,6 +298,8 @@ class AST(object):
 
         class Self(object):
             terminal = True
+            rval = True
+            lval = True
             def __init__(self):
                 pass
 
@@ -319,6 +335,7 @@ class AST(object):
                 raise Exception("Fixity slots does not match arity")
             op_cls = AST.Op.op_class(name, pfixity, arity, prec)
             op_cls.nonterminal = True
+            op_cls.rval = True
             op_cls.subtree = ["exprs"]
             op_cls.add_expr = AST.Op.add_expr
             setattr(AST.Op, name, op_cls)
@@ -482,8 +499,12 @@ class AST(object):
         AST.Op.create_ops()
 
         for ty in Shared.Type.iter_types(AST):
-            if ty in [AST.Op, AST.Expr]:
+            if ty in [AST, AST.Op, AST.Expr]:
                 continue
+            if not hasattr(ty, "rval"):
+                ty.rval = False
+            if not hasattr(ty, "lval"):
+                ty.lval = False
             if getattr(ty, 'terminal', None):
                 AST.terminal_exprs.append(ty)
             if getattr(ty, 'nonterminal', None):

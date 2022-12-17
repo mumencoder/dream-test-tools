@@ -23,7 +23,7 @@ layout = html.Div([
 ])
 
 def format_code( text ):
-    return html.Div( text, style={"white-space":"pre-wrap", "font-family":"monospace"} )
+    return html.Div( text, style={"white-space":"pre", "font-family":"monospace"} )
 
 def process_tests():
     global home_content
@@ -36,7 +36,7 @@ def process_tests():
             process_test(tenv)
             ele = html.Div([
                 dcc.Link(tenv.attr.test.metadata.name, href="/test/" + tenv.attr.test.metadata.name), " ", render_summary(tenv)
-            ], style={"white-space":"pre-wrap", "font-family":"monospace"} )
+            ], style={"white-space":"pre", "font-family":"monospace"} )
             home_content.append( ele ) 
 
 def process_test(tenv):
@@ -145,14 +145,12 @@ def render_test(tenv):
         result.append( html.H3("Missing errors:") )
         result += [ format_code( str(tenv.attr.test.errors.missing )) , html.Hr() ]
 
-    
-
     return result
 
 root_env = Shared.Environment()
 def flat_list(path, *args):
     root_env.attr.tests.root_dir = Shared.Path( path )
-
+    process_tests()
     app.layout = layout
 
 if __name__ == '__main__':

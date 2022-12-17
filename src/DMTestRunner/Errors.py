@@ -46,8 +46,7 @@ class Errors:
             return "ZERO_DIVIDE"
         if "definition out of place" in msg:
             return "BAD_DEFINE"
-        print("unknown byond msg", msg)
-        return ''
+        return 'UNKNOWN'
 
     @staticmethod
     def opendream_category(err):
@@ -70,8 +69,7 @@ class Errors:
             return "DUPLICATE_STATIC_VAR"
         if 'Duplicate definition of var' in msg:
             return "DUPLICATE_DEF"
-        print("unknown opendream msg", msg)
-        return ''
+        return 'UNKNOWN'
 
     @staticmethod 
     def collect_errors(err_info, classify_fn):

@@ -50,6 +50,7 @@ def is_generated(env):
 def generate_test_and_save(tenv):
     if is_generated(tenv):
         return
+    print( "==============", tenv.attr.test.root_dir )
     builder = generate_test()
     tenv.attr.test.metadata.paths.dm_file = 'test.dm'
     tenv.attr.test.metadata.paths.collider_model = 'collider_model.json'
@@ -171,6 +172,8 @@ async def process_errors(env):
 
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
+
+    print( ctenv.attr.test.root_dir )
     await byond_codetree(ctenv)
     await opendream_ast(ctenv)
     await clopen_ast(ctenv)
@@ -242,6 +245,22 @@ async def find_new_errors(path, tmp_path):
 
         shutil.rmtree( tenv.attr.test.root_dir )
         env.branches = []
+
+async def run_single_test(test_path, tmp_path):
+    env = Shared.Environment()
+    env.attr.tests.root_dir = Shared.Path( test_path )
+
+    # copy DMStandard and DLLs
+    empenv = Shared.Environment()
+    benv = baseenv.attr.envs.byond.branch()
+    benv.attr.test.root_dir = Shared.Path( tmp_path ) / 'empty' 
+    await prepare_empty(benv, empenv)
+
+    tenv = env.branch().merge(empenv)
+    tenv.attr.test.root_dir = Shared.Path( test_path )
+    DMTR.Metadata.load_test(tenv)
+    if is_generated(tenv):
+        await run_test(tenv)
 
 async def run_test_batch(path, tmp_path):
     env = Shared.Environment()
