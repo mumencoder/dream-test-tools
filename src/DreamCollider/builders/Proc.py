@@ -13,6 +13,8 @@ class RandomProcs(object):
             proc_define = self.initialize_node( AST.GlobalProcDefine() )
         elif type(current_block) is AST.ObjectBlock:
             proc_define = self.initialize_node( AST.ObjectProcDefine() )
+            if random.random() < 0.1:
+                proc_define.is_override = True
         else:
             raise Exception("bad block")
         proc_define.name = self.get_proc_name(env, current_block, proc_define)

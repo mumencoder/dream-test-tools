@@ -34,6 +34,8 @@ class Errors:
             return "MISSING_LEFT_ARG_IN"
         if "missing left-hand argument to =" in msg:
             return "MISSING_LEFT_ARG_ASSIGN"
+        if "invalid proc name: reserved word" in msg:
+            return "PROC_RESERVED_WORD"
         if "invalid variable name: reserved word" in msg:
             return "VAR_RESERVED_WORD"
         if "missing while statement" in msg:
@@ -44,10 +46,14 @@ class Errors:
             return "DUPLICATE_DEF"
         if "attempted division by zero" in msg:
             return "ZERO_DIVIDE"
+        if "var: expected end of statement" in msg:
+            return "EXPECTED_STMT_END"
         if "definition out of place" in msg:
             return "BAD_DEFINE"
+        if "/: missing comma ',' or right-paren ')'" in msg:
+            return "SLASH_MISSING_SOMETHING"
         if "var: missing comma ',' or right-paren ')'" in msg:
-            return "MISSING_SOMETHING"
+            return "VAR_MISSING_SOMETHING"
         return 'UNKNOWN'
 
     @staticmethod

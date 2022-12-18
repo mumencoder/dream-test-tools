@@ -11,6 +11,7 @@ class Validate:
     class Op:
         class In:
             def validate(self):
+                Validate.subtree_valid(self)
                 self.errors.append( GeneralError('UNEXPECTED_IN') )
 
     def subtree_valid(self):

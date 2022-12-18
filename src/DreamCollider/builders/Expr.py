@@ -68,6 +68,8 @@ class RandomExprGenerator(object):
                 else:
                     expr.n = random.randint(-100,100)
             elif type(expr) is AST.Expr.Float:
+                # 3.4e38 largest
+                # 1.4e-45 smallest
                 if random.random() < 0.05:
                     expr.n = 1 - 2*random.random()
                 else:

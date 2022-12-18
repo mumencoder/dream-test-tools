@@ -146,16 +146,18 @@ class Unparse(object):
         def unparse(self, upar):
             if len(self.parent.leaves) != 1:
                 upar.begin_line( self.get_ws() )
+
             upar.set_lineno(self)
-            upar.write('var')
-            upar.write( self.get_ws() )
-            upar.write( "/" )
-            upar.write( self.get_ws() )
-            for seg in self.var_path:
-                upar.write( f"{seg}" )
+            if not self.is_override:
+                upar.write('var')
                 upar.write( self.get_ws() )
-                upar.write( f"/")
+                upar.write( "/" )
                 upar.write( self.get_ws() )
+                for seg in self.var_path:
+                    upar.write( f"{seg}" )
+                    upar.write( self.get_ws() )
+                    upar.write( f"/")
+                    upar.write( self.get_ws() )
 
             upar.write( self.name )
             if self.expression is not None:
@@ -170,9 +172,12 @@ class Unparse(object):
             ws = []
             if len(self.parent.leaves) != 1:
                 ws += ['\n']
-            ws += [ "", "" ]
-            for seg in self.var_path:
-                ws += ["", ""]
+            
+            if not self.is_override:
+                ws += [ "", "" ]
+                for seg in self.var_path:
+                    ws += ["", ""]
+
             if self.expression is not None:
                 ws += [" ", " "]
             if len(self.parent.leaves) != 1:
@@ -186,13 +191,15 @@ class Unparse(object):
                 upar.set_lineno(self)
                 upar.write("/")
 
-            upar.write( self.get_ws() )
+            if not self.is_override:
+                upar.write( self.get_ws() )
+                upar.set_lineno(self)
+                upar.write("proc/")
+
             upar.set_lineno(self)
-            upar.write("proc/")
             upar.write( self.get_ws() )
             upar.write( self.name )
             upar.write( self.get_ws() )
-
             upar.write( "(" )
             upar.write( self.get_ws() )
             for param in self.params:
@@ -208,7 +215,9 @@ class Unparse(object):
             ws = []
             if self.parent is None:
                 ws += [""]
-            ws += ["", "", ""]
+            if not self.is_override:
+                ws += [""]
+            ws += ["", ""]
             ws += [ "", "", Block(1), Block(-1) ]
             return ws
 

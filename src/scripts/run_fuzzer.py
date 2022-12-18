@@ -131,7 +131,12 @@ async def opendream_ast(tenv):
 
     l = List[System.String]()
     l.Add( str(env.attr.compilation.dm_file_path) )
-    tenv.attr.test.open_compile = DMCompiler.DMCompiler.GetAST( l )
+    try:
+        tenv.attr.test.open_compile = DMCompiler.DMCompiler.GetAST( l )
+    except Exception as e:
+        tenv.attr.test.metadata.paths.opendream_threw = 'opendream_threw.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_threw, "w") as f:
+            f.write(str(e))
 
     #DMAST.DMASTNodePrinter().Print(tenv.attr.test.open_compile.ast, System.Console.Out)
     errors = DMCompiler.DMCompiler.errors
@@ -196,7 +201,8 @@ async def prepare_empty(ienv, oenv):
     try:
         empty_root = p.BeginParse( System.IO.StringReader( oenv.attr.empty.codetree ) )
         empty_root.FixLabels()
-    except:
+    except Exception as e:
+        print(e)
         for error in p.errors:
             print(error)
     oenv.attr.empty.root = empty_root
@@ -223,6 +229,8 @@ async def byond_codetree(benv):
 async def find_new_errors(path, tmp_path):
     env = Shared.Environment()
     env.attr.tests.root_dir = Shared.Path( path )
+    if os.path.exists( env.attr.tests.root_dir ):
+        shutil.rmtree( env.attr.tests.root_dir )
 
     # copy DMStandard and DLLs
     empenv = Shared.Environment()

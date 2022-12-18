@@ -29,11 +29,12 @@ class AST(object):
             self.expression = None      # AST.Expr
 
     class ObjectVarDefine(object):
-        attrs = ["name", "var_path"]
+        attrs = ["name", "var_path", "is_override"]
         subtree = ["expression"]
         def __init__(self):
             self.name = None            # str
             self.var_path = []          # AST.VarPath
+            self.is_override = False    # bool
             self.expression = None      # AST.Expr
 
     class GlobalProcDefine(object):
@@ -45,10 +46,11 @@ class AST(object):
             self.body = None            # List[AST.Stmt]
 
     class ObjectProcDefine(object):
-        attrs = ["name"]
+        attrs = ["name", "is_override"]
         subtree = ["params", "body"]
         def __init__(self):
             self.name = None            # str
+            self.is_override = False    # bool
             self.params = []            # List[AST.ProcArgument]
             self.body = None            # List[AST.Stmt]
 
@@ -223,7 +225,6 @@ class AST(object):
         class FormatString(object):
             attrs = ["strings"]
             subtree = ["exprs"]
-            arity = "vararg"
             traits = ["rval", "terminal"]
             def __init__(self):
                 self.strings = None     # List[str]
@@ -256,20 +257,17 @@ class AST(object):
 
         class Call(object):
             class Param(object):
-                arity = "vararg"
                 def __init__(self):
                     self.name = None        # Union[str,None]
                     self.value = None       # AST.Expr
 
             class Identifier(object):
-                arity = "vararg"
                 traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.name = None        # str
                     self.args = None        # List[AST.Call.Param]
 
             class Expr(object):
-                arity = "vararg"
                 traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.expr = None        # AST.Expr
