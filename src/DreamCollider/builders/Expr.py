@@ -29,6 +29,8 @@ class RandomExprGenerator(object):
         return vn
 
     def expression(self, env, depth=None, arity=None):
+        if depth < 1:
+            raise Exception("Invalid depth")
         tries = 0
         expr = None
         while expr is None:
@@ -37,24 +39,17 @@ class RandomExprGenerator(object):
             tries += 1
             expr = None
 
-            if arity == "rval":
-                if depth == 1:
-                    expr = self.initialize_node( random.choice( AST.terminal_exprs )() )
-                else:
-                    expr = self.initialize_node( random.choice( AST.nonterminal_exprs )() )
-            elif arity == "lval":
-                expr = self.initialize_node( AST.Expr.GlobalIdentifier() )
-            elif arity == "storage":
-                expr = self.initialize_node( AST.Expr.GlobalIdentifier() )
-            elif arity == "path":
-                expr = self.initialize_node( AST.Expr.Path() )
-            elif arity == "prop":
-                expr = self.initialize_node( AST.Expr.Property() )
+            node_cls = random.choice( AST.trait_index[arity] )
+            if depth == 1:
+                if "terminal" not in node_cls.traits:
+                    expr = None
+                    continue
             else:
-                raise Exception("unknown arity", arity)
+                if "nonterminal" not in node_cls.traits:
+                    expr = None
+                    continue
 
-            #if arity not in expr.traits:
-            #    expr = None
+            expr = self.initialize_node( node_cls() )
 
             if expr is None:
                 pass

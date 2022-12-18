@@ -19,7 +19,7 @@ class Const(object):
     class Expr(object):
         class Identifier(object):
             def is_const(self, scope):
-                if scope.get_usage(self).initialization_mode() == "const":
+                if scope.resolve_usage(self).initialization_mode() == "const":
                     return True
                 else:
                     return False

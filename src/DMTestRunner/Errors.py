@@ -46,6 +46,8 @@ class Errors:
             return "ZERO_DIVIDE"
         if "definition out of place" in msg:
             return "BAD_DEFINE"
+        if "var: missing comma ',' or right-paren ')'" in msg:
+            return "MISSING_SOMETHING"
         return 'UNKNOWN'
 
     @staticmethod

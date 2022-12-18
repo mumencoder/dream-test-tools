@@ -11,6 +11,8 @@ class Display:
             if line == "":
                 continue
             ss = line.split(':')
+            if len(ss) < 3:
+                continue
             if ss[2] in ['error', 'warning']:
                 yield {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}
     

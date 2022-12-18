@@ -50,7 +50,6 @@ def is_generated(env):
 def generate_test_and_save(tenv):
     if is_generated(tenv):
         return
-    print( "==============", tenv.attr.test.root_dir )
     builder = generate_test()
     tenv.attr.test.metadata.paths.dm_file = 'test.dm'
     tenv.attr.test.metadata.paths.collider_model = 'collider_model.json'
@@ -80,7 +79,6 @@ async def clopen_ast(tenv):
         tenv.attr.test.metadata.paths.clparser_errors = 'clparser_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_errors, "w") as f:
             for error in result["parser"].errors:
-                print( type(error) )
                 f.write( error + '\n' )
                 f.write( "===\n" )
     else:
@@ -173,7 +171,6 @@ async def process_errors(env):
 async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
 
-    print( ctenv.attr.test.root_dir )
     await byond_codetree(ctenv)
     await opendream_ast(ctenv)
     await clopen_ast(ctenv)
@@ -196,8 +193,12 @@ async def prepare_empty(ienv, oenv):
     oenv.attr.empty.codetree = codetree
 
     p = ClopenDream.Parser()
-    empty_root = p.BeginParse( System.IO.StringReader( oenv.attr.empty.codetree ) )
-    empty_root.FixLabels()
+    try:
+        empty_root = p.BeginParse( System.IO.StringReader( oenv.attr.empty.codetree ) )
+        empty_root.FixLabels()
+    except:
+        for error in p.errors:
+            print(error)
     oenv.attr.empty.root = empty_root
 
     l = List[System.String]()

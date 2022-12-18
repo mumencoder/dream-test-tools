@@ -19,11 +19,15 @@ class RandomProcs(object):
         return proc_define
 
     def get_proc_name(self, env, object_block, proc_define):
-        letters = random.randint(2,3)
-        vn = ""
-        for i in range(0, letters):
-            vn += random.choice(string.ascii_lowercase)
-        return vn
+        name = None
+        while name is None:
+            letters = random.randint(2,3)
+            vn = ""
+            for i in range(0, letters):
+                vn += random.choice(string.ascii_lowercase)
+            if vn not in ["as", "to", "in"]:
+                name = vn
+        return name
 
 class SimpleProcCreator(object):
     def create_proc_params(self, env, proc_define):

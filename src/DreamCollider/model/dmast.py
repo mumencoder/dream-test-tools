@@ -2,9 +2,6 @@
 from ..common import *
     
 class AST(object):
-    terminal_exprs = []
-    nonterminal_exprs = []
-    
     class Toplevel(object):
         subtree = ["leaves"]
 
@@ -195,38 +192,31 @@ class AST(object):
     class Expr(object):
         class Identifier(object):
             attrs = ["name"]
-            terminal = True
-            rval = True
-            lval = True
+            traits = ["rval", "lval", "storage", "terminal"]
             def __init__(self):
                 self.name = None        # str
 
         class GlobalIdentifier(object):
             attrs = ["name"]
-            terminal = True
-            rval = True
-            lval = True
+            traits = ["rval", "lval", "storage", "terminal"]
             def __init__(self):
                 self.name = None        # str
 
         class Integer(object):
             attrs = ["n"]
-            terminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 self.n = None           # int
 
         class Float(object):
             attrs = ["n"]
-            terminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 self.n = None           # float
 
         class String(object):
             attrs = ["s"]
-            terminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 self.s = None           # str
 
@@ -234,35 +224,31 @@ class AST(object):
             attrs = ["strings"]
             subtree = ["exprs"]
             arity = "vararg"
-            nonterminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 self.strings = None     # List[str]
                 self.exprs = None       # List[AST.Expr]
 
         class Resource(object):
             attrs = ["s"]
-            terminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 self.s = None           # str
 
         class Null(object):
-            terminal = True
-            rval = True
+            traits = ["rval", "terminal"]
             def __init__(self):
                 pass
 
         class Property(object):
             attrs = ["name"]
-            terminal = True
+            traits = ["prop"]
             def __init__(self):
                 self.name = None
 
         class Path(object):
             attrs = ["prefix", "ops", "types"]
-            terminal = True
-            rval = True
+            traits = ["rval", "path", "terminal"]
             def __init__(self):
                 self.prefix = None      # str
                 self.types = None       # List[str]
@@ -277,29 +263,24 @@ class AST(object):
 
             class Identifier(object):
                 arity = "vararg"
-                nonterminal = True
-                rval = True
+                traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.name = None        # str
                     self.args = None        # List[AST.Call.Param]
 
             class Expr(object):
                 arity = "vararg"
-                nonterminal = True
-                rval = True
+                traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.expr = None        # AST.Expr
                     self.args = None        # List[AST.Call.Param]
 
         class Super(object):
-            terminal = True
             def __init__(self):
                 pass
 
         class Self(object):
-            terminal = True
-            rval = True
-            lval = True
+            traits = ["terminal", "rval", "lval"]
             def __init__(self):
                 pass
 
@@ -334,8 +315,7 @@ class AST(object):
             if fixity_slot != len(arity):
                 raise Exception("Fixity slots does not match arity")
             op_cls = AST.Op.op_class(name, pfixity, arity, prec)
-            op_cls.nonterminal = True
-            op_cls.rval = True
+            op_cls.traits = ["nonterminal", "rval"]
             op_cls.subtree = ["exprs"]
             op_cls.add_expr = AST.Op.add_expr
             setattr(AST.Op, name, op_cls)
@@ -347,7 +327,7 @@ class AST(object):
             h.op("Paren", fixity="(_)", arity=["rval"], prec=360)
             h.op("PathUpwards", fixity="_._", arity=["path", "path"], prec=360)
             h.op("PathDownwards", fixity="_:_", arity=["path", "path"], prec=360)
-            h.op("Path", fixity="_/_", arity=["path", "path"], prec=360)
+            h.op("PathBranch", fixity="_/_", arity=["path", "path"], prec=360)
 
             h.op("Index", fixity="_[_]", arity=["storage", "rval"], prec=350)
             h.op("Deref", fixity="_._", arity=["storage", "prop"], prec=350) 
@@ -415,38 +395,6 @@ class AST(object):
             h.op("AssignAnd", fixity="_&&=_", arity=["lval", "rval"], prec=200)
             h.op("AssignOr", fixity="_||=_", arity=["lval", "rval"], prec=200)
 
-    special_fns = ["initial", "issaved", "istype", "locate"]
-
-    class Path(object):
-        def __init__(self, segments):
-            self.segments = tuple(segments)
-
-        def parent_paths(self):
-            cpath = []
-            for segment in self.segments:
-                cpath.append(segment)
-                yield AST.Path(cpath)
-
-        def contains(self, path):
-            for i, segment in enumerate(path.segments):
-                if i >= len(self.segments):
-                    return False
-                if segment != self.segments[i]:
-                    return False
-            return True
-
-        def __str__(self):
-            return str(self.segments)
-
-        def __eq__(self, o):
-            return self.segments == o.segments
-
-        def __hash__(self):
-            return hash(self.segments)
-
-        def from_string(path):
-            return AST.Path( [seg for seg in path.split("/") if seg != ""] )
-
     def print(node, s, depth=0, seen=None):
         if id(node) in seen:
             print( s.getvalue() )
@@ -495,20 +443,15 @@ class AST(object):
                 else:
                     yield from AST.walk_subtree(st)
 
+    special_fns = ["initial", "issaved", "istype", "locate"]
+    trait_index = collections.defaultdict(list)
+
     def initialize():
         AST.Op.create_ops()
 
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
-            if not hasattr(ty, "rval"):
-                ty.rval = False
-            if not hasattr(ty, "lval"):
-                ty.lval = False
-            if getattr(ty, 'terminal', None):
-                AST.terminal_exprs.append(ty)
-            if getattr(ty, 'nonterminal', None):
-                AST.nonterminal_exprs.append(ty)
             ty.stmt_only = False
             ty.is_op = False
 
@@ -524,5 +467,11 @@ class AST(object):
             op = getattr(AST.Op, ty_name)
             op.stmt_only = True
 
+        for ty in Shared.Type.iter_types(AST):
+            if ty in [AST, AST.Op, AST.Expr]:
+                continue
+            if hasattr(ty, 'traits'):
+                for trait in ty.traits:
+                    AST.trait_index[trait].append( ty )
 
 AST.initialize()

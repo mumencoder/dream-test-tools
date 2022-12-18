@@ -6,7 +6,7 @@ class Usage:
         class Identifier:
             def get_usage( self, scope ):
                 try:
-                    usage = scope.resolve_usage( self )
+                    usage = [scope.resolve_usage( self )]
                 except UsageError as e:
                     self.errors.append( e )
                     return []
@@ -14,7 +14,7 @@ class Usage:
         class GlobalIdentifier:
             def get_usage( self, scope ):
                 try:
-                    usage = scope.resolve_usage( self )
+                    usage = [scope.resolve_usage( self )]
                 except UsageError as e:
                     self.errors.append( e )
                     return []
@@ -26,5 +26,5 @@ class Usage:
     def op_usage(self, scope):
         usages = []
         for expr in self.exprs:
-            usages += expr.get_usage(scope)
+            usages = expr.get_usage(scope)
         return usages

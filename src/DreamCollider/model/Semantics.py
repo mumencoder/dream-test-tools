@@ -17,7 +17,7 @@ class Semantics(object):
             self.object_blocks_by_path = collections.defaultdict(list)
 
             self.decl_deps = collections.defaultdict(set)
-            self.decl_cycles = collections.defaultdict(set)
+            self.decl_cycles = set()
           
         def collect_errors(self, acc_errs):
             for node in AST.walk_subtree(self):
@@ -145,7 +145,7 @@ class Semantics(object):
             while cnode is not None:
                 path.append(cnode.name)
                 cnode = cnode.parent
-            self.path = AST.Path( list(reversed(path)) )
+            self.path = Semantics.Path( list(reversed(path)) )
 
         # TODO: support parent_type assignment
         def parent_chain(self, include_self=True, include_root=True):
@@ -196,9 +196,9 @@ class Semantics(object):
             if not expr.is_const(self) and self.initialization_mode() == "const":
                 self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
             for usage in usages:
-                self.block.root.add_dependency( self, usage )
-                if self.block.root.check_usage_cycle( self, usage ) is True:
-                    self.expr_errors.append( GeneralError('USAGE_CYCLE') )
+                self.block.add_dependency( self, usage )
+                if self.block.check_usage_cycle( self, usage ) is True:
+                    self.errors.append( GeneralError('USAGE_CYCLE') )
 
     class ObjectVarDefine:
         def init_semantics(self):
@@ -250,7 +250,35 @@ class Semantics(object):
         def set_body(self, body):
             self.body = body
 
+    class Path(object):
+        def __init__(self, segments):
+            self.segments = tuple(segments)
 
+        def parent_paths(self):
+            cpath = []
+            for segment in self.segments:
+                cpath.append(segment)
+                yield Semantics.Path(cpath)
+
+        def contains(self, path):
+            for i, segment in enumerate(path.segments):
+                if i >= len(self.segments):
+                    return False
+                if segment != self.segments[i]:
+                    return False
+            return True
+
+        def __str__(self):
+            return str(self.segments)
+
+        def __eq__(self, o):
+            return self.segments == o.segments
+
+        def __hash__(self):
+            return hash(self.segments)
+
+        def from_string(path):
+            return Semantics.Path( [seg for seg in path.split("/") if seg != ""] )
 
     def initialize():
         ### Semantics setup

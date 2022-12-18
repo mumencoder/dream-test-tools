@@ -906,7 +906,7 @@ class Unparse(object):
             if hasattr(unparse_ty, 'default_ws'):
                 Unparse.default_ws_types[ast_ty] = unparse_ty.default_ws
 
-        for ty_name in ["PathUpwards", "PathDownwards", "Path", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
+        for ty_name in ["PathUpwards", "PathDownwards", "PathBranch", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
             op = getattr(AST.Op, ty_name)
             op.spacing = False
 
