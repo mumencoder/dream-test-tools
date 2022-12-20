@@ -1,15 +1,7 @@
 
 import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random, shutil
 
-import pythonnet
-pythonnet.load("coreclr")
-import clr
-
 import mumenrepo as Shared
-import DMTestRunner as DMTR
-import DMShared, DreamCollider
-
-import sys
 
 def base_setup(env):
     env = env.branch()
@@ -35,19 +27,11 @@ def base_setup(env):
 
     return env
 
-def load_clopendream(env):
-    sys.path.append( str( env.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net6.0') )
-    clr.AddReference("ClopenDream")
-    clr.AddReference("DMCompiler")
+baseenv = base_setup( Shared.Environment() )
+sys.path.append( str( baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net6.0') )
 
-def load_opendream(env):
-    sys.path.append( str( env.attr.install.dir / 'DMCompiler' / 'bin' / 'Release' / 'net6.0') )
-    sys.path.append( str( env.attr.install.dir / 'bin' / 'Content.Server' ) )
-    sys.path.append( str( env.attr.install.dir / 'bin' / 'Content.Tests' ) )
-    clr.AddReference("DMCompiler")
-    clr.AddReference("OpenDreamServer")
-    clr.AddReference("OpenDreamRuntime")
+import DMTestRunner as DMTR
+import DMShared, DreamCollider
 
-def load_opendream_tests(env):
-    clr.AddReference("Content.Tests")
-    clr.AddReference("Robust.Shared")
+import sys
+
