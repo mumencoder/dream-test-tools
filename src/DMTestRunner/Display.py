@@ -18,13 +18,13 @@ class Display:
     
     def opendream_errors(text):
         for line in text.split('\n'):
-            if not line.startswith("Error at "):
+            if not line.startswith("Error"):
                 continue
             ss = line.split(" ")
-            if len(ss) < 3:
+            if len(ss) < 4:
                 continue
             # TODO: this probably will not work for filename with spaces
-            ff = ss[2].split(":")
+            ff = ss[3].split(":")
             if len(ff) >= 2:
                 yield {"file":ff[0].strip(), "lineno":int(ff[1]), "msg":" ".join(ss[3:]), "text":line }
 

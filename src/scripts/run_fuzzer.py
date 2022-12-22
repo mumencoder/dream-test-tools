@@ -52,7 +52,7 @@ async def run_test(env):
     ctenv = env.merge( baseenv.attr.envs.byond )
 
     await DMTR.Runners.byond_codetree(ctenv)
-    #await DMTR.Runners.opendream_ast(ctenv)
+    await DMTR.Runners.opendream_ast(ctenv)
     await DMTR.Runners.clopen_ast(ctenv)
 
     return ctenv
@@ -102,7 +102,7 @@ async def run_single_test(test_path, tmp_path):
     if is_generated(tenv):
         await run_test(tenv)
 
-async def run_test_batch(path, tmp_path):
+async def run_test_batch(output_dir, path, tmp_path):
     env = Shared.Environment()
     env.attr.tests.root_dir = Shared.Path( path )
 
@@ -125,7 +125,7 @@ async def run_test_batch(path, tmp_path):
         if c % 1024 == 0 or c in print_c:
             print(f"{c} {c / (time.time() - start_time)} tests/sec")
 
-async def generate_batch(path, n, *args):
+async def generate_batch(output_dir, path, n, *args):
     env = Shared.Environment()
     env.attr.tests.root_dir = Shared.Path( path )
     env.attr.tests.required_test_count = int(n)

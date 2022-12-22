@@ -185,6 +185,8 @@ async def opendream_ast(tenv):
     if errors.Count > 0:
         tenv.attr.test.metadata.paths.opendream_errors = 'opendream_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_errors, "w") as f:
+            for error in tenv.attr.test.open_compile.parserErrors:
+                f.write( error.ToString() + '\n')
             for error in errors:
                 f.write( error.ToString() + '\n')
     else:

@@ -1,5 +1,9 @@
 
-from common import *
+import os, asyncio, sys
+
+from startup import base_setup
+import mumenrepo as Shared
+import DMShared
 
 class Byond:
     async def install(env):
@@ -33,7 +37,7 @@ class OpenDream:
         await DMShared.OpenDream.Builder.build( benv )
 
 async def main():
-    env = base_setup( Shared.Environment() )
+    env = base_setup( Shared.Environment(), sys.argv[1] )
     await Byond.install(env.attr.envs.byond)
     await OpenDream.install(env.attr.envs.opendream)
     await ClopenDream.install(env.attr.envs.clopendream)

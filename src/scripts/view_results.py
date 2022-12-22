@@ -113,7 +113,7 @@ def render_test(tenv):
     return result
 
 root_env = Shared.Environment()
-def flat_list(path, *args):
+def flat_list(output_dir, path, *args):
     root_env.attr.tests.root_dir = Shared.Path( path )
     process_all_tests(root_env)
     app.layout = layout
