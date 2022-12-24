@@ -25,6 +25,7 @@ def process_test(tenv):
             tenv.attr.test.errors["byond"] = Errors.collect_errors( tenv.attr.test.dm_lines["byond_errors"], Errors.byond_category)
 
     get_file(tenv, "opendream_errors")
+    get_file(tenv, "opendream_throw")
     if tenv.attr_exists('.test.files.opendream_errors'):
         tenv.attr.test.dm_lines["opendream_errors"] = Display.opendream_errors_info( tenv.attr.test.files.opendream_errors )
 
@@ -36,6 +37,8 @@ def process_test(tenv):
         tenv.attr.test.dm_lines["clparser_tree"] = Display.clparser_tree_info( tenv.attr.test.files.clparser_tree )
 
     get_file(tenv, "clconvert_errors")
+
+    get_file(tenv, "collider_ast")
 
     get_file(tenv, "collider_model")
     if tenv.attr_exists('.test.files.collider_model'):

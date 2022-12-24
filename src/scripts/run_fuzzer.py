@@ -40,10 +40,15 @@ def generate_test_and_save(tenv):
         return
     builder = generate_test()
     tenv.attr.test.metadata.paths.dm_file = 'test.dm'
+    tenv.attr.test.metadata.paths.collider_ast = 'collider_ast.txt'
     tenv.attr.test.metadata.paths.collider_model = 'collider_model.json'
     with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "w") as f:
         source = builder.unparse()
         f.write( source )
+    with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.collider_ast, "w") as f:
+        s = io.StringIO()
+        builder.print(s)
+        f.write( s.getvalue() )
     with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.collider_model, "w") as f:
         f.write( json.dumps(builder.get_model(), cls=DreamCollider.ModelEncoder) )
     DMTR.Metadata.save_test(tenv)
@@ -54,6 +59,7 @@ async def run_test(env):
     await DMTR.Runners.byond_codetree(ctenv)
     await DMTR.Runners.opendream_ast(ctenv)
     await DMTR.Runners.clopen_ast(ctenv)
+    #await DMTR.Runners.run_meta(ctenv)
 
     return ctenv
 

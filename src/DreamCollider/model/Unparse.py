@@ -3,895 +3,620 @@ from ..common import *
 
 from .dmast import *
 
+def _Line():
+    return {"type":"Line"}
+def _BeginNode(node):
+    return {"type":"BeginNode", "node":node}
+def _EndNode(node):
+    return {"type":"EndNode", "node":node}
+
+def _Symbol(text):
+    return {"type":"Symbol", "text":text}
+def _Ident(text, type=None):
+    return {"type":"Ident", "text":text, "id_type":type}
+def _Keyword(text):
+    return {"type":"Keyword", "text":text}
+def _Exact(text):
+    return {"type":"Exact", "text":text}
+def _BeginParen():
+    return {"type":"BeginParen"}
+def _EndParen():
+    return {"type":"EndParen"}
+def _Newline():
+    return {"type":"Newline"}
+def _Whitespace(n=0):
+    return {"type":"Whitespace", "n":n}
+
+def _BeginBlock():
+    return {"type":"BeginBlock"}
+def _EndBlock():
+    return {"type":"EndBlock"}
+def _BeginLine():
+    return {"type":"BeginLine"}
+def _EndLine():
+    return {"type":"EndLine"}
+
+def _Fuzz():
+    return {"type":"Fuzz"}
+
 class Unparser(object):
     def __init__(self):
         self.s = io.StringIO()
-        self.depth = 0
-        self.newline = True
         self.current_line = 1
+
+        self.block_mode = [ {"type":"toplevel", 'indent':''} ]
+        self.node_stack = []
+        self.newline = True
 
     def raw_write(self, s):
         self.current_line += s.count('\n')
+        if len(s) > 0:
+            if s[-1] == '\n':
+                self.newline = True
+            else:
+                self.newline = False
         self.s.write(s)
 
-    def write(self, s):
-        if self.newline is True:
-            self.raw_write( self.depth*2*" ")
-            self.newline = False
-        self.raw_write(s)
+    def process_token(self, token):
+        if token["type"] == "Line":
+            node = self.node_stack[-1]
+            if not hasattr(node, 'lineno'):
+                node.lineno = self.current_line
+        elif token["type"] == "BeginNode":
+            self.node_stack.append( token["node"] )
+        elif token["type"] == "EndNode":
+            self.node_stack.pop()
+        elif token["type"] == "Exact":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Symbol":
+            self.raw_write( token["text"] )
+        elif token["type"] == "BeginParen":
+            self.raw_write( '(' )
+        elif token["type"] == "EndParen":
+            self.raw_write( ')' )
+        elif token["type"] == "Ident":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Keyword":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Fuzz":
+            pass
+        elif token["type"] == "BeginBlock":
+            # TODO: check for single leafs in node
+            if self.block_mode[-1]["type"] == "oneline":
+                self.block_mode.append( {"type":"oneline"} )
+            else:
+                a = random.random()
+                if a < 0.33:
+                    self.block_mode.append( {"type":"oneline"} )
+                elif a < 0.66:
+                    self.block_mode.append( {"type":"indent", "indent": self.inc_indent()} )
+                else:
+                    self.block_mode.append( {"type":"nice_bracket", "indent": self.inc_indent()})
+            self.begin_block()
+        elif token["type"] == "EndBlock":
+            self.end_block()
+            self.block_mode.pop()
+        elif token["type"] == "BeginLine":
+            self.begin_line()
+        elif token["type"] == "EndLine":
+            self.end_line()
+        elif token["type"] == "Newline":
+            self.raw_write('\n')
+        elif token["type"] == "Whitespace":
+            if token["n"] == 0:
+                a = random.random()
+                if a < 0.5:
+                    self.raw_write(" ")
+            if token["n"] == 1:
+                a = random.random()
+                if a < 0.95:
+                    self.raw_write(" ")
+        else:
+            raise Exception("unknown token", token)
 
-    def set_lineno(self, node):
-        if not hasattr(node, 'lineno'):
-            node.lineno = self.current_line
+    def begin_block(self):
+        if self.block_mode[-1]["type"] == "oneline":
+            self.process_token( _Symbol('{') )
+            self.process_token( _Whitespace(1) )
+        elif self.block_mode[-1]["type"] == "indent":
+            self.process_token( _Newline() )
+            self.write_indent( self.block_mode[-1] )
+        elif self.block_mode[-1]["type"] == "nice_bracket":
+            self.process_token( _Symbol('{') )
+            self.process_token( _Fuzz() )
+            self.process_token( _Newline() )
+            self.write_indent( self.block_mode[-1] )
+        else:
+            raise Exception("bad block mode", self.block_mode[-1])
 
-    def block_mode_newline(self, ws):
-        if ws["block"] > 0:
-            self.newline = True
-            return "\n"
-        elif ws["block"] < 0:
-            return ""
+    def end_block(self):
+        if self.block_mode[-1]["type"] == "oneline":
+            self.process_token( _Symbol('}') )
+            self.process_token( _Whitespace(1) )
+        elif self.block_mode[-1]["type"] == "indent":
+            pass
+        elif self.block_mode[-1]["type"] == "nice_bracket":
+            self.process_token( _Newline() )
+            self.write_indent( self.block_mode[-2] )
+            self.process_token( _Symbol('}') )
+        else:
+            raise Exception("bad block mode", self.block_mode[-1])
 
-    def begin_line(self, ws):
-        if self.newline is False:
-            self.raw_write(ws)
-            self.newline = True
+    def begin_line(self):
+        if self.block_mode[-1]["type"] == "oneline":
+            pass
+        elif self.block_mode[-1]["type"] == "toplevel":
+            pass
+        elif self.block_mode[-1]["type"] == "indent":
+            if not self.newline:
+                self.process_token( _Newline() )
+                self.write_indent( self.block_mode[-1] )
+        elif self.block_mode[-1]["type"] == "nice_bracket":
+            if not self.newline:
+                self.process_token( _Newline() )
+                self.write_indent( self.block_mode[-1] )
+        else:
+            raise Exception("bad block mode", self.block_mode[-1])
 
-    def end_line(self, ws):
-        if self.newline is False:
-            self.raw_write(ws)
-            self.newline = True
+    def end_line(self):
+        if self.block_mode[-1]["type"] == "oneline":
+            self.process_token( _Symbol(';') )
+            self.process_token( _Whitespace(1) )
+        elif self.block_mode[-1]["type"] == "toplevel":
+            self.process_token( _Newline() )
+        elif self.block_mode[-1]["type"] == "indent":
+            self.process_token( _Newline() )
+        elif self.block_mode[-1]["type"] == "nice_bracket":
+            self.process_token( _Newline() )
+        else:
+            raise Exception("bad block mode", self.block_mode[-1])
 
-    def begin_block(self, ws):
-        if type(ws) is dict:
-            ws = self.convert_block_ws(ws)
-        self.raw_write(ws)
-        self.depth += 1
+    def get_min_indent(self):
+        mindent = None
+        for mode in self.block_mode:
+            if "indent" in mode:
+                mindent = mode
+        return mindent
 
-    def end_block(self, ws):
-        if type(ws) is dict:
-            ws = self.convert_block_ws(ws)
-        self.raw_write(ws)
-        self.depth -= 1
+    def inc_indent(self):
+        mindent = self.get_min_indent()
+        indent = mindent["indent"]
+        a2 = random.random()
+        if a2 < 0.5:
+            indent += ' '
+        else:
+            indent += '\t'
+        return indent
 
-def Block(n):
-    return {"block":n}
-
+    def write_indent(self, mode):
+        if "indent" not in mode:
+            raise Exception("no indent", mode)
+        self.raw_write( mode["indent"] )
 class Unparse(object):
-    class Toplevel(object):
-        def unparse(self, upar):
-            upar.set_lineno(self)
-            for leaf in self.leaves:
-                leaf.unparse(upar)
-            return upar
 
-        def default_ws(self):
-            return [ ]
+    def subshape( node ):
+        yield _BeginNode(node)
+        yield from node.shape()
+        yield _EndNode(node)
+    class Toplevel(object):
+        def shape(self):
+            yield _BeginNode(self)
+            yield _Line()
+            for leaf in self.leaves:
+                yield from Unparse.subshape( leaf )
+            yield _EndNode(self)
             
     class TextNode(object):
-        def unparse(self, upar):
-            upar.set_lineno(self)
-            upar.write( self.text )
-
-        def default_ws(self):
-            return [ ]
+        def shape(self):
+            yield from [ _Line(), _Exact(self.text) ]
 
     class ObjectBlock(object):
-        def unparse(self, upar):
+        def shape(self):
+            yield from [_BeginLine(), _Line() ]
             if self.parent is None:
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write("/")
+                yield from [ _Symbol("/"), _Fuzz() ]
+            yield from [ _Ident(self.name), _Fuzz() ]
             if len(self.leaves) == 1 and self.leaves[0].join_path:
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.name )
-                upar.write( self.get_ws() )
-                upar.write("/")
-                upar.write( self.get_ws() )
-                self.leaves[0].unparse( upar )
+                yield from [ _Symbol("/"), _Fuzz() ]
+                yield from Unparse.subshape( self.leaves[0] )
+                yield _EndLine()
             else:
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.name )
-                upar.write( self.get_ws() )
-
-                upar.begin_block( self.get_ws() )
+                yield _BeginBlock()
                 for leaf in self.leaves:
-                    leaf.unparse(upar)
-                upar.end_block( self.get_ws() )
-
-        def default_ws(self):
-            ws = []
-            if self.parent is None:
-                ws += [ "\n", "" ]
-            if len(self.leaves) == 1 and self.leaves[0].join_path:
-                ws += [ "", "", "" ]
-            else:
-                ws += [ "", "", "" ]
-                ws += [ Block(1), Block(-1) ]
-            return ws
+                    yield from Unparse.subshape( leaf )
+                yield _EndBlock() 
+                yield _EndLine()
 
     class GlobalVarDefine(object):
-        def unparse(self, upar):
-            upar.begin_line( self.get_ws() )
-            upar.set_lineno(self)
-            upar.write('var')
-            upar.write( self.get_ws() )
-            upar.write( "/" )
-            upar.write( self.get_ws() )
+        def shape(self):
+            yield from [_BeginLine(), _Line(), _Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz() ]
             for seg in self.var_path:
-                upar.write( f"{seg}" )
-                upar.write( self.get_ws() )
-                upar.write( f"/")
-                upar.write( self.get_ws() )
-
-            upar.write( self.name )
+                yield from [ _Ident(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
+            yield from [ _Ident( self.name, "name" ) ]
             if self.expression is not None:
-                upar.write( self.get_ws() )
-                upar.write('=')
-                upar.write( self.get_ws() )
-                self.expression.unparse(upar)
-            upar.end_line( self.get_ws() )
-
-        def default_ws(self):
-            ws = [ "\n", "", "" ]
-            for seg in self.var_path:
-                ws += ["", ""]
-            ws += [" ", " ", "\n"]
-            return ws
-
+                yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
+                yield from Unparse.subshape( self.expression )
+            yield _EndLine()
     class ObjectVarDefine(object):
-        def unparse(self, upar):
+        def shape(self):
             if len(self.parent.leaves) != 1:
-                upar.begin_line( self.get_ws() )
-
-            upar.set_lineno(self)
+                yield _BeginLine()
+            yield _Line()
             if not self.is_override:
-                upar.write('var')
-                upar.write( self.get_ws() )
-                upar.write( "/" )
-                upar.write( self.get_ws() )
+                yield from [_Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 for seg in self.var_path:
-                    upar.write( f"{seg}" )
-                    upar.write( self.get_ws() )
-                    upar.write( f"/")
-                    upar.write( self.get_ws() )
-
-            upar.write( self.name )
+                    yield from [ _Ident(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
+            yield from [ _Ident( self.name, "name" ), _Fuzz() ]
             if self.expression is not None:
-                upar.write( self.get_ws() )
-                upar.write('=')
-                upar.write( self.get_ws() )
-                self.expression.unparse(upar)
+                yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
+                yield from Unparse.subshape( self.expression )
             if len(self.parent.leaves) != 1:
-                upar.end_line( self.get_ws() )
-                
-        def default_ws(self):
-            ws = []
-            if len(self.parent.leaves) != 1:
-                ws += ['\n']
-            
-            if not self.is_override:
-                ws += [ "", "" ]
-                for seg in self.var_path:
-                    ws += ["", ""]
-
-            if self.expression is not None:
-                ws += [" ", " "]
-            if len(self.parent.leaves) != 1:
-                ws += ['\n']
-            return ws
+                yield _EndLine()
 
     class ObjectProcDefine(object):
-        def unparse(self, upar):
-            if self.parent is None:
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write("/")
-
+        def shape(self):
+            if len(self.parent.leaves) != 1:
+                yield _BeginLine()
+            yield _Line()
             if not self.is_override:
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write("proc/")
-
-            upar.set_lineno(self)
-            upar.write( self.get_ws() )
-            upar.write( self.name )
-            upar.write( self.get_ws() )
-            upar.write( "(" )
-            upar.write( self.get_ws() )
+                yield from [_Keyword("proc"), _Symbol("/"), _Fuzz()]
+            yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
             for param in self.params:
-                param.unparse(upar)
-            upar.write( ")" )
-            upar.write( self.get_ws() )
-            upar.begin_block( self.get_ws() )
+                yield from Unparse.subshape( param )
+            yield from [_EndParen(), _BeginBlock() ]
             for stmt in self.body:
-                stmt.unparse(upar)
-            upar.end_block( self.get_ws() )
-
-        def default_ws(self):
-            ws = []
-            if self.parent is None:
-                ws += [""]
-            if not self.is_override:
-                ws += [""]
-            ws += ["", ""]
-            ws += [ "", "", Block(1), Block(-1) ]
-            return ws
+                yield from Unparse.subshape( stmt )
+            yield _EndBlock()
+            if len(self.parent.leaves) != 1:
+                yield _EndLine()
 
     class GlobalProcDefine(object):
-        def unparse(self, upar):
-            upar.begin_line( self.get_ws() )
-            upar.set_lineno(self)
-            upar.write( "/proc/")
-            upar.write( self.name )
-            upar.write( self.get_ws() )
-            upar.write( "(" )
-            upar.write( self.get_ws() )
+        def shape(self):
+            yield from [_BeginLine(), _Line(), _Symbol("/"), _Fuzz(), _Ident("proc"), _Fuzz(), _Symbol("/"), _Fuzz()]
+            yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
             for param in self.params:
-                param.unparse(upar)
-            upar.write( ")" )
-            upar.write( self.get_ws() )
-            upar.begin_block( self.get_ws() )
+                yield from Unparse.subshape( param )
+            yield from [_EndParen(), _BeginBlock() ]
             for stmt in self.body:
-                stmt.unparse(upar)
-            upar.end_block( self.get_ws() )
-
-        def default_ws(self):
-            return [ "\n", "", "", "", Block(1), Block(-1) ]
-
+                yield from Unparse.subshape( stmt )
+            yield _EndBlock()
+            yield _EndLine()
     class ProcArgument(object):
-        def unparse(self, upar):
-            upar.write( self.get_ws() )
-            upar.set_lineno(self)
+        def shape(self):
+            yield _Line()
             if self.param_type is not None:
-                self.param_type.unparse(upar)
-                upar.write( self.get_ws() )
-            self.write( self.name )
-            upar.write( self.get_ws() )
+                yield from Unparse.subshape( self.param_type )
+            yield from [_Ident(self.name, "name"), _Whitespace()]
             if self.default is not None:
-                upar.write( "=" )
-                upar.write( self.get_ws() )
-                self.default.unparse(upar)
-                upar.write( self.get_ws() )
+                yield from [_Symbol("="), _Whitespace()]
+                yield from Unparse.subshape( self.default )
             if self.possible_values is not None:
-                upar.write( "as" )
-                upar.write( self.get_ws() )
-                self.possible_values.unparse(upar)
-                upar.write( self.get_ws() )
-
-        def default_ws(self):
-            ws = [ "" ]
-            if self.param_type is not None:
-                ws += [ "" ]
-            ws += [ " " ]
-            if self.default is not None:
-                ws += [ " ", " " ]
-            if self.possible_values is not None:
-                ws += [ " ", " " ]
-            return ws
+                yield from [_Keyword("as"), _Whitespace()]
+                yield from Unparse.subshape( self.possible_values )
 
     class Stmt(object):
         class Expression(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.get_ws() )
-                self.expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", "", "\n" ]
-
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from Unparse.subshape( self.expr )
+                yield _EndLine()
+                
         class VarDefine(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "var/" )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 if self.var_type is not None:
-                    self.var_type.unparse(upar)
-                    upar.write( self.get_ws() )
-                upar.write( self.name )
-                upar.write( self.get_ws() )
+                    yield from Unparse.subshape( self.var_type )
+                yield from [_Ident(self.name, "name")]
                 if self.expr is not None:
-                    upar.write("=")
-                    upar.write( self.get_ws() )
-                    self.expr.unparse(upar)
-                    upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-
-            def default_ws(self):
-                ws = ["\n", "", ""]
-                if self.var_type is not None:
-                    ws += [ "" ]
-                ws += [ " " ]
-                if self.expr is not None:
-                    ws += [ " ", "" ]
-                ws += [ "\n" ]
-                return ws
+                    yield from [_Whitespace(1), _Symbol("="), _Whitespace(1) ]
+                    yield from Unparse.subshape( self.expr )
+                yield _EndLine()
 
         class Return(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('return')
-                upar.write( self.get_ws() )
-                self.expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("return"), _Whitespace(1)]
+                yield from Unparse.subshape( self.expr )
+                yield _EndLine()
+
             def default_ws(self):
                 return [ "\n", "", " ", "", "\n" ]
 
         class Break(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('break')
-                upar.write( self.get_ws() )
-                upar.write( self.label )
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", " ", "", "\n" ]
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("break"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield _EndLine()
 
         class Continue(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('continue')
-                upar.write( self.get_ws() )
-                upar.write( self.label )
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", " ", "", "\n" ]
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("continue"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield _EndLine()
 
         class Goto(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('goto')
-                upar.write( self.get_ws() )
-                upar.write( self.label )
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", " ", "", "\n" ]
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("goto"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield _EndLine()
 
         class Label(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.label )
-                upar.write( self.get_ws() )
-                upar.write( ":" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Ident(self.label, "label"), _Fuzz()]
+                if self.has_colon:
+                    yield from [_Symbol(":"), _Fuzz()]
+                yield _BeginBlock()
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", "", "", "\n", "\n", "\n" ]
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
         class Del(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('del')
-                upar.write( self.get_ws() )
-                self.expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return [ "\n", "", " ", "", "\n" ]
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("del"), _Whitespace(1) ]
+                yield from Unparse.subshape( self.expr )
+                yield _EndLine()
 
         class Set(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write("set")
-                upar.write( self.get_ws() )
-                upar.write( self.attr )
-                upar.write( self.get_ws() )
-                upar.write( "=" )
-                upar.write( self.get_ws() )
-                self.expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", " ", " ", " ", "", "\n"]
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("set"), _Whitespace(1), _Ident(self.attr, "attr"), _Whitespace(), _Symbol("="), _Whitespace()]
+                yield from Unparse.subshape( self.expr )
+                yield _EndLine()
 
         class Spawn(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "spawn" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.delay.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword["spawn"], _Fuzz(), _BeginParen(), _Whitespace() ]
+                yield from Unparse.subshape( self.delay )
+                yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", "", "", "", "", "\n", "\n", "\n"]
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
         class If(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "if" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.condition.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword["if"], _Fuzz(), _BeginParen(), _Whitespace() ]
+                yield from Unparse.subshape( self.condition )
+                yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.truebody:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
                 if self.falsebody is not None:
-                    upar.write( "else" )
-                    upar.write( self.get_ws() )
-                    upar.begin_block( self.get_ws() )
+                    yield from [_Keyword["else"], _Whitespace(), _BeginBlock() ]
                     for stmt in self.falsebody:
-                        stmt.unparse(upar)
-                    upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                ws = ['\n', "", "", "", "", "", "\n", "\n"]
-                if self.falsebody is not None:
-                    ws += [ "", "\n", "\n" ]
-                ws += [ "\n" ]
-                return ws
+                        yield from Unparse.subshape( stmt )
+                    yield _EndBlock()
+                yield _EndLine()
 
         class For(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "for" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                # TODO: assign statements allowed here
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword["for"], _Fuzz(), _BeginParen(), _Whitespace() ]
                 if self.expr1 is not None:
-                    self.expr1.unparse(upar)
-                    upar.write( self.get_ws() )
+                    yield from Unparse.subshape( self.expr1 )
+                    yield from [_Symbol(";"), _Whitespace()]
                 if self.expr2 is not None:
-                    self.expr1.unparse(upar)
-                    upar.write( self.get_ws() )
+                    yield from Unparse.subshape( self.expr2 )
+                    yield from [_Symbol(";"), _Whitespace()]
                 if self.expr3 is not None:
-                    self.expr1.unparse(upar)
-                    upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+                    yield from Unparse.subshape( self.expr3 )
+                yield from [_EndParen(), _Fuzz(), _BeginBlock()]
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                ws = ['\n', "", "", "" ]
-                if self.expr1 is not None:
-                    ws += "; "
-                if self.expr2 is not None:
-                    ws += "; "
-                if self.expr3 is not None:
-                    ws += "; "
-                ws += ["\n", "\n", "\n"]
-                return ws
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
         class ForEnumerator(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "for" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.var_expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write("in")
-                upar.write( self.get_ws() )
-                self.list_expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("for"), _Fuzz(), _BeginParen(), _Whitespace()]
+                yield from Unparse.subshape( self.var_expr )
+                yield from [_Whitespace(1), _Keyword("in"), _Whitespace()]
+                yield from Unparse.subshape( self.list_expr )
+                yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", " ", "", " ", " ", "", "\n", "\n", "\n" ]
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
         class While(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "while" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.condition.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("while"), _Fuzz(), _BeginParen(), _Whitespace()]
+                yield from Unparse.subshape( self.condition )
+                yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", "", "", "", "", "\n", "\n", "\n" ]
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
         class DoWhile(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "do" )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword["do"], _Fuzz(), _BeginBlock()]
                 for stmt in self.body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.write("while")
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.condition.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", "\n", "\n", "", "", "", "\n" ]
+                    yield from Unparse.subshape( stmt )
+                yield from [_EndBlock(), _Fuzz()]
+                yield from [_Keyword("while"), _Fuzz(), _BeginParen(), _Whitespace()]
+                yield from Unparse.subshape( self.condition )
+                yield from [_EndParen(), _Whitespace()]
+                yield _EndLine()
 
         class Switch(object):
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "switch" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.switch_expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.begin_block( self.get_ws() )
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("switch"), _Fuzz(), _BeginParen(), _Whitespace()]
+                yield from Unparse.subshape( self.switch_expr )
+                yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for case in self.cases:
-                    case.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", " ", "", "", "\n", "\n", "", "\n" ]
+                    Unparse.subshape( case )
+                yield _EndBlock()
+                yield _EndLine()
 
             class IfCase(object):
-                def unparse(self, upar):
-                    upar.begin_line( self.get_ws() )
-                    upar.write( self.get_ws() )
-                    upar.set_lineno(self)
-                    upar.write( "if" )
-                    upar.write( self.get_ws() )
-                    upar.write( "(" )
-                    upar.write( self.get_ws() )
-                    self.condition.unparse(upar)
-                    upar.write( self.get_ws() )
-                    upar.write( ")" )
-                    upar.begin_block( self.get_ws() )
-                    for stmt in self.body:
-                        stmt.unparse(upar)
-                    upar.end_block( self.get_ws() )
-                    upar.write( self.get_ws() )
-                    upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", " ", "", "", "\n", "\n", "", "\n" ]
+                def shape(self):
+                    yield from [_BeginLine(), _Line()]
+                    yield from [_Keyword("if"), _Fuzz(), _BeginParen(), _Whitespace()]
+                    yield from Unparse.subshape( self.condition )
+                    yield from [_EndParen(), _Whitespace(), _BeginBlock()]
+                    for stmt in self.stmts:
+                        yield from Unparse.subshape( stmt )
+                    yield _EndBlock()
+                    yield _EndLine()
 
             class ElseCase(object):
-                def unparse(self, upar):
-                    upar.begin_line( self.get_ws() )
-                    upar.write( self.get_ws() )
-                    upar.set_lineno(self)
-                    upar.write( "else" )
-                    upar.write( self.get_ws() )
-                    upar.begin_block( self.get_ws() )
-                    for stmt in self.body:
-                        stmt.unparse(upar)
-                    upar.end_block( self.get_ws() )
-                    upar.write( self.get_ws() )
-                    upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ['\n', "", "", "\n", "\n", "", "\n" ]
+                def shape(self):
+                    yield from [_BeginLine(), _Line()]
+                    yield from [_Keyword("else"), _Whitespace(1), _BeginBlock()]
+                    for stmt in self.stmts:
+                        yield from Unparse.subshape( stmt )
+                    yield _EndBlock()
+                    yield _EndLine()
 
-        class Try:
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "try" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+        class Try(object):
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("try"), _BeginBlock()]
                 for stmt in self.try_body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.write( "catch" )
-                upar.write( self.get_ws() )
-                upar.write( "(" )
-                upar.write( self.get_ws() )
-                self.catch_param.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.write( ")" )
-                upar.write( self.get_ws() )
-                upar.begin_block( self.get_ws() )
+                    yield from Unparse.subshape( stmt )
+                yield from [_EndBlock(), _EndLine(), _BeginLine(), _Keyword("catch"), _Whitespace(), _BeginParen(), _Whitespace() ]
+                yield from Unparse.subshape( self.catch_param )
+                yield from [_EndParen(), _Whitespace(1), _BeginBlock()]
                 for stmt in self.catch_body:
-                    stmt.unparse(upar)
-                upar.end_block( self.get_ws() )
-                upar.end_line( self.get_ws() )
+                    yield from Unparse.subshape( stmt )
+                yield _EndBlock()
+                yield _EndLine()
 
-            def default_ws(self):
-                return ['\n', "", "", "\n", "\n", " ", "", "", "", "\n", "\n", "\n" ]
+            class Catch(object):
+                def shape(self):
+                    yield from [_Line()]
+                    yield from Unparse( self.expr )
 
-            class Catch:
-                def unparse(self, upar):
-                    self.expr.unparse(upar)
-                def default_ws(self):
-                    return []
-
-        class Throw:
-            def unparse(self, upar):
-                upar.begin_line( self.get_ws() )
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( "throw" )
-                upar.write( self.get_ws() )
-                self.expr.unparse(upar)
-                upar.write( self.get_ws() )
-                upar.end_line( self.get_ws() )
-            def default_ws(self):
-                return ["\n", "", " ", "", "\n"]
+        class Throw(object):
+            def shape(self):
+                yield from [_BeginLine(), _Line()]
+                yield from [_Keyword("throw"), _Whitespace(1) ]
+                yield from Unparse( self.expr )
+                yield _EndLine()
 
     class Expr(object):
         class Identifier(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.name )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Ident(self.name), _Fuzz()]
 
         class GlobalIdentifier(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( f"global.{self.name}" )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact("global."), _Ident(self.name), _Fuzz()]
                 
         class Integer(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( str(self.n) )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact(str(self.n)), _Fuzz()]
 
         class Float(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( str(self.n) )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact(str(self.n)), _Fuzz()]
                 
         class String(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( f'"{self.s}"')
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Symbol('"'), _Exact(str(self.s)), _Symbol('"'), _Fuzz()]
 
         class FormatString(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
                 i = 0
                 while i < len(self.exprs):
-                    upar.set_lineno(self)
-                    upar.write( '"' )
-                    upar.write( self.strings[i] )
-                    upar.write( '[' )
-                    upar.write( self.get_ws() )
-                    upar.write( self.exprs[i] )
-                    upar.write( self.get_ws() )
-                    upar.write( ']' )
+                    yield from [_Symbol('"'), _Exact(str(self.strings[i])), _Symbol('['), _Whitespace(1) ] 
+                    yield from Unparse.subshape( self.exprs[i])
+                    yield from [_Whitespace(1), _Symbol("]")]
                     i += 1
-                upar.write( self.strings[i] )
-                upar.write( '"' )
-                upar.write( self.get_ws() )
-            def default_ws(self):
-                ws = [ "" ]
-                for i in range(0, len(self.exprs)):
-                    ws += [ "", "" ]
-                ws += [ "" ]
-                return ws
+                yield from [_Exact(str(self.strings[i])), _Symbol('"'), _Fuzz()]
 
         class Resource(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( f"'{self.s}'" )
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Symbol("'"), _Exact(str(self.s)), _Symbol("'"), _Fuzz()]
 
         class Null(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('null')
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact("null"), _Fuzz()]
 
         class Property(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write( self.name )
-                upar.write( self.get_ws() )
-            def default_ws(self):
-                return ["", ""]
+            def shape(self):
+                yield from [_Line(), _Exact(self.name), _Fuzz()]
 
         class Path(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
                 if self.prefix is not None:
-                    upar.set_lineno(self)
-                    upar.write( self.prefix )
+                    yield _Symbol(self.prefix)
                 i = 0
                 while i < len(self.ops):
-                    upar.set_lineno(self)
-                    upar.write( self.types[i] )
-                    upar.write( self.ops[i] )
+                    yield from [ _Ident(self.types[i], "path"), _Symbol(self.ops[i])]
                     i += 1
-                upar.set_lineno(self)
-                upar.write( self.types[i] )
-                upar.write( self.get_ws() )
+                yield from [_Ident(self.types[i], "path"), _Fuzz()]
 
         class Call(object):
             class Identifier(object):
-                def unparse(self, upar):
-                    upar.write( self.get_ws() )
-                    upar.set_lineno(self)
-                    upar.write( self.name )
-                    upar.write( self.get_ws() )
-                    upar.write( "(" )
-                    upar.write( self.get_ws() )
+                def shape(self):
+                    yield from [_Fuzz(), _Line()]
+                    yield from [_Ident(self.name, "call"), _Fuzz(), _BeginParen(), _Whitespace()]
                     for arg in self.args:
-                        arg.unparse(upar)
-                    upar.write( ")" )
-                    upar.write( self.get_ws() )
-                def default_ws(self):
-                    return [ "", "", "", "" ]
+                        yield from Unparser.subshape(arg)
+                    yield from [_Whitespace(), _EndParen()]
 
             class Expr(object):
-                def unparse(self, upar):
-                    upar.write( self.get_ws() )
-                    upar.set_lineno(self)
-                    upar.write( self.expr )
-                    upar.write( self.get_ws() )
-                    upar.write( "(" )
-                    upar.write( self.get_ws() )
+                def shape(self):
+                    yield from [_Fuzz(), _Line()]
+                    yield from Unparser.subshape( self.expr )
+                    yield from [_Ident(self.name, "call"), _Fuzz(), _BeginParen(), _Whitespace()]
                     for arg in self.args:
-                        arg.unparse(upar)
-                    upar.write( self.get_ws() )
-                    upar.write( ")" )
-                def default_ws(self):
-                    return [ "", "", "", "" ]
+                        yield from Unparser.subshape(arg)
+                    yield from [_Whitespace(), _EndParen()]
 
             class Param(object):
-                def unparse(self, upar):
-                    upar.write( self.get_ws() )
+                def shape(self):
+                    yield from [_Fuzz(), _Line()]
                     if self.name is not None:
-                        upar.set_lineno(self)
-                        upar.write( self.name )
-                        upar.write( self.get_ws() )
-                        upar.write( '=' )
-                        upar.write( self.get_ws() )
-                    upar.set_lineno(self)
-                    self.value.unparse(upar)
-                    upar.write( self.get_ws() )
-
-                def default_ws(self):
-                    ws = [ "" ]
-                    if self.name is not None:
-                        ws += [" ", " "]
-                    ws += [ "" ]
-                    return ws
-
+                        yield from [_Ident(self.name, "param"), _Whitespace(1), _Symbol("="), _Whitespace(1)]
+                    yield from Unparser.subshape( self.value )
         class Super(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('..')
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact(".."), _Fuzz()]
 
         class Self(object):
-            def unparse(self, upar):
-                upar.write( self.get_ws() )
-                upar.set_lineno(self)
-                upar.write('.')
-                upar.write( self.get_ws() )
+            def shape(self):
+                yield from [_Fuzz(), _Line(), _Exact("."), _Fuzz()]
 
     @staticmethod
-    def unparse_op(self, upar):
-        upar.set_lineno(self)
+    def op_shape(self):
+        yield _Line()
         if self.parent and self.parent.prec >= self.prec:
-            upar.write( self.get_ws() )
-            upar.write("(")
-            upar.write( self.get_ws() )
-
+            yield from [_Fuzz(), _Symbol("("), _Fuzz() ]
         cleaf = 0
         for e in self.fixity:
             if e == "_":
-                expr = self.exprs[cleaf]
-                expr.unparse(upar)
+                yield from Unparse.subshape( self.exprs[cleaf] )
                 cleaf += 1
             elif type(e) is str:
                 if self.spacing:
-                    upar.write( self.get_ws() )
-                    upar.write(f"{e}")
-                    upar.write( self.get_ws() )
+                    yield from [_Whitespace(1), _Symbol(e), _Whitespace(1)]
                 else:
-                    upar.write(f"{e}")
+                    yield from [_Fuzz(), _Symbol(e), _Fuzz()]
             else:
                 raise Exception("bad fixity")
-
         if self.parent and self.parent.prec >= self.prec:
-            upar.write( self.get_ws() )
-            upar.write(")")
-            upar.write( self.get_ws() )
+            yield from [_Fuzz(), _Symbol(")"), _Fuzz() ]
 
-    def default_op_ws(self):
-        ws = []
-        if self.parent and self.parent.prec >= self.prec:
-            ws += ["", ""]
-        for e in self.fixity:
-            if e == "_":
-                pass
-            if type(e) is str:
-                if self.spacing:
-                    ws += [" ", " "]
-        if self.parent and self.parent.prec >= self.prec:
-            ws += ["", ""]
-        return ws
-
-    def default_expr_ws(self):
-        return ["", ""]
-
-    def get_ws(self):
-        return self.ws.popleft()
-
-    default_ws_types = {}
-        
     def initialize():
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
             ty.join_path = False
-            ty.get_ws = Unparse.get_ws
 
         AST.ObjectBlock.join_path = True
         AST.ObjectVarDefine.join_path = True
@@ -900,25 +625,19 @@ class Unparse(object):
         for ty in Shared.Type.iter_types(AST.Op):
             if ty is AST.Op:
                 continue
-            ty.unparse_op = Unparse.unparse_op
-            ty.unparse = lambda self, upar: Unparse.unparse_op( self, upar )
+            if not hasattr('ty', 'shape'):
+                ty.shape = Unparse.op_shape
             ty.spacing = True
-            Unparse.default_ws_types[ty] = Unparse.default_op_ws
 
         for ty in Shared.Type.iter_types(AST.Expr):
             if ty is AST.Expr:
                 continue
             ty.spacing = True
-            Unparse.default_ws_types[ty] = Unparse.default_expr_ws
-
-        for ast_ty, unparse_ty in Shared.Type.mix_types(AST, Unparse):
-            if hasattr(unparse_ty, 'default_ws'):
-                Unparse.default_ws_types[ast_ty] = unparse_ty.default_ws
 
         for ty_name in ["PathUpwards", "PathDownwards", "PathBranch", "Deref", "MaybeDeref", "LaxDeref", "MaybeLaxDeref", "Index", "MaybeIndex"]:
             op = getattr(AST.Op, ty_name)
             op.spacing = False
 
-        Shared.Type.mix_fn(AST, Unparse, 'unparse')
+        Shared.Type.mix_fn(AST, Unparse, 'shape')
 
 Unparse.initialize()

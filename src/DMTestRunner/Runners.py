@@ -159,13 +159,26 @@ async def clopen_ast(tenv):
         tenv.attr.test.metadata.paths.clconvert_errors = 'clconvert_errors.txt'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clconvert_errors, "w") as f:
             for error in result["converter"].errors:
-                f.write( error.Text + '\n' )
+                f.write( error + '\n' )
                 f.write( "===\n" )
     else:
         if tenv.attr_exists( '.test.metadata.paths.clconvert_errors' ):
             del tenv.attr.test.metadata.paths.clconvert_errors
 
     Metadata.save_test(tenv)
+
+async def run_meta(tenv):
+    lexer = ClopenDream.DMLexer()
+    get_file(tenv, 'dm_file')
+    src = ClopenDream.SourceText( tenv.attr.test.files.dm_file )
+    lexer.Include( src )
+
+    parsing = True
+    while parsing:
+        token = lexer.NextToken()
+        if token.K == ClopenDream.DMToken.Kind.EndOfFile:
+            parsing = False
+        print( token.ToString() )
 
 async def opendream_ast(tenv):
     env = tenv.branch()
@@ -176,8 +189,8 @@ async def opendream_ast(tenv):
     try:
         tenv.attr.test.open_compile = DMCompiler.DMCompiler.GetAST( l )
     except Exception as e:
-        tenv.attr.test.metadata.paths.opendream_threw = 'opendream_threw.txt'
-        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_threw, "w") as f:
+        tenv.attr.test.metadata.paths.opendream_throw = 'opendream_throw.txt'
+        with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.opendream_throw, "w") as f:
             f.write(str(e))
 
     #DMAST.DMASTNodePrinter().Print(tenv.attr.test.open_compile.ast, System.Console.Out)

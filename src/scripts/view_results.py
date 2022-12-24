@@ -53,6 +53,8 @@ def render_summary(tenv):
         return "DM missing"
     if tenv.attr_exists('.test.metadata.paths.byond_errors'):
         result += "byond errors - "
+    if tenv.attr_exists('.test.metadata.paths.opendream_throw'):
+        result += "OpenDream threw - "
     if not tenv.attr_exists('.test.metadata.paths.clparser_tree'):
         return "ClParser tree missing"
     if tenv.attr_exists('.test.metadata.paths.clparser_throw'):
@@ -85,10 +87,19 @@ def render_test(tenv):
         text = format_code( DMTR.Display.merge_text( *error_lines ) ) 
         result += [ text, html.Hr() ]
 
+    if tenv.attr_exists('.test.metadata.paths.collider_ast'):
+        result.append( html.H3("Collider AST") )
+        text = format_code( tenv.attr.test.files.collider_ast ) 
+        result += [ text, html.Hr() ]
+
     if tenv.attr_exists('.test.metadata.paths.clparser_tree'):
         result.append( html.H3("Clparser tree:") )
         text = format_code( DMTR.Display.merge_text( tenv.attr.test.dm_lines["dm_file"], tenv.attr.test.dm_lines["clparser_tree"] ) ) 
         result += [ text , html.Hr() ]
+
+    if tenv.attr_exists('.test.metadata.paths.opendream_throw'):
+        result.append( html.H3("Opendream threw:") )
+        result += [ format_code( tenv.attr.test.files.opendream_throw ), html.Hr() ]
 
     if tenv.attr_exists('.test.metadata.paths.clparser_throw'):
         result.append( html.H3("Clparser threw:") )

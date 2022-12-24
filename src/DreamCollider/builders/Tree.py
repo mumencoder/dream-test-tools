@@ -62,12 +62,10 @@ class Toplevel(object):
             proc_define.set_params( proc_params )
             proc_define.set_body( proc_body )
 
-        self.assign_whitespace( env )
-
     def unparse(self):
         upar = Unparser()
-        upar.convert_block_ws = upar.block_mode_newline
-        self.toplevel.unparse(upar)
+        for token in self.toplevel.shape():
+            upar.process_token( token )
         return upar.s.getvalue()        
 
     def get_model(self):
