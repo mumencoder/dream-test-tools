@@ -1,11 +1,11 @@
 
 import os, sys, mumenrepo as Shared
+import DreamCollider
 
 def base_setup(env, output_dir):
     env = env.branch()
-#    env.attr.dirs.output = Shared.Path( os.path.realpath( os.path.join( os.path.dirname(__file__), "..", "..", "output" )) )
     env.attr.dirs.output = Shared.Path( output_dir )
-    
+
     env.attr.shell.env = os.environ
     env.attr.process.stdout = sys.stdout
     env.attr.dirs.tmp = env.attr.dirs.output / 'tmp'

@@ -62,11 +62,17 @@ class Toplevel(object):
             proc_define.set_params( proc_params )
             proc_define.set_body( proc_body )
 
-    def unparse(self):
+    def unparse(self, ngrams=None):
         upar = Unparser()
-        for token in self.toplevel.shape():
-            upar.process_token( token )
-        return upar.s.getvalue()        
+
+        ngram_tokens, text_tokens = itertools.tee( upar.coalesce_newlines( upar.fuzz_stream( self.toplevel.shape() ) ), 2)
+
+        for token in upar.strip_nonprintable( text_tokens ):
+            upar.write_token( token )
+
+        self.text = upar.s.getvalue()   
+        if ngrams is not None:
+            self.ngram_info = ngrams.compute_info( ngram_tokens)     
 
     def get_model(self):
         m = {}

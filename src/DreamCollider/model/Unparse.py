@@ -12,12 +12,12 @@ def _EndNode(node):
 
 def _Symbol(text):
     return {"type":"Symbol", "text":text}
-def _Ident(text, type=None):
-    return {"type":"Ident", "text":text, "id_type":type}
 def _Keyword(text):
     return {"type":"Keyword", "text":text}
-def _Exact(text):
-    return {"type":"Exact", "text":text}
+def _Ident(text, type=None):
+    return {"type":"Ident", "text":text, "id_type":type}
+def _Text(text, type=None):
+    return {"type":"Text", "text":text, "text_type":type}
 def _BeginParen():
     return {"type":"BeginParen"}
 def _EndParen():
@@ -46,39 +46,60 @@ class Unparser(object):
 
         self.block_mode = [ {"type":"toplevel", 'indent':''} ]
         self.node_stack = []
-        self.newline = True
 
-    def raw_write(self, s):
-        self.current_line += s.count('\n')
-        if len(s) > 0:
-            if s[-1] == '\n':
-                self.newline = True
-            else:
-                self.newline = False
-        self.s.write(s)
+    def update_mode(self, token):
+        if token["type"] == "BeginNode":
+            self.node_stack.append( token["node"] )
+        if token["type"] == "EndNode":
+            self.node_stack.pop()
 
-    def process_token(self, token):
         if token["type"] == "Line":
             node = self.node_stack[-1]
             if not hasattr(node, 'lineno'):
                 node.lineno = self.current_line
-        elif token["type"] == "BeginNode":
-            self.node_stack.append( token["node"] )
-        elif token["type"] == "EndNode":
-            self.node_stack.pop()
-        elif token["type"] == "Exact":
-            self.raw_write( token["text"] )
-        elif token["type"] == "Symbol":
-            self.raw_write( token["text"] )
-        elif token["type"] == "BeginParen":
-            self.raw_write( '(' )
-        elif token["type"] == "EndParen":
-            self.raw_write( ')' )
-        elif token["type"] == "Ident":
-            self.raw_write( token["text"] )
-        elif token["type"] == "Keyword":
-            self.raw_write( token["text"] )
-        elif token["type"] == "Fuzz":
+
+        if token["type"] == "Newline":
+            self.current_line += 1
+
+    def raw_write(self, s):
+        self.s.write(s)
+
+    def fuzz_stream(self, tokens):
+        for token in tokens:
+            yield from self.fuzz_token(token)
+
+    def coalesce_newlines(self, tokens):
+        newline = True
+        for token in tokens:
+            if token["type"] == "Newline":
+                if newline is True:
+                    pass
+                else:
+                    yield token
+                newline = True
+            elif token["type"] in ["Text", "Symbol", "Keyword", "Ident", "Whitespace"]:
+                newline = False
+                yield token
+            elif token["type"] in ["BeginNode", "EndNode", "Line"]:
+                yield token
+            else:
+                raise Exception("unknown token", token)
+
+    def strip_nonprintable(self, tokens):
+        for token in tokens:
+            self.update_mode(token)
+            if token["type"] in ["Text", "Symbol", "Ident", "Keyword", "Newline"]:
+                yield token
+            else:
+                pass
+
+    def fuzz_indent(self, mode):
+        if "indent" not in mode:
+            raise Exception("no indent", mode)
+        yield _Text( mode["indent"], type="indent" )
+    
+    def fuzz_token(self, token):
+        if token["type"] == "Fuzz":
             pass
         elif token["type"] == "BeginBlock":
             # TODO: check for single leafs in node
@@ -86,59 +107,79 @@ class Unparser(object):
                 self.block_mode.append( {"type":"oneline"} )
             else:
                 a = random.random()
-                if a < 0.33:
+                if a < 0.05:
                     self.block_mode.append( {"type":"oneline"} )
                 elif a < 0.66:
                     self.block_mode.append( {"type":"indent", "indent": self.inc_indent()} )
                 else:
                     self.block_mode.append( {"type":"nice_bracket", "indent": self.inc_indent()})
-            self.begin_block()
+            yield from self.begin_block()
         elif token["type"] == "EndBlock":
-            self.end_block()
+            yield from self.end_block()
             self.block_mode.pop()
         elif token["type"] == "BeginLine":
-            self.begin_line()
+            yield from self.begin_line()
         elif token["type"] == "EndLine":
-            self.end_line()
-        elif token["type"] == "Newline":
-            self.raw_write('\n')
+            yield from self.end_line()
+        elif token["type"] == "BeginParen":
+            yield _Symbol('(')
+        elif token["type"] == "EndParen":
+            yield _Symbol(')')
         elif token["type"] == "Whitespace":
             if token["n"] == 0:
                 a = random.random()
                 if a < 0.5:
-                    self.raw_write(" ")
-            if token["n"] == 1:
+                    yield _Text(" ", type="ws")
+            elif token["n"] == 1:
                 a = random.random()
                 if a < 0.95:
-                    self.raw_write(" ")
+                    yield _Text(" ", type="ws")
+            else:
+                raise Exception(token)
+        else:
+            yield token
+
+    def write_token(self, token):
+        if token["type"] == "Text":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Symbol":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Ident":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Keyword":
+            self.raw_write( token["text"] )
+        elif token["type"] == "Newline":
+            self.raw_write('\n')
         else:
             raise Exception("unknown token", token)
 
     def begin_block(self):
         if self.block_mode[-1]["type"] == "oneline":
-            self.process_token( _Symbol('{') )
-            self.process_token( _Whitespace(1) )
+            yield from self.fuzz_token( _Whitespace() )
+            yield from self.fuzz_token( _Symbol('{') )
+            yield from self.fuzz_token( _Whitespace(1) )
         elif self.block_mode[-1]["type"] == "indent":
-            self.process_token( _Newline() )
-            self.write_indent( self.block_mode[-1] )
+            yield from self.fuzz_token( _Newline() )
+            yield from self.fuzz_indent( self.block_mode[-1] )
         elif self.block_mode[-1]["type"] == "nice_bracket":
-            self.process_token( _Symbol('{') )
-            self.process_token( _Fuzz() )
-            self.process_token( _Newline() )
-            self.write_indent( self.block_mode[-1] )
+            yield from self.fuzz_token( _Whitespace() )
+            yield from self.fuzz_token( _Symbol('{') )
+            yield from self.fuzz_token( _Fuzz() )
+            yield from self.fuzz_token( _Newline() )
+            yield from self.fuzz_indent( self.block_mode[-1] )
         else:
             raise Exception("bad block mode", self.block_mode[-1])
 
     def end_block(self):
         if self.block_mode[-1]["type"] == "oneline":
-            self.process_token( _Symbol('}') )
-            self.process_token( _Whitespace(1) )
+            yield from self.fuzz_token( _Symbol('}') )
+            yield from self.fuzz_token( _Whitespace(1) )
         elif self.block_mode[-1]["type"] == "indent":
             pass
         elif self.block_mode[-1]["type"] == "nice_bracket":
-            self.process_token( _Newline() )
-            self.write_indent( self.block_mode[-2] )
-            self.process_token( _Symbol('}') )
+            yield from self.fuzz_token( _Newline() )
+            yield from self.fuzz_indent( self.block_mode[-2] )
+            yield from self.fuzz_token( _Symbol('}') )
         else:
             raise Exception("bad block mode", self.block_mode[-1])
 
@@ -148,26 +189,24 @@ class Unparser(object):
         elif self.block_mode[-1]["type"] == "toplevel":
             pass
         elif self.block_mode[-1]["type"] == "indent":
-            if not self.newline:
-                self.process_token( _Newline() )
-                self.write_indent( self.block_mode[-1] )
+            yield from self.fuzz_token( _Newline() )
+            yield from self.fuzz_indent( self.block_mode[-1] )
         elif self.block_mode[-1]["type"] == "nice_bracket":
-            if not self.newline:
-                self.process_token( _Newline() )
-                self.write_indent( self.block_mode[-1] )
+            yield from self.fuzz_token( _Newline() )
+            yield from self.fuzz_indent( self.block_mode[-1] )
         else:
             raise Exception("bad block mode", self.block_mode[-1])
 
     def end_line(self):
         if self.block_mode[-1]["type"] == "oneline":
-            self.process_token( _Symbol(';') )
-            self.process_token( _Whitespace(1) )
+            yield from self.fuzz_token( _Symbol(';') )
+            yield from self.fuzz_token( _Whitespace(1) )
         elif self.block_mode[-1]["type"] == "toplevel":
-            self.process_token( _Newline() )
+            yield from self.fuzz_token( _Newline() )
         elif self.block_mode[-1]["type"] == "indent":
-            self.process_token( _Newline() )
+            yield from self.fuzz_token( _Newline() )
         elif self.block_mode[-1]["type"] == "nice_bracket":
-            self.process_token( _Newline() )
+            yield from self.fuzz_token( _Newline() )
         else:
             raise Exception("bad block mode", self.block_mode[-1])
 
@@ -188,10 +227,7 @@ class Unparser(object):
             indent += '\t'
         return indent
 
-    def write_indent(self, mode):
-        if "indent" not in mode:
-            raise Exception("no indent", mode)
-        self.raw_write( mode["indent"] )
+
 class Unparse(object):
 
     def subshape( node ):
@@ -208,7 +244,7 @@ class Unparse(object):
             
     class TextNode(object):
         def shape(self):
-            yield from [ _Line(), _Exact(self.text) ]
+            yield from [ _Line(), _Text(self.text, type="general") ]
 
     class ObjectBlock(object):
         def shape(self):
@@ -319,9 +355,6 @@ class Unparse(object):
                 yield from [_Keyword("return"), _Whitespace(1)]
                 yield from Unparse.subshape( self.expr )
                 yield _EndLine()
-
-            def default_ws(self):
-                return [ "\n", "", " ", "", "\n" ]
 
         class Break(object):
             def shape(self):
@@ -512,42 +545,42 @@ class Unparse(object):
 
         class GlobalIdentifier(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact("global."), _Ident(self.name), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text("global.", type="global_id"), _Ident(self.name), _Fuzz()]
                 
         class Integer(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact(str(self.n)), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(str(self.n), type="int"), _Fuzz()]
 
         class Float(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact(str(self.n)), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(str(self.n), type="float"), _Fuzz()]
                 
         class String(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Symbol('"'), _Exact(str(self.s)), _Symbol('"'), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol('"'), _Text(str(self.s), type="string"), _Symbol('"'), _Fuzz()]
 
         class FormatString(object):
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 i = 0
                 while i < len(self.exprs):
-                    yield from [_Symbol('"'), _Exact(str(self.strings[i])), _Symbol('['), _Whitespace(1) ] 
+                    yield from [_Symbol('"'), _Text(str(self.strings[i]), type="fmt_string"), _Symbol('['), _Whitespace(1) ] 
                     yield from Unparse.subshape( self.exprs[i])
                     yield from [_Whitespace(1), _Symbol("]")]
                     i += 1
-                yield from [_Exact(str(self.strings[i])), _Symbol('"'), _Fuzz()]
+                yield from [_Text(str(self.strings[i]), type="fmt_string"), _Symbol('"'), _Fuzz()]
 
         class Resource(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Symbol("'"), _Exact(str(self.s)), _Symbol("'"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol("'"), _Text(str(self.s), type="resource"), _Symbol("'"), _Fuzz()]
 
         class Null(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact("null"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text("null", type="null"), _Fuzz()]
 
         class Property(object):
             def shape(self):
-                yield from [_Line(), _Exact(self.name), _Fuzz()]
+                yield from [_Line(), _Text(self.name, type="property"), _Fuzz()]
 
         class Path(object):
             def shape(self):
@@ -586,11 +619,11 @@ class Unparse(object):
                     yield from Unparser.subshape( self.value )
         class Super(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact(".."), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text("..", type="super"), _Fuzz()]
 
         class Self(object):
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Exact("."), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(".", type="self"), _Fuzz()]
 
     @staticmethod
     def op_shape(self):
