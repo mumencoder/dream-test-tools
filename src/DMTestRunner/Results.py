@@ -39,12 +39,15 @@ def process_test(tenv):
     get_file(tenv, "clconvert_errors")
 
     get_file(tenv, "collider_ast")
-
     get_file(tenv, "collider_model")
+    get_file(tenv, "ngram_info")
     if tenv.attr_exists('.test.files.collider_model'):
         tenv.attr.test.files.collider_model = json.loads( tenv.attr.test.files.collider_model )
         tenv.attr.test.dm_lines["collider_model"] = Display.collider_errors_info( tenv.attr.test.files.collider_model )
         tenv.attr.test.errors["opendream"] = [ tuple(e) for e in tenv.attr.test.dm_lines["collider_model"] ]
+    if tenv.attr_exists('.test.files.ngram_info'):
+        tenv.attr.test.files.ngram_info = json.loads( tenv.attr.test.files.ngram_info )
+
 
 def iter_tests(root_env):
     for path, dirs, files in os.walk(root_env.attr.tests.root_dir):

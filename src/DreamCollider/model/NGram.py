@@ -19,21 +19,42 @@ class NGram(object):
     def __init__(self):
         self.calculate_ordinals()
 
+    @staticmethod
+    def new_accum():
+        return {"ngram_counts": collections.defaultdict(int), "token_count":0}
+
+    @staticmethod
+    def accum_count(accum, info):
+        counts = accum["ngram_counts"]
+        accum["token_count"] += info["token_count"]
+        for k, c in info["ngram_counts"].items():
+            counts[k] += c
+
+    def score_test(pool_accum, test_accum):
+        score = 0.0
+        for ngram, ct in test_accum["ngram_counts"].items():
+            if ngram in pool_accum["ngram_counts"]:
+                base_score = pool_accum["token_count"] / pool_accum["ngram_counts"][ngram] 
+                score += ct * base_score
+            else:
+                score += ct * pool_accum["token_count"]
+        return score / test_accum["token_count"]
+
     def ngram_to_str(self, ng):
         return ",".join(ng)
     
     def compute_info(self, tokens):
         tokens = itertools.tee( tokens, 2)
         info = {}
-        info["frequency"] = self.compute_frequency( self.iter_ngram(tokens[0], 2) )
+        info["ngram_counts"] = self.compute_ngram_counts( self.iter_ngram(tokens[0], 2) )
         info["token_count"] = len( list(tokens[1]) )
         return info
 
-    def compute_frequency(self, ngs):
-        frequency = collections.defaultdict(int)
+    def compute_ngram_counts(self, ngs):
+        counts = collections.defaultdict(int)
         for ng in ngs:
-            frequency[ self.ngram_to_str(ng) ] += 1
-        return frequency
+            counts[ self.ngram_to_str(ng) ] += 1
+        return counts
 
     def calculate_ordinals(self):
         i = 12

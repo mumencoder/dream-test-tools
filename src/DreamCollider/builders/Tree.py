@@ -72,7 +72,7 @@ class Toplevel(object):
 
         self.text = upar.s.getvalue()   
         if ngrams is not None:
-            self.ngram_info = ngrams.compute_info( ngram_tokens)     
+            self.ngram_info = ngrams.compute_info( ngram_tokens )     
 
     def get_model(self):
         m = {}
