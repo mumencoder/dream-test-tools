@@ -206,7 +206,8 @@ def load_sifter(env):
 
 def save_sifter(env):
     env.attr.sifter.metadata["tests_dir"] = str( env.attr.sifter.metadata["tests_dir"] )
-    shutil.copy(env.attr.sifter.metadata_dir / 'sifter.json', env.attr.sifter.metadata_dir / 'sifter.json.backup' )
+    if os.path.exists( env.attr.sifter.metadata_dir / 'sifter.json'):
+        shutil.copy(env.attr.sifter.metadata_dir / 'sifter.json', env.attr.sifter.metadata_dir / 'sifter.json.backup' )
     with open(env.attr.sifter.metadata_dir / 'sifter.json', "w") as f:
         f.write( json.dumps( env.attr.sifter.metadata ) )
     load_sifter(env)
@@ -283,6 +284,37 @@ def merge_chunks(env, chunk1_id, chunk2_id):
 
     return {"tests":passing_tests, "accum": merge_accum}
 
+def iter_sifter_tests(env):
+    for k, chunks in env.attr.sifter.metadata["chunk_index"].items():
+        for chunk_id in chunks:
+            with open( env.attr.sifter.chunk_dir / chunk_id, "r") as f:
+                chunk_info = json.loads( f.read() )
+                for test in chunk_info["tests"]:
+                    yield test
+
+def clean_chunks(env):
+    known_chunks = set()
+    for k, chunks in env.attr.sifter.metadata["chunk_index"].items():
+        for chunk_id in chunks:
+            known_chunks.add( chunk_id )
+
+    removed_chunks = 0
+    for chunk_file in os.listdir( env.attr.sifter.chunk_dir ):
+        if chunk_file not in known_chunks:
+            os.remove( env.attr.sifter.chunk_dir / chunk_file )
+            removed_chunks += 1
+    print(f"removed {removed_chunks} chunks")
+
+def clean_tests(env):
+    cleaned = 0
+    start_time = time.time()
+    known_tests = set( iter_sifter_tests(env))
+    for test_dir in os.listdir(env.attr.sifter.metadata["tests_dir"]):
+        if test_dir not in known_tests:
+            shutil.rmtree( env.attr.sifter.metadata["tests_dir"] / test_dir )
+            cleaned += 1
+    print(f"cleaned {cleaned} tests in {time.time()-start_time}")
+
 async def run_sifter(output_dir, metadata_dir):
     env = Shared.Environment()
     env.attr.sifter.metadata_dir = Shared.Path( metadata_dir )
@@ -293,6 +325,9 @@ async def run_sifter(output_dir, metadata_dir):
         load_sifter(env)
         sifter = env.attr.sifter.metadata
     env.attr.tests.root_dir = sifter["tests_dir"]
+
+    clean_tests(env)
+    clean_chunks(env)
 
     env.attr.sifter.total_tests = 0
     for k, chunks in sifter["chunk_index"].items():
@@ -359,6 +394,8 @@ async def run_sifter(output_dir, metadata_dir):
                 sifter["chunk_index"][str(cenv.attr.sifter.chunk.level)].append( cenv.attr.sifter.chunk.uuid )
                 save_sifter(env)
                 env.attr.sifter.total_tests -= cenv.attr.sifter.chunk.test_count
+                clean_tests(env)
+                clean_chunks(env)
             else:
                 must_generate = True
 
