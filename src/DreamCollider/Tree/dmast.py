@@ -258,17 +258,22 @@ class AST(object):
 
         class Call(object):
             class Param(object):
+                attrs = ["name"]
+                subtree = ["value"]
                 def __init__(self):
                     self.name = None        # Union[str,None]
                     self.value = None       # AST.Expr
 
             class Identifier(object):
+                attrs = ["name", "args"]
                 traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.name = None        # str
                     self.args = None        # List[AST.Call.Param]
 
             class Expr(object):
+                subtree = ["expr"]
+                attrs = ["args"]
                 traits = ["rval", "nonterminal"]
                 def __init__(self):
                     self.expr = None        # AST.Expr
@@ -282,6 +287,48 @@ class AST(object):
             traits = ["terminal", "rval", "lval"]
             def __init__(self):
                 pass
+
+        class Input(object):
+            subtree = ["call", "in_list"]
+            attrs = ["as_type"]
+            traits = ["rval", "nonterminal"]
+            def __init__(self):
+                self.call = None            # AST.Expr.Call.Identifier
+                self.as_type = None         # str
+                self.in_list = None         # AST.Expr
+
+        class ModifiedType(object):
+            attrs = ["mods", "path"]
+            traits = ["rval", "nonterminal"]
+            def __init__(self):
+                self.path = None            # AST.Expr.Path
+                self.mods = None            # List[AST.Expr.ModifiedType.Mod]
+            
+            class Mod(object):
+                attrs = ["var"]
+                subtree = ["val"]
+                def __init__(self):
+                    self.var = None         # str
+                    self.val = None         # AST.Expr
+                    
+        class Pick(object):
+            subtree = ["vals"]
+            traits = ["rval", "nonterminal"]
+            def __init__(self):
+                self.syntax_mode = None     # str
+                self.options = None         # List[AST.Expr.Pick.Entry]
+
+            class Entry(object):
+                subtree = ["p", "val"]
+                def __init__(self):
+                    self.p = None           # AST.Expr
+                    self.val = None         # AST.Expr
+
+        class New(object):
+            subtree = ["call"]
+            traits = ["rval", "nonterminal"]
+            def __init__(self):
+                self.call = None            # AST.Expr.Call.Expr
 
     class Op(object):
         def __init__(self):
@@ -442,27 +489,42 @@ class AST(object):
                 else:
                     yield from AST.walk_subtree(st)
 
-    special_fns = ["initial", "issaved", "istype", "locate"]
     trait_index = collections.defaultdict(list)
 
     def initialize():
         AST.Op.create_ops()
 
         for ty in Shared.Type.iter_types(AST):
-            if ty in [AST, AST.Op, AST.Expr]:
+            if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
                 continue
+            if not hasattr(ty, 'traits'):
+                ty.traits = []
+
+        for ty in Shared.Type.iter_types(AST.Stmt):
+            if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
+                continue
+            ty.traits.append( "stmt" )
+
+        for ty in Shared.Type.iter_types(AST.Expr):
+            if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
+                continue
+            ty.traits.append( "expr" )
 
         for ty in Shared.Type.iter_types(AST.Op):
-            if ty in [AST, AST.Op, AST.Expr]:
+            if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
                 continue
+            ty.traits.append( "expr" )
+            ty.traits.append( "op" )
 
         for ty_name in [
             "Assign", "AssignAdd", "AssignSubtract", "AssignMultiply", "AssignDivide", "AssignModulus", 
             "AssignBitAnd", "AssignBitOr", "AssignBitXor", "AssignShiftLeft", "AssignShiftRight",
             "AssignInto", "AssignAnd", "AssignOr"]:
             op = getattr(AST.Op, ty_name)
-            op.traits.append( "stmt_only" )
+            op.traits.append( "stmt" )
+            op.traits.remove( "expr" )
 
+        AST.Op.ShiftLeft.traits.append( "stmt" )
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue

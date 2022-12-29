@@ -31,10 +31,6 @@ class Blank(object):
             class Catch(object): pass
         class Throw(object): pass
 
-        #class Browse(object): pass
-        #class BrowseResource(object): pass
-        #class OutputControl(object): pass
-
     class Expr(object):
         class Identifier(object): pass
         class GlobalIdentifier(object): pass
@@ -53,16 +49,7 @@ class Blank(object):
             class Expr(object): pass
         class Super(object): pass
         class Self(object): pass
-
-        # TODO: AddText
-        # TODO: Prob
-        # TODO: NewList
-        # TODO: Input
-        # TODO: Pick
-        # TODO: VarDeclExpression
-        # TODO: NewPath
-        # TODO: NewIdentifier
-        # TODO: NewDereference
-        # TODO: NewListIndex
-        # TODO: NewInferred
-        # TODO: ExpressionInRange
+        class Input(object): pass
+        class ModifiedType(object): pass
+        class Pick(object): pass
+        class New(object): pass

@@ -48,10 +48,9 @@ class RandomExprGenerator(object):
                     continue
 
             expr = self.initialize_node( node_cls() )
-
             if expr is None:
                 pass
-            elif "stmt_only" in expr.traits:
+            elif "expr" not in expr.traits:
                 expr = None
             elif depth > 1 and hasattr(expr, 'arity'):
                 leaf_arity = expr.arity
@@ -88,7 +87,8 @@ class RandomExprGenerator(object):
                 expr = None
             elif type(expr) in [AST.Expr.Null, AST.Expr.Self]:
                 pass
-            elif type(expr) in [AST.Expr.FormatString, AST.Expr.Call.Expr, AST.Expr.Call.Identifier]:
+            elif type(expr) in [AST.Expr.FormatString, AST.Expr.Call.Expr, AST.Expr.Call.Identifier, 
+                    AST.Expr.Input, AST.Expr.New, AST.Expr.ModifiedType, AST.Expr.Pick]:
                 # TODO: things that could be initialized
                 expr = None
             else:

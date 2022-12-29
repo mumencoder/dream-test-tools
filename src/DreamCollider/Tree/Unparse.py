@@ -598,8 +598,10 @@ class Unparse(object):
                 def shape(self):
                     yield from [_Fuzz(), _Line()]
                     yield from [_Ident(self.name, "call"), _Fuzz(), _BeginParen(), _Whitespace()]
-                    for arg in self.args:
+                    for i, arg in enumerate(self.args):
                         yield from Unparser.subshape(arg)
+                        if i < len(self.args) - 1:
+                            yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
                     yield from [_Whitespace(), _EndParen()]
 
             class Expr(object):
@@ -607,8 +609,10 @@ class Unparse(object):
                     yield from [_Fuzz(), _Line()]
                     yield from Unparser.subshape( self.expr )
                     yield from [_Ident(self.name, "call"), _Fuzz(), _BeginParen(), _Whitespace()]
-                    for arg in self.args:
+                    for i, arg in enumerate(self.args):
                         yield from Unparser.subshape(arg)
+                        if i < len(self.args) - 1:
+                            yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
                     yield from [_Whitespace(), _EndParen()]
 
             class Param(object):
@@ -617,6 +621,7 @@ class Unparse(object):
                     if self.name is not None:
                         yield from [_Ident(self.name, "param"), _Whitespace(1), _Symbol("="), _Whitespace(1)]
                     yield from Unparser.subshape( self.value )
+
         class Super(object):
             def shape(self):
                 yield from [_Fuzz(), _Line(), _Text("..", type="super"), _Fuzz()]
@@ -625,6 +630,47 @@ class Unparse(object):
             def shape(self):
                 yield from [_Fuzz(), _Line(), _Text(".", type="self"), _Fuzz()]
 
+        class Input(object):
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
+                yield from Unparser.subshape(self.call)
+                if self.as_type is not None:
+                    yield from [_Whitespace(1), _Keyword("as"), _Whitespace(1), _Ident(self.as_type)]
+                if self.in_list is not None:
+                    yield from [_Whitespace(1), _Keyword("in"), _Whitespace(1)]
+                    yield from Unparser.subshape(self.in_list)
+
+        class ModifiedType(object):
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
+                yield from Unparser.subshape(self.path)
+                yield from [_Whitespace(), _Symbol("{"), _Whitespace(1)]
+                for i, mod in enumerate(self.mods):
+                    yield from Unparser.subshape(mod.var)
+                    yield from [_Whitespace(1), _Symbol('='), _Whitespace(1)]
+                    yield from Unparser.subshape(mod.val)
+                    if i < len(self.mods) - 1:
+                        yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
+                yield from [_Whitespace(1), _Symbol('}')]
+
+        class Pick(object):
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
+                yield from [_Text("pick", type='proclike')]
+                yield from [_Whitespace(), _BeginParen(), _Whitespace(1)]
+                for i, option in enumerate(self.options):
+                    yield from Unparser.subshape(option.p)
+                    yield from [_Whitespace(1), _Symbol(';'), _Whitespace(1)]
+                    yield from Unparser.subshape(option.val)
+                    if i < len(self.options) - 1:
+                        yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
+                yield from [_Whitespace(), _EndParen()]
+                
+        class New(object):
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
+                yield from Unparser.subshape(self.call)                
+            
     @staticmethod
     def op_shape(self):
         yield _Line()
