@@ -1,9 +1,7 @@
 
 from ..common import *
 from ..model import *
-
-class GenerationError(Exception):
-    pass
+from .Errors import *
 
 class SimpleVarExprCreator(object):
     def create_var_expr(self, env, var_define):
@@ -53,9 +51,9 @@ class RandomExprGenerator(object):
 
             if expr is None:
                 pass
-            elif expr.stmt_only:
+            elif "stmt_only" in expr.traits:
                 expr = None
-            elif depth > 1 and expr.is_op:
+            elif depth > 1 and hasattr(expr, 'arity'):
                 leaf_arity = expr.arity
                 if leaf_arity == "vararg":
                     leaf_arity = random.randint(1,3)*["rval"]

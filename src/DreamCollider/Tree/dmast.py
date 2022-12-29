@@ -10,6 +10,7 @@ class AST(object):
             self.parent = None
 
     class TextNode(object):
+        attrs = ["text"]
         def __init__(self, text):
             self.text = text
 
@@ -450,20 +451,17 @@ class AST(object):
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
-            ty.stmt_only = False
-            ty.is_op = False
 
         for ty in Shared.Type.iter_types(AST.Op):
-            if ty is AST.Op:
+            if ty in [AST, AST.Op, AST.Expr]:
                 continue
-            ty.is_op = True
 
         for ty_name in [
             "Assign", "AssignAdd", "AssignSubtract", "AssignMultiply", "AssignDivide", "AssignModulus", 
             "AssignBitAnd", "AssignBitOr", "AssignBitXor", "AssignShiftLeft", "AssignShiftRight",
             "AssignInto", "AssignAnd", "AssignOr"]:
             op = getattr(AST.Op, ty_name)
-            op.stmt_only = True
+            op.traits.append( "stmt_only" )
 
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:

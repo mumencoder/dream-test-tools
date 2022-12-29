@@ -1,7 +1,7 @@
 
 from ..common import *
 
-from .dmast import *
+from ..Tree import *
 
 class Const(object):
     def always_const(self, scope):

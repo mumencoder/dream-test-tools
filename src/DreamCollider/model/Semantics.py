@@ -1,7 +1,7 @@
 from ..common import *
 
 from .Errors import *
-from .dmast import *
+from ..Tree import *
 
 class Semantics(object):
     class Toplevel:
@@ -356,6 +356,10 @@ class Semantics(object):
                 if p.startswith("__"):
                     continue
                 setattr(ast_ty, p, getattr(sem_ty, p))
+
+    @staticmethod
+    def init_semantics(node):
+        node.errors = []
 
 class ModelEncoder(json.JSONEncoder):
     def default(self, obj):

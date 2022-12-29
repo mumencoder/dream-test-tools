@@ -1,6 +1,6 @@
 
 from .Errors import *
-from .dmast import *
+from ..Tree import *
 
 class Validate:
     class Expr:
