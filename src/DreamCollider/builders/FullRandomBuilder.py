@@ -14,7 +14,9 @@ class FullRandomBuilder(
         Proc.SimpleProcCreator,
         Expr.RandomExprGenerator,
         Var.RandomVars):
-    pass
+    def __init__(self):
+        self.stdlib = Stdlib.initialize()
+        self.toplevel = self.initialize_node( AST.Toplevel() )
 
     def initialize_node(self, node):
         Semantics.init_semantics( node )

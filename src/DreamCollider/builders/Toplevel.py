@@ -3,9 +3,6 @@ from ..common import *
 from ..model import *
 
 class Toplevel(object):
-    def __init__(self):
-        self.toplevel = self.initialize_node( AST.Toplevel() )
-
     def generate(self, env):
         while self.blocks_remaining(env):
             current_block = self.get_block(env, phase="block")
