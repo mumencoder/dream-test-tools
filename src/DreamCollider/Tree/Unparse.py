@@ -229,7 +229,6 @@ class Unparser(object):
 
 
 class Unparse(object):
-
     def subshape( node ):
         yield _BeginNode(node)
         yield from node.shape()
@@ -252,7 +251,7 @@ class Unparse(object):
             if self.parent is None:
                 yield from [ _Symbol("/"), _Fuzz() ]
             yield from [ _Ident(self.name), _Fuzz() ]
-            if len(self.leaves) == 1 and self.leaves[0].join_path:
+            if len(self.leaves) == 1 and self.leaves[0].can_join_path and self.leaves[0].should_join_path:
                 yield from [ _Symbol("/"), _Fuzz() ]
                 yield from Unparse.subshape( self.leaves[0] )
                 yield _EndLine()
@@ -295,7 +294,11 @@ class Unparse(object):
                 yield _BeginLine()
             yield _Line()
             if not self.is_override:
-                yield from [_Keyword("proc"), _Symbol("/"), _Fuzz()]
+                if self.is_verb:
+                    proc_type = _Keyword("verb")
+                else:
+                    proc_type = _Keyword("proc")
+                yield from [proc_type, _Symbol("/"), _Fuzz()]
             yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
@@ -699,11 +702,11 @@ class Unparse(object):
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
-            ty.join_path = False
+            ty.can_join_path = False
 
-        AST.ObjectBlock.join_path = True
-        AST.ObjectVarDefine.join_path = True
-        AST.ObjectProcDefine.join_path = True
+        AST.ObjectBlock.can_join_path = True
+        AST.ObjectVarDefine.can_join_path = True
+        AST.ObjectProcDefine.can_join_path = True
 
         for ty in Shared.Type.iter_types(AST.Op):
             if ty is AST.Op:

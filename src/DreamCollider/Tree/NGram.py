@@ -4,7 +4,7 @@ from ..common import *
 from .dmast import *
 
 class NGram(object):
-    keywords = ["var", "proc", "return"]
+    keywords = ["var", "proc", "verb", "return"]
     symbols = ["/", "{", "}", "[", "]", "(", ")", "--", "++", 
         "~", ".", ":", "<=", ">=", "<", ">", "+", "-", "*", "%", "**", "^", "'", '"', ";", "!", "?", "?[",
         "&", "|", "||", "&&", "<<", ">>",

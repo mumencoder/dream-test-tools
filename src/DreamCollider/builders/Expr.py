@@ -4,13 +4,13 @@ from ..model import *
 from .Errors import *
 
 class SimpleVarExprCreator(object):
-    def create_var_expr(self, env, var_define):
+    def create_var_expr(self, env):
         expr = self.initialize_node( AST.Expr.Integer() )
         expr.n = random.randint(-100,100)
         return expr
 
 class RandomExprGenerator(object):
-    def create_var_expr(self, env, var_define):
+    def create_var_expr(self, env):
         expr = None
         while expr is None:
             try:

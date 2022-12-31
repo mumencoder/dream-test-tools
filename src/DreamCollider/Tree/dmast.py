@@ -47,13 +47,14 @@ class AST(object):
             self.body = []              # List[AST.Stmt]
 
     class ObjectProcDefine(object):
-        attrs = ["name", "is_override"]
+        attrs = ["name", "is_override", "is_verb"]
         subtree = ["params", "body"]
         def __init__(self):
             self.name = None            # str
             self.is_override = False    # bool
+            self.is_verb = False
             self.params = []            # List[AST.ProcArgument]
-            self.body = []            # List[AST.Stmt]
+            self.body = []              # List[AST.Stmt]
 
     class ProcArgument(object):
         attrs = ["name", "param_type"]
