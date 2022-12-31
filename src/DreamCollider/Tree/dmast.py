@@ -44,7 +44,7 @@ class AST(object):
         def __init__(self):
             self.name = None            # str
             self.params = []            # List[AST.ProcArgument]
-            self.body = None            # List[AST.Stmt]
+            self.body = []              # List[AST.Stmt]
 
     class ObjectProcDefine(object):
         attrs = ["name", "is_override"]
@@ -53,7 +53,7 @@ class AST(object):
             self.name = None            # str
             self.is_override = False    # bool
             self.params = []            # List[AST.ProcArgument]
-            self.body = None            # List[AST.Stmt]
+            self.body = []            # List[AST.Stmt]
 
     class ProcArgument(object):
         attrs = ["name", "param_type"]

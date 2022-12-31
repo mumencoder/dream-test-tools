@@ -14,21 +14,20 @@ class Semantics(object):
 
             # toplevel indices
             # TODO: these need to be ordered by tree position
+            self.object_blocks = [self]
+            self.vars = []
+            self.procs = []
+
             self.object_blocks_by_path = collections.defaultdict(list)
 
             self.decl_deps = collections.defaultdict(set)
             self.decl_cycles = set()
           
-        def collect_errors(self, acc_errs):
-            for node in AST.walk_subtree(self):
-                for error in node.errors:
-                    acc_errs.append( (node.lineno, error) )
-            return acc_errs
-
+        ### Accessors
         def get_vars(self):
             return list(self.global_vars_by_name.values())
 
-        def iter_blocks(self):
+        def iter_objects(self):
             yield self
             for leaf_list in list(self.object_blocks_by_name.values()):
                 for leaf in leaf_list:
@@ -45,15 +44,16 @@ class Semantics(object):
                     yield proc
 
         def iter_var_defines(self):
-            for block in self.iter_blocks():
+            for block in self.iter_objects():
                 for var in block.iter_vars():
                     yield var
 
         def iter_proc_defines(self):
-            for block in self.iter_blocks():
+            for block in self.iter_objects():
                 for proc in block.iter_procs():
                     yield proc
 
+        ### Builders
         def add_leaf(self, leaf):
             if type(leaf) is AST.ObjectBlock:
                 self.object_blocks_by_name[leaf.name].append( leaf )
@@ -62,6 +62,7 @@ class Semantics(object):
                 leaf.assign_block( self )
             elif type(leaf) is AST.GlobalProcDefine:
                 self.global_procs_by_name[leaf.name].append( leaf )
+                leaf.assign_block( self )
             else:
                 raise Exception("invalid leaf", leaf)
             leaf.root = self
@@ -72,8 +73,23 @@ class Semantics(object):
                 self.note_object_block( leaf )
     
         def note_object_block(self, leaf):
+            self.object_blocks.append( leaf ) 
             self.object_blocks_by_path[leaf.path].append( leaf )
 
+        def note_var(self, leaf):
+            self.vars.append( leaf )
+        
+        def note_proc(self, leaf):
+            self.procs.append( leaf )
+
+        ### Errors
+        def collect_errors(self, acc_errs):
+            for node in AST.walk_subtree(self):
+                for error in node.errors:
+                    acc_errs.append( (node.lineno, error) )
+            return acc_errs
+
+        ### Semantics
         def resolve_usage(self, use):
             if type(use) is AST.Expr.Identifier:
                 if len( self.global_vars_by_name[ use.name ] ) == 0:
@@ -130,6 +146,7 @@ class Semantics(object):
                 leaf.assign_block(self)
             elif type(leaf) is AST.ObjectProcDefine:
                 self.object_procs_by_name[leaf.name].append( leaf )
+                leaf.assign_block( self )
             else:
                 raise Exception("invalid leaf", leaf)
             leaf.root = self.root
@@ -182,6 +199,7 @@ class Semantics(object):
 
         def assign_block(self, block):
             self.block = block
+            self.block.note_var( self )
 
         def initialization_mode(self):
             #TODO: if override, inherits mode of overriden
@@ -209,6 +227,7 @@ class Semantics(object):
 
         def assign_block(self, block):
             self.block = block
+            self.block.root.note_var( self )
 
         def initialization_mode(self):
             #TODO: if override, inherits mode of overriden
@@ -233,22 +252,30 @@ class Semantics(object):
             self.allow_override = True
             self.allow_verb = True
 
-        def set_params(self, params):
-            self.params = params
+        def assign_block(self, block):
+            self.block = block
+            self.block.note_proc( self )
 
-        def set_body(self, body):
-            self.body = body
+        def add_param(self, param):
+            self.params.append( param )
+
+        def add_stmt(self, stmt):
+            self.body.append( stmt )
 
     class ObjectProcDefine:
         def init_semantics(self):
             self.allow_override = True
             self.allow_verb = True
 
-        def set_params(self, params):
-            self.params = params
+        def assign_block(self, block):
+            self.block = block
+            self.block.root.note_proc( self )
 
-        def set_body(self, body):
-            self.body = body
+        def add_param(self, param):
+            self.params.append( param )
+
+        def add_stmt(self, stmt):
+            self.body.append( stmt )
 
     class Path(object):
         def __init__(self, segments):

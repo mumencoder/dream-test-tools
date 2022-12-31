@@ -297,8 +297,10 @@ class Unparse(object):
             if not self.is_override:
                 yield from [_Keyword("proc"), _Symbol("/"), _Fuzz()]
             yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
-            for param in self.params:
+            for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
+                if i < len(self.params) - 1:
+                    yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
             yield from [_EndParen(), _BeginBlock() ]
             for stmt in self.body:
                 yield from Unparse.subshape( stmt )
@@ -310,8 +312,10 @@ class Unparse(object):
         def shape(self):
             yield from [_BeginLine(), _Line(), _Symbol("/"), _Fuzz(), _Ident("proc"), _Fuzz(), _Symbol("/"), _Fuzz()]
             yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
-            for param in self.params:
+            for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
+                if i < len(self.params) - 1:
+                    yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
             yield from [_EndParen(), _BeginBlock() ]
             for stmt in self.body:
                 yield from Unparse.subshape( stmt )
