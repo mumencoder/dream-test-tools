@@ -4,6 +4,7 @@ from . import Object
 from . import Proc
 from . import Expr
 from . import Var
+from . import DefaultConfig
 
 from ..model import *
 
@@ -13,13 +14,17 @@ class FullRandomBuilder(
         Proc.RandomProcs,
         Proc.SimpleProcCreator,
         Expr.RandomExprGenerator,
-        Var.RandomVars):
+        Var.RandomVars,
+        DefaultConfig.DefaultConfig):
     def __init__(self):
         self.stdlib = Stdlib.initialize()
         self.toplevel = self.initialize_node( AST.Toplevel() )
 
+        self.initialize_config()
+
         self.proc_defines = {}
         self.var_defines = []
+        self.user_object_blocks = []
 
     def initialize_node(self, node):
         Semantics.init_semantics( node )
@@ -39,15 +44,13 @@ class FullRandomBuilder(
             env.attr.action = action
 
             if action == "object_declare":
-                if self.object_declare_count(env) == 0:
+                if self.object_declare_count(env) <= 0:
                     eligible_actions.remove( "object_declare" )
                     continue
-                current_object = self.choose_object(env)
-                new_object = self.declare_object(env, current_object)
-                current_object.add_leaf( new_object )
+                self.declare_object(env)
 
             if action == "var_declare":
-                if self.var_declare_count(env) == 0:
+                if self.var_declare_count(env) <= 0:
                     eligible_actions.remove( "var_declare" )
                     continue
                 current_object = self.choose_object(env)
@@ -55,7 +58,7 @@ class FullRandomBuilder(
                 current_object.add_leaf( var_declare )
 
             if action == "proc_declare":
-                if self.proc_declare_count(env) == 0:
+                if self.proc_declare_count(env) <= 0:
                     eligible_actions.remove( "proc_declare" )
                     continue
                 current_object = self.choose_object(env)

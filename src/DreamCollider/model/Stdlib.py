@@ -6,6 +6,7 @@ class Stdlib:
         def __init__(self):
             self.current_path = []
             self.parent_types = {}
+            self.objects = {}
             self.procs = collections.defaultdict(dict)
             self.vars = collections.defaultdict(dict)
 
@@ -15,7 +16,10 @@ class Stdlib:
                 self.paths = paths
 
             def __enter__(self):
-                self.builder.current_path += self.paths
+                builder = self.builder
+                builder.current_path += self.paths
+                if builder.get_current_path() not in builder.objects:
+                    builder.objects[builder.get_current_path()] = None
 
             def __exit__(self, *args):
                 self.builder.current_path = self.builder.current_path[:-len(self.paths)]

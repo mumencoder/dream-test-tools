@@ -71,7 +71,15 @@ class Semantics(object):
             if type(leaf) is AST.ObjectBlock:
                 leaf.compute_path()
                 self.note_object_block( leaf )
-    
+
+        def add_branch(self, branch):
+            if len(branch) == 0:
+                return
+            node = branch[-1]
+            self.add_leaf( node )
+            branch.pop()
+            node.add_branch( list(branch) )
+   
         def note_object_block(self, leaf):
             self.object_blocks.append( leaf ) 
             self.object_blocks_by_path[leaf.path].append( leaf )
@@ -155,6 +163,14 @@ class Semantics(object):
             if type(leaf) is AST.ObjectBlock:
                 leaf.compute_path()
                 self.root.note_object_block( leaf )
+
+        def add_branch(self, branch):
+            if len(branch) == 0:
+                return
+            node = branch[-1]
+            self.add_leaf( node )
+            branch.pop()
+            node.add_branch( list(branch) )
 
         def compute_path(self):
             path = []
