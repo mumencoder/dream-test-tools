@@ -196,13 +196,13 @@ class AST(object):
     class Expr(object):
         class Identifier(object):
             attrs = ["name"]
-            traits = ["rval", "lval", "storage", "terminal"]
+            traits = ["rval", "lval", "storage", "terminal", "callable"]
             def __init__(self):
                 self.name = None        # str
 
         class GlobalIdentifier(object):
             attrs = ["name"]
-            traits = ["rval", "lval", "storage", "terminal"]
+            traits = ["rval", "lval", "storage", "terminal", "callable"]
             def __init__(self):
                 self.name = None        # str
 
@@ -227,10 +227,10 @@ class AST(object):
         class FormatString(object):
             attrs = ["strings"]
             subtree = ["exprs"]
-            traits = ["rval", "terminal"]
+            traits = ["rval", "nonterminal"]
             def __init__(self):
-                self.strings = None     # List[str]
-                self.exprs = None       # List[AST.Expr]
+                self.strings = []      # List[str]
+                self.exprs = []        # List[AST.Expr]
 
         class Resource(object):
             attrs = ["s"]
@@ -251,13 +251,20 @@ class AST(object):
 
         class Path(object):
             attrs = ["prefix", "ops", "types"]
-            traits = ["rval", "path", "terminal"]
+            traits = ["rval", "path", "terminal", "callable"]
             def __init__(self):
                 self.prefix = None      # str
                 self.types = None       # List[str]
                 self.ops = None         # List[str]
 
         class Call(object):
+            subtree = ["expr"]
+            attrs = ["args"]
+            traits = ["rval", "nonterminal"]
+            def __init__(self):
+                self.expr = None        # AST.Expr
+                self.args = []        # List[AST.Call.Param]
+
             class Param(object):
                 attrs = ["name"]
                 subtree = ["value"]
@@ -265,22 +272,8 @@ class AST(object):
                     self.name = None        # Union[str,None]
                     self.value = None       # AST.Expr
 
-            class Identifier(object):
-                attrs = ["name", "args"]
-                traits = ["rval", "nonterminal"]
-                def __init__(self):
-                    self.name = None        # str
-                    self.args = None        # List[AST.Call.Param]
-
-            class Expr(object):
-                subtree = ["expr"]
-                attrs = ["args"]
-                traits = ["rval", "nonterminal"]
-                def __init__(self):
-                    self.expr = None        # AST.Expr
-                    self.args = None        # List[AST.Call.Param]
-
         class Super(object):
+            traits = ["terminal", "callable"]
             def __init__(self):
                 pass
 
@@ -490,6 +483,18 @@ class AST(object):
                 else:
                     yield from AST.walk_subtree(st)
 
+    def create(env, data):
+        if type(data) is tuple:
+            node = data[0]()
+            env.attr.builder.init_node(node)
+            for key, subdata in data[1].items():
+                setattr(node, key, AST.create(env, subdata))
+            return node
+        if type(data) is list:
+            return [ AST.create(env, subdata) for subdata in data ]
+        else:
+            return data
+
     trait_index = collections.defaultdict(list)
 
     def initialize():
@@ -524,6 +529,18 @@ class AST(object):
             op = getattr(AST.Op, ty_name)
             op.traits.append( "stmt" )
             op.traits.remove( "expr" )
+
+        for ty_name in ["Deref", "LaxDeref", "MaybeDeref", "MaybeLaxDeref"]:
+            op = getattr(AST.Op, ty_name)
+            op.traits.append( "callable" )
+            op.traits.append( "deref" )
+            op.traits.append( "lval" )
+
+        for ty_name in ["Index", "MaybeIndex"]:
+            op = getattr(AST.Op, ty_name)
+            op.traits.append( "callable" )
+            op.traits.append( "index" )
+            op.traits.append( "lval" )
 
         AST.Op.ShiftLeft.traits.append( "stmt" )
         for ty in Shared.Type.iter_types(AST):

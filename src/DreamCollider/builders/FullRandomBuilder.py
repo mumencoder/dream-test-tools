@@ -51,6 +51,8 @@ class FullRandomBuilder(
                 node.is_verb = random.random() < self.config.attr.define.proc.is_verb_prob
 
     def generate(self, env):
+        env = env.branch()
+        env.attr.builder.init_node = self.initialize_node
         eligible_actions = ["object_declare", "var_declare", "proc_declare", "var_define", "add_proc_parameter", "add_proc_stmt"]
 
         generating = True

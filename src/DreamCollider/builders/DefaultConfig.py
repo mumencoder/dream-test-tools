@@ -24,7 +24,7 @@ class DefaultConfig:
 
         def choose_option(wclass):
             return random.choices( wclass["options"], wclass["weights"] )[0]
-        type(self).choose_option = choose_option
+        self.choose_option = choose_option
 ### Global
     	# total # of object blocks that will be added to AST 
         self.config.attr.object_block_count = max(0, random.gauss(10, 5))
@@ -52,11 +52,10 @@ class DefaultConfig:
         self.config.attr.obj.weights.type.stdlib = 1
     	# which stdlib types can show up as an object block
         self.config.attr.obj.allowed_stdlib_types = list( self.stdlib.objects.keys() )
-
         generate_choices('.obj')
 
         def declare_object(self, env):
-            declare_type = choose_option( self.config.attr.obj.choices.type )
+            declare_type = self.choose_option( self.config.attr.obj.choices.type )
 
             if declare_type == "new_user":
                 if len( self.user_object_blocks ) == 0:
@@ -126,5 +125,9 @@ class DefaultConfig:
 ### Defines/Procs/Stmts
         # "world << expr"
         self.config.attr.define.proc.stmt.weights.type.output_normal = 5
-        # expr << expr
-        self.config.attr.define.proc.stmt.weights.type.irregular_weight = 1
+        # "expr << expr"
+        self.config.attr.define.proc.stmt.weights.type.output_irregular = 1
+        generate_choices('.define.proc.stmt')
+
+### Exprs
+        self.config.attr.expr.param.is_named = 0.1

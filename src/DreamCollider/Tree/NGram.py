@@ -6,7 +6,7 @@ from .dmast import *
 class NGram(object):
     keywords = ["var", "proc", "verb", "return"]
     symbols = ["/", "{", "}", "[", "]", "(", ")", "--", "++", 
-        "~", ".", ":", "<=", ">=", "<", ">", "+", "-", "*", "%", "**", "^", "'", '"', ";", "!", "?", "?[",
+        "~", ".", ":", "?.", "?:", "<=", ">=", "<", ">", "+", "-", "*", "%", "**", "^", "'", '"', ";", "!", "?", "?[",
         "&", "|", "||", "&&", "<<", ">>",
         "=", "==", "!=", "~!", "~=", "<>",
         "in", "to", "as", ',']
@@ -57,7 +57,7 @@ class NGram(object):
         return counts
 
     def calculate_ordinals(self):
-        i = 12
+        i = 14
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue    
@@ -109,6 +109,11 @@ class NGram(object):
                 return "10"
             if token["text_type"] == "global_id":
                 return "11"
+            if token["text_type"] == "fmt_string":
+                return "12"
+            if token["text_type"] == "property":
+                return "13"
+            
             raise Exception(token)
         if token["type"] == "Keyword":
             return self.keyword_ords[ token["text"] ]

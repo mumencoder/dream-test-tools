@@ -348,8 +348,10 @@ async def run_sifter(output_dir, metadata_dir):
             cenv.attr.sifter.chunk.ngram_counts = DreamCollider.NGram.new_accum()
             cenv.attr.sifter.chunk.test_count = 0
             for tenv in generate_n_tests(cenv, sifter["chunk_size"]):
-                if random.random() < 1.0 / sifter["chunk_size"]:
+                if random.random() < 4.0 / sifter["chunk_size"]:
+                    print("===")
                     print( tenv.attr.collider.builder.text )
+                    print("===")
                 cenv.attr.sifter.chunk.tests.append( tenv.attr.test.metadata.name )
                 cenv.attr.sifter.chunk.test_count  += 1
                 DreamCollider.NGram.accum_count(cenv.attr.sifter.chunk.ngram_counts, tenv.attr.collider.builder.ngram_info)

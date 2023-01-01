@@ -11,12 +11,18 @@ class SimpleVarExprCreator(object):
 
 class RandomExprGenerator(object):
     def create_var_expr(self, env):
+        expr = self.expression( env, env.attr.expr.depth, "rval" )
+        return expr
+
+    def create_call_expression(self, env, depth):
         expr = None
         while expr is None:
-            try:
-                expr = self.expression( env, env.attr.expr.depth, "rval" )
-            except GenerationError:
-                pass
+            node_cls = random.choice( AST.trait_index["callable"] )
+            expr = node_cls()
+            expr = self.initialize_node( node_cls() )
+            expr = self.initialize_expression( env, expr, depth )
+            if expr is None and depth > 1:
+                depth -= 1
         return expr
 
     def randomString(self, lo, hi):
@@ -29,25 +35,31 @@ class RandomExprGenerator(object):
     def expression(self, env, depth=None, arity=None):
         if depth < 1:
             raise Exception("Invalid depth")
-        tries = 0
         expr = None
         while expr is None:
-            if tries > 5:
-                raise GenerationError()
-            tries += 1
             expr = None
-
             node_cls = random.choice( AST.trait_index[arity] )
-            if depth == 1:
-                if "terminal" not in node_cls.traits:
-                    expr = None
-                    continue
-            else:
-                if "nonterminal" not in node_cls.traits:
-                    expr = None
-                    continue
-
             expr = self.initialize_node( node_cls() )
+            expr = self.initialize_expression( env, expr, depth )
+            if expr is None and depth > 1:
+                depth -= 1
+        return expr
+
+    def initialize_expression(self, env, expr, depth):
+            if type(expr) is AST.Expr.Property:
+                expr.name = random.choice( ['pa', 'pb', 'pc'] )
+                return expr
+
+            if "terminal" not in expr.traits and "nonterminal" not in expr.traits:
+                raise Exception("cannot determine depth limit", type(expr))
+
+            if depth == 1:
+                if "terminal" not in expr.traits:
+                    return None
+            else:
+                if "nonterminal" not in expr.traits:
+                    return None
+
             if expr is None:
                 pass
             elif "expr" not in expr.traits:
@@ -75,23 +87,33 @@ class RandomExprGenerator(object):
                 expr = None
             elif type(expr) is AST.Expr.String:
                 expr.s = self.randomString(0, 3)
+            elif type(expr) is AST.Expr.FormatString:
+                for i in range( 0, random.randint(1, 3) ):
+                    expr.strings.append( self.randomString(0, 3) )
+                    expr.exprs.append( self.expression(env, depth-1, "rval") )
+                expr.strings.append( self.randomString(0, 3) )
             elif type(expr) is AST.Expr.GlobalIdentifier:
                 expr.name = random.choice( ['ga', 'gb', 'gc'] )
             elif type(expr) is AST.Expr.Identifier:
                 expr.name = random.choice( ['a', 'b', 'c'] )
-            elif type(expr) is AST.Expr.Property:
-                expr.name = random.choice( ['pa', 'pb', 'pc'] )
             elif type(expr) is AST.Expr.Path:
                 expr = self.random_path()
             elif type(expr) is AST.Expr.Super:
                 expr = None
             elif type(expr) in [AST.Expr.Null, AST.Expr.Self]:
                 pass
-            elif type(expr) in [AST.Expr.FormatString, AST.Expr.Call.Expr, AST.Expr.Call.Identifier, 
-                    AST.Expr.Input, AST.Expr.New, AST.Expr.ModifiedType, AST.Expr.Pick]:
+            elif type(expr) is AST.Expr.Call:
+                expr.expr = self.create_call_expression(env, random.randint(1, 3) )
+                for i in range( 0, random.randint(1,3) ):
+                    param = AST.Expr.Call.Param()
+                    if random.random() < self.config.attr.expr.param.is_named:
+                        param.name = self.randomString(0, 3)
+                    param.value = self.expression(env, depth-1, "rval")
+                    expr.args.append( param )
+            elif type(expr) in [AST.Expr.Input, AST.Expr.New, AST.Expr.ModifiedType, AST.Expr.Pick]:
                 # TODO: things that could be initialized
                 expr = None
             else:
                 raise Exception("cannot initialize", type(expr))
+            return expr
 
-        return expr
