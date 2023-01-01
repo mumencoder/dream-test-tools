@@ -208,13 +208,13 @@ class AST(object):
 
         class Integer(object):
             attrs = ["n"]
-            traits = ["rval", "terminal"]
+            traits = ["rval", "terminal", "numeric"]
             def __init__(self):
                 self.n = None           # int
 
         class Float(object):
             attrs = ["n"]
-            traits = ["rval", "terminal"]
+            traits = ["rval", "terminal", "numeric"]
             def __init__(self):
                 self.n = None           # float
 
@@ -263,7 +263,7 @@ class AST(object):
             traits = ["rval", "nonterminal"]
             def __init__(self):
                 self.expr = None        # AST.Expr
-                self.args = []        # List[AST.Call.Param]
+                self.args = []          # List[AST.Call.Param]
 
             class Param(object):
                 attrs = ["name"]
@@ -283,11 +283,11 @@ class AST(object):
                 pass
 
         class Input(object):
-            subtree = ["call", "in_list"]
+            subtree = ["args", "in_list"]
             attrs = ["as_type"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
-                self.call = None            # AST.Expr.Call.Identifier
+                self.args = []              # List[AST.Call.Param]
                 self.as_type = None         # str
                 self.in_list = None         # AST.Expr
 
@@ -296,7 +296,7 @@ class AST(object):
             traits = ["rval", "nonterminal"]
             def __init__(self):
                 self.path = None            # AST.Expr.Path
-                self.mods = None            # List[AST.Expr.ModifiedType.Mod]
+                self.mods = []              # List[AST.Expr.ModifiedType.Mod]
             
             class Mod(object):
                 attrs = ["var"]
@@ -306,11 +306,11 @@ class AST(object):
                     self.val = None         # AST.Expr
                     
         class Pick(object):
-            subtree = ["vals"]
+            subtree = ["options"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
                 self.syntax_mode = None     # str
-                self.options = None         # List[AST.Expr.Pick.Entry]
+                self.options = []           # List[AST.Expr.Pick.Entry]
 
             class Entry(object):
                 subtree = ["p", "val"]
@@ -319,10 +319,10 @@ class AST(object):
                     self.val = None         # AST.Expr
 
         class New(object):
-            subtree = ["call"]
+            subtree = ["args"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
-                self.call = None            # AST.Expr.Call.Expr
+                self.args = []            # List[AST.Call.Param]
 
     class Op(object):
         def __init__(self):

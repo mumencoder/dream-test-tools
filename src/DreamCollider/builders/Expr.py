@@ -32,6 +32,13 @@ class RandomExprGenerator(object):
             vn += random.choice(string.ascii_lowercase)
         return vn
 
+    def randomDMValueType(self):
+        return random.choice( [
+            "anything", "null", "text",
+            "obj", "mob", "turf", "num", "message", "area", 
+            "color", "file", "commandtext", "sound", "icon"
+        ] )
+
     def expression(self, env, depth=None, arity=None):
         if depth < 1:
             raise Exception("Invalid depth")
@@ -64,6 +71,12 @@ class RandomExprGenerator(object):
                 pass
             elif "expr" not in expr.traits:
                 expr = None
+            # no good way to initialize these
+            elif type(expr) is AST.Expr.Resource:
+                expr = None
+            # just fine the way they are
+            elif type(expr) in [AST.Expr.Super, AST.Expr.Null, AST.Expr.Self]:
+                pass
             elif depth > 1 and hasattr(expr, 'arity'):
                 leaf_arity = expr.arity
                 if leaf_arity == "vararg":
@@ -83,8 +96,6 @@ class RandomExprGenerator(object):
                     expr.n = 1 - 2*random.random()
                 else:
                     expr.n = 100 - 200*random.random()
-            elif type(expr) is AST.Expr.Resource:
-                expr = None
             elif type(expr) is AST.Expr.String:
                 expr.s = self.randomString(0, 3)
             elif type(expr) is AST.Expr.FormatString:
@@ -98,10 +109,6 @@ class RandomExprGenerator(object):
                 expr.name = random.choice( ['a', 'b', 'c'] )
             elif type(expr) is AST.Expr.Path:
                 expr = self.random_path()
-            elif type(expr) is AST.Expr.Super:
-                expr = None
-            elif type(expr) in [AST.Expr.Null, AST.Expr.Self]:
-                pass
             elif type(expr) is AST.Expr.Call:
                 expr.expr = self.create_call_expression(env, random.randint(1, 3) )
                 for i in range( 0, random.randint(1,3) ):
@@ -110,9 +117,36 @@ class RandomExprGenerator(object):
                         param.name = self.randomString(0, 3)
                     param.value = self.expression(env, depth-1, "rval")
                     expr.args.append( param )
-            elif type(expr) in [AST.Expr.Input, AST.Expr.New, AST.Expr.ModifiedType, AST.Expr.Pick]:
-                # TODO: things that could be initialized
-                expr = None
+            elif type(expr) is AST.Expr.Input:
+                for i in range( 0, random.randint(1,3) ):
+                    param = AST.Expr.Call.Param()
+                    if random.random() < self.config.attr.expr.param.is_named:
+                        param.name = self.randomString(0, 3)
+                    param.value = self.expression(env, depth-1, "rval")
+                    expr.args.append( param )
+                expr.as_type = self.randomDMValueType()
+                expr.in_list = self.expression(env, depth-1, "rval")
+            elif type(expr) is AST.Expr.New:
+                for i in range( 0, random.randint(1,3) ):
+                    param = AST.Expr.Call.Param()
+                    if random.random() < self.config.attr.expr.param.is_named:
+                        param.name = self.randomString(0, 3)
+                    param.value = self.expression(env, depth-1, "rval")
+                    expr.args.append( param )
+            elif type(expr) is AST.Expr.ModifiedType:
+                expr.path = self.expression(env, 1, "path")
+                for i in range( 0, random.randint(1,3) ):
+                    mod = AST.Expr.ModifiedType.Mod()
+                    mod.var = self.randomString(0, 3)
+                    mod.val = self.expression(env, depth-1, "rval")
+                    expr.mods.append( mod )
+            elif type(expr) is AST.Expr.Pick:
+                for i in range( 0, random.randint(1,3) ):
+                    entry = AST.Expr.Pick.Entry()
+                    entry.p = self.expression(env, 1, "numeric")
+                    entry.val = self.expression(env, depth-1, "rval")
+                    expr.options.append( entry )
+
             else:
                 raise Exception("cannot initialize", type(expr))
             return expr

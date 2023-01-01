@@ -4,7 +4,7 @@ from ..common import *
 from .dmast import *
 
 class NGram(object):
-    keywords = ["var", "proc", "verb", "return"]
+    keywords = ["var", "proc", "verb", "return", "as", "in"]
     symbols = ["/", "{", "}", "[", "]", "(", ")", "--", "++", 
         "~", ".", ":", "?.", "?:", "<=", ">=", "<", ">", "+", "-", "*", "%", "**", "^", "'", '"', ";", "!", "?", "?[",
         "&", "|", "||", "&&", "<<", ">>",
@@ -57,7 +57,7 @@ class NGram(object):
         return counts
 
     def calculate_ordinals(self):
-        i = 14
+        i = 15
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue    
@@ -113,7 +113,8 @@ class NGram(object):
                 return "12"
             if token["text_type"] == "property":
                 return "13"
-            
+            if token["text_type"] == "proclike":
+                return "14"
             raise Exception(token)
         if token["type"] == "Keyword":
             return self.keyword_ords[ token["text"] ]

@@ -568,10 +568,10 @@ class Unparse(object):
 
         class FormatString(object):
             def shape(self):
-                yield from [_Fuzz(), _Line()]
+                yield from [_Fuzz(), _Line(), _Symbol('"')]
                 i = 0
                 while i < len(self.exprs):
-                    yield from [_Symbol('"'), _Text(str(self.strings[i]), type="fmt_string"), _Symbol('['), _Whitespace(1) ] 
+                    yield from [_Text(str(self.strings[i]), type="fmt_string"), _Symbol('['), _Whitespace(1) ] 
                     yield from Unparse.subshape( self.exprs[i])
                     yield from [_Whitespace(1), _Symbol("]")]
                     i += 1
@@ -629,7 +629,13 @@ class Unparse(object):
         class Input(object):
             def shape(self):
                 yield from [_Fuzz(), _Line()]
-                yield from Unparse.subshape(self.call)
+                yield from [_Text("input", type="proclike"), _Fuzz()]
+                yield from [_Whitespace(), _BeginParen(), _Whitespace(1)]
+                for i, arg in enumerate(self.args):
+                    yield from Unparse.subshape(arg)
+                    if i < len(self.args) - 1:
+                        yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
+                yield from [_Whitespace(), _EndParen()]
                 if self.as_type is not None:
                     yield from [_Whitespace(1), _Keyword("as"), _Whitespace(1), _Ident(self.as_type)]
                 if self.in_list is not None:
@@ -642,7 +648,7 @@ class Unparse(object):
                 yield from Unparse.subshape(self.path)
                 yield from [_Whitespace(), _Symbol("{"), _Whitespace(1)]
                 for i, mod in enumerate(self.mods):
-                    yield from Unparse.subshape(mod.var)
+                    yield _Ident(mod.var)
                     yield from [_Whitespace(1), _Symbol('='), _Whitespace(1)]
                     yield from Unparse.subshape(mod.val)
                     if i < len(self.mods) - 1:
@@ -665,8 +671,14 @@ class Unparse(object):
         class New(object):
             def shape(self):
                 yield from [_Fuzz(), _Line()]
-                yield from Unparse.subshape(self.call)                
-            
+                yield from [_Text("new", type="proclike")]                
+                yield from [_Whitespace(), _BeginParen(), _Whitespace(1)]
+                for i, arg in enumerate(self.args):
+                    yield from Unparse.subshape(arg)
+                    if i < len(self.args) - 1:
+                        yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]    
+                yield from [_Whitespace(), _EndParen()]
+
     @staticmethod
     def op_shape(self):
         yield _Line()
