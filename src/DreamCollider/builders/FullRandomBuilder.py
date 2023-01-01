@@ -4,6 +4,7 @@ from . import Object
 from . import Proc
 from . import Expr
 from . import Var
+from . import Stmt
 from . import DefaultConfig
 
 from ..model import *
@@ -13,6 +14,7 @@ class FullRandomBuilder(
         Object.RandomObjects,
         Proc.RandomProcs,
         Proc.SimpleProcCreator,
+        Stmt.RandomStmt,
         Expr.RandomExprGenerator,
         Var.RandomVars,
         DefaultConfig.DefaultConfig):
@@ -32,6 +34,21 @@ class FullRandomBuilder(
         if hasattr(node, 'init_semantics'):
             node.init_semantics()
         return node
+
+    def finalize_node(self, parent_node, node):
+        if type(node) in [AST.ObjectBlock, AST.ObjectProcDefine, AST.ObjectVarDefine]:
+            node.should_join_path = random.random() < self.config.attr.path_join_prob
+
+            if type(node) in [AST.ObjectProcDefine, AST.ObjectVarDefine]:
+                if parent_node.define_mode == "user":
+                    node.is_override = random.random() < self.config.attr.override_user_define_prob
+                elif parent_node.define_mode == "stdlib":
+                    node.is_override = random.random() < self.config.attr.override_stdlib_define_prob
+                else:
+                    raise Exception("unindexed node", node)
+
+            if type(node) is AST.ObjectProcDefine:
+                node.is_verb = random.random() < self.config.attr.define.proc.is_verb_prob
 
     def generate(self, env):
         eligible_actions = ["object_declare", "var_declare", "proc_declare", "var_define", "add_proc_parameter", "add_proc_stmt"]
@@ -57,6 +74,7 @@ class FullRandomBuilder(
                 current_object = self.choose_object(env)
                 env.attr.current_object = current_object
                 var_declare = self.declare_var(env)
+                self.finalize_node( current_object, var_declare )
                 current_object.add_leaf( var_declare )
 
             if action == "proc_declare":
@@ -66,6 +84,7 @@ class FullRandomBuilder(
                 current_object = self.choose_object(env)
                 env.attr.current_object = current_object
                 proc_declare = self.declare_proc(env)
+                self.finalize_node( current_object, proc_declare )
                 current_object.add_leaf( proc_declare )
 
             if action == "var_define":
@@ -103,18 +122,3 @@ class FullRandomBuilder(
                 proc_stmt = self.create_proc_stmt(env)
                 current_proc.add_stmt( proc_stmt )
                 self.proc_defines[ current_proc ]["stmts"] -= 1
-
-        for node in AST.walk_subtree( self.toplevel ):
-            if type(node) in [AST.ObjectBlock, AST.ObjectProcDefine, AST.ObjectVarDefine]:
-                node.should_join_path = random.random() < self.config.attr.path_join_prob
-
-            if type(node) in [AST.ObjectProcDefine, AST.ObjectVarDefine]:
-                if node.parent in self.user_object_blocks:
-                    node.is_override = random.random() < self.config.attr.override_user_define_prob
-                elif node.parent in self.stdlib_object_blocks:
-                    node.is_override = random.random() < self.config.attr.override_stdlib_define_prob
-                else:
-                    raise Exception("unindexed node", node)
-
-            if type(node) is AST.ObjectProcDefine:
-                node.is_verb = random.random() < self.config.attr.define.proc.is_verb_prob

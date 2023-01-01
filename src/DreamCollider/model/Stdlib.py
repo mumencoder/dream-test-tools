@@ -307,8 +307,8 @@ class Stdlib:
 
         with b.dmtype("mob"):
             b.parent_type("atom","movable")
-            b.dmproc("Login")
-            b.dmproc("Logout")
+            b.dmproc("Login", callback=True)
+            b.dmproc("Logout", callback=True)
 
             b.dmvar("ckey")
             b.dmvar("client")

@@ -50,9 +50,3 @@ class SimpleProcCreator(object):
         arg = self.initialize_node( AST.ProcArgument() )
         arg.name = "arg"
         return arg
-
-    def create_proc_stmt(self, env):
-        stmt = self.initialize_node( AST.Stmt.Return() )
-        stmt.expr = self.initialize_node( AST.Expr.Integer() )
-        stmt.expr.n = random.randint(-100, 100)
-        return stmt

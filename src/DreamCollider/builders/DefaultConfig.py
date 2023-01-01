@@ -4,8 +4,27 @@ from ..common import *
 from ..Tree import *
 
 class DefaultConfig:
+
     def initialize_config(self):
         self.config = Shared.Environment()
+
+        def generate_choices(pattern):
+            filter_pattern = pattern + '.*'
+            choice_dict = collections.defaultdict(lambda: collections.defaultdict(list))
+            for prop in self.config.filter_properties(filter_pattern):
+                names = prop.split(".")
+                option = names[-1]
+                wclass = names[-2]
+                weight = self.config.get_attr(prop)
+                choice_dict[wclass]["options"].append(option)
+                choice_dict[wclass]["weights"].append(weight)
+
+            for wclass, results in choice_dict.items():
+                self.config.set_attr(f"{pattern}.choices.{wclass}", results)
+
+        def choose_option(wclass):
+            return random.choices( wclass["options"], wclass["weights"] )[0]
+        type(self).choose_option = choose_option
 ### Global
     	# total # of object blocks that will be added to AST 
         self.config.attr.object_block_count = max(0, random.gauss(10, 5))
@@ -26,49 +45,59 @@ class DefaultConfig:
 ### Object Blocks
 
     	# weight that object block will belong to an existing user type
-        self.config.attr.obj.user_type_weight = 7
+        self.config.attr.obj.weights.type.user = 7
     	# weight that object block will belong to a new type
-        self.config.attr.obj.new_user_type_weight = 2
+        self.config.attr.obj.weights.type.new_user = 2
     	# weight that object block will belong to a stdlib type
-        self.config.attr.obj.stdlib_type_weight = 1
+        self.config.attr.obj.weights.type.stdlib = 1
     	# which stdlib types can show up as an object block
         self.config.attr.obj.allowed_stdlib_types = list( self.stdlib.objects.keys() )
 
-        def declare_object(self, env):
-            options = ["user_type", "new_user_type", "stdlib_type"]
-            weights = [self.config.attr.obj.user_type_weight, self.config.attr.obj.new_user_type_weight, self.config.attr.obj.stdlib_type_weight]
-            declare_type = random.choices( options, weights )[0]
+        generate_choices('.obj')
 
-            if declare_type == "new_user_type":
+        def declare_object(self, env):
+            declare_type = choose_option( self.config.attr.obj.choices.type )
+
+            if declare_type == "new_user":
                 if len( self.user_object_blocks ) == 0:
                     parent_block = self.toplevel
                 else:
                     parent_block = random.choice( [self.toplevel] + self.user_object_blocks )
                 block = self.initialize_node( AST.ObjectBlock() )
                 block.name = f'ty{str( random.choice( list(range(0, 5)) ) )}'
-                parent_block.add_leaf( block )
+                block.define_mode = "user"
                 self.user_object_blocks.append( block )
-            elif declare_type == "user_type":
+                self.finalize_node( parent_block, block )
+                parent_block.add_leaf( block )
+            elif declare_type == "user":
                 if len( self.user_object_blocks ) == 0:
                     return
-                new_branch = []
                 copy_block = random.choice( self.user_object_blocks )
+                copy_path = []
                 while copy_block is not None:
+                    copy_path.append( copy_block )
+                    copy_block = copy_block.parent
+                ast_block = self.toplevel
+                for copy_block in copy_path:
                     block = self.initialize_node( AST.ObjectBlock() )
                     block.name = copy_block.name
-                    new_branch.append( block )
+                    block.define_mode = "user"
                     self.user_object_blocks.append( block )
-                    copy_block = copy_block.parent
-                self.toplevel.add_branch( new_branch )
-            elif declare_type == "stdlib_type":
-                new_branch = []
+                    self.finalize_node( ast_block, block )
+                    ast_block.add_leaf( block )
+                    ast_block = block
+            elif declare_type == "stdlib":
                 stdlib_path = random.choice( self.config.attr.obj.allowed_stdlib_types )
+                copy_path = []
+                ast_block = self.toplevel
                 for path in reversed(stdlib_path):
                     block = self.initialize_node( AST.ObjectBlock() )
                     block.name = path
+                    block.define_mode = "stdlib"
                     self.stdlib_object_blocks.append( block )
-                    new_branch.append( block )
-                self.toplevel.add_branch( new_branch )
+                    self.finalize_node( ast_block, block )
+                    ast_block.add_leaf( block )
+                    ast_block = block
             else:
                 raise Exception("unknown block selection")
 
@@ -93,3 +122,9 @@ class DefaultConfig:
         def proc_declare_remaining(self, env):
             return self.config.attr.define.proc.count - len(self.toplevel.procs)
         type(self).proc_declare_remaining = proc_declare_remaining
+
+### Defines/Procs/Stmts
+        # "world << expr"
+        self.config.attr.define.proc.stmt.weights.type.output_normal = 5
+        # expr << expr
+        self.config.attr.define.proc.stmt.weights.type.irregular_weight = 1
