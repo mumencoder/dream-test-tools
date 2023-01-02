@@ -18,8 +18,10 @@ class FullRandomBuilder(
         Expr.RandomExprGenerator,
         Var.RandomVars,
         DefaultConfig.DefaultConfig):
+
+    stdlib = Stdlib.initialize()
+
     def __init__(self):
-        self.stdlib = Stdlib.initialize()
         self.toplevel = self.initialize_node( AST.Toplevel() )
 
         self.initialize_config()
@@ -124,3 +126,5 @@ class FullRandomBuilder(
                 proc_stmt = self.create_proc_stmt(env)
                 current_proc.add_stmt( proc_stmt )
                 self.proc_defines[ current_proc ]["stmts"] -= 1
+
+        

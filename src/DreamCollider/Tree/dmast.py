@@ -3,11 +3,11 @@ from ..common import *
     
 class AST(object):
     class Toplevel(object):
+        attrs = []
         subtree = ["leaves"]
 
         def __init__(self):
             self.leaves = []
-            self.parent = None
 
     class TextNode(object):
         attrs = ["text"]
@@ -15,10 +15,11 @@ class AST(object):
             self.text = text
 
     class ObjectBlock(object):
-        attrs = ["name"]
+        attrs = ["name", "should_join_path"]
         subtree = ["leaves"]
         def __init__(self):
             self.name = None
+            self.should_join_path = False
             self.leaves = []
 
     class GlobalVarDefine(object):
@@ -30,12 +31,13 @@ class AST(object):
             self.expression = None      # AST.Expr
 
     class ObjectVarDefine(object):
-        attrs = ["name", "var_path", "is_override"]
+        attrs = ["name", "var_path", "is_override", "should_join_path"]
         subtree = ["expression"]
         def __init__(self):
             self.name = None            # str
             self.var_path = []          # AST.VarPath
             self.is_override = False    # bool
+            self.should_join_path = False
             self.expression = None      # AST.Expr
 
     class GlobalProcDefine(object):
@@ -47,12 +49,13 @@ class AST(object):
             self.body = []              # List[AST.Stmt]
 
     class ObjectProcDefine(object):
-        attrs = ["name", "is_override", "is_verb"]
+        attrs = ["name", "is_override", "is_verb", "should_join_path"]
         subtree = ["params", "body"]
         def __init__(self):
             self.name = None            # str
             self.is_override = False    # bool
             self.is_verb = False
+            self.should_join_path = False
             self.params = []            # List[AST.ProcArgument]
             self.body = []              # List[AST.Stmt]
 
@@ -306,6 +309,7 @@ class AST(object):
                     self.val = None         # AST.Expr
                     
         class Pick(object):
+            attrs = ["syntax_mode"]
             subtree = ["options"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
@@ -356,6 +360,7 @@ class AST(object):
                 raise Exception("Fixity slots does not match arity")
             op_cls = AST.Op.op_class(name, pfixity, arity, prec)
             op_cls.traits = ["nonterminal", "rval"]
+            op_cls.attrs = []
             op_cls.subtree = ["exprs"]
             op_cls.add_expr = AST.Op.add_expr
             setattr(AST.Op, name, op_cls)
@@ -495,16 +500,59 @@ class AST(object):
         else:
             return data
 
+    def marshall(node):
+        if node is None:
+            return node
+        ty = type(node)
+        fields = { }
+        for attr in ty.attrs:
+            fields[attr] = getattr(node, attr)
+        for attr in ty.subtree:
+            v = getattr(node, attr)
+            if type(v) is list:
+                fields[attr] = [AST.marshall(n) for n in v]
+            else:
+                fields[attr] = AST.marshall( v ) 
+        fields["_subtree"] = AST.marshall_ty2str[ty]
+        return fields
+
+    def unmarshall(data):
+        if data is None:
+            return data
+        if "_subtree" not in data:
+            raise Exception("expected _subtree", data.keys())
+        ty = AST.marshall_str2ty[ data["_subtree"] ]
+        node = ty()
+        for attr in ty.attrs:
+            setattr(node, attr, data[attr])
+        for attr in ty.subtree:
+            if type(data[attr]) is list:
+                setattr(node, attr, [AST.unmarshall(d) for d in data[attr]])
+            else:
+                setattr(node, attr, AST.unmarshall(data[attr]))
+
     trait_index = collections.defaultdict(list)
 
     def initialize():
         AST.Op.create_ops()
 
+        AST.marshall_names = set()
+        AST.marshall_ty2str = {}
+        AST.marshall_str2ty = {}
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
                 continue
+            if ty.__name__ in AST.marshall_names:
+                raise Exception("node name clash")
+            AST.marshall_names.add( ty.__name__ )
+            AST.marshall_ty2str[ ty ] = ty.__name__
+            AST.marshall_str2ty[ ty.__name__ ] = ty 
+            if not hasattr(ty, 'subtree'):
+                ty.subtree = []
             if not hasattr(ty, 'traits'):
                 ty.traits = []
+            if not hasattr(ty, 'attrs'):
+                ty.attrs = []
 
         for ty in Shared.Type.iter_types(AST.Stmt):
             if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
@@ -549,5 +597,30 @@ class AST(object):
             if hasattr(ty, 'traits'):
                 for trait in ty.traits:
                     AST.trait_index[trait].append( ty )
+
+        def safe_setattr(self, attr, value):
+            if attr == "errors":
+                pass
+            # Semantics
+            elif attr in ["object_blocks_by_name", "global_vars_by_name", "global_procs_by_name", 
+                    "object_blocks", "vars", "procs", "object_blocks_by_path", "decl_deps", "decl_cycles"]:
+                pass
+            elif attr in ["block", "root", "parent", "object_vars_by_name", "object_procs_by_name", "path"]:
+                pass
+            # Builder relevant fields
+            elif attr in ["define_mode"]:
+                pass
+            # Unparse relevant fields
+            elif attr in ["lineno"]:
+                pass
+            elif attr in type(self).attrs or attr in type(self).subtree:
+                pass
+            else:
+                raise Exception(f"attempt to set {attr} in {self}")
+            return object.__setattr__(self, attr, value)
+
+        for ty in Shared.Type.iter_types(AST):
+            ty.set_attrs = set()
+            ty.__setattr__ = safe_setattr
 
 AST.initialize()

@@ -106,7 +106,7 @@ class RandomExprGenerator(object):
             elif type(expr) is AST.Expr.GlobalIdentifier:
                 expr.name = random.choice( ['ga', 'gb', 'gc'] )
             elif type(expr) is AST.Expr.Identifier:
-                expr.name = random.choice( ['a', 'b', 'c'] )
+                expr.name = random.choice( ['a', 'b', 'c', 'usr'] )
             elif type(expr) is AST.Expr.Path:
                 expr = self.random_path()
             elif type(expr) is AST.Expr.Call:

@@ -195,7 +195,10 @@ class Semantics(object):
         def resolve_usage(self, use):
             if type(use) is AST.Expr.Identifier:
                 if use.name in self.object_vars_by_name:
-                    return self.object_vars_by_name[self.path][0]
+                    uses = self.object_vars_by_name[self.path]
+                    if len(uses) == 0:
+                        raise UsageError(self, use, 'UNDEF_VAR')
+                    return uses[0]
                 else:
                     if self.parent is not None:
                         return self.parent.resolve_usage(use)
@@ -208,7 +211,7 @@ class Semantics(object):
 
     class GlobalVarDefine:
         def init_semantics(self):
-            self.allow_override = True
+            pass
 
         def get_storage_id(self):
             return f"gvd@{self.name}"
@@ -236,7 +239,7 @@ class Semantics(object):
 
     class ObjectVarDefine:
         def init_semantics(self):
-            self.allow_override = True
+            pass
 
         def get_storage_id(self):
             return f"ovd@{self.block.path}@{self.name}"
@@ -265,8 +268,7 @@ class Semantics(object):
 
     class GlobalProcDefine:
         def init_semantics(self):
-            self.allow_override = True
-            self.allow_verb = True
+            pass
 
         def assign_block(self, block):
             self.block = block
@@ -280,8 +282,7 @@ class Semantics(object):
 
     class ObjectProcDefine:
         def init_semantics(self):
-            self.allow_override = True
-            self.allow_verb = True
+            pass
 
         def assign_block(self, block):
             self.block = block

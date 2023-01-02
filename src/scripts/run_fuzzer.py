@@ -16,6 +16,10 @@ def generate_test(tenv):
     builder.generate( benv )
     builder.unparse(ngrams=tenv.attr.ngrams)
     tenv.attr.collider.builder = builder
+    #print( DreamCollider.AST.marshall( tenv.attr.collider.builder.toplevel ) )
+    #raise Exception("")
+    #md = DreamCollider.AST.marshall( tenv.attr.collider.builder.toplevel )
+    #DreamCollider.AST.unmarshall( md )
 
 def try_init_test_instance(env):
     env.attr.test.metadata.name = Shared.Random.generate_string(24)
