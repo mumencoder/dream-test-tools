@@ -110,8 +110,11 @@ class DefaultConfig:
         type(self).var_declare_remaining = var_declare_remaining
 
 ### Defines/Procs
-        self.config.attr.define.proc.is_verb_prob = 0.05
         self.config.attr.define.proc.count = max(0, random.gauss(5, 2.5) )
+        self.config.attr.define.proc.is_verb_prob = 0.05
+        self.config.attr.define.proc.arg.has_path_prob = 0.10
+        self.config.attr.define.proc.arg.has_default_prob = 0.10
+        self.config.attr.define.proc.arg.has_astype_prob = 0.10
         def determine_proc_stmt_count(self, env):
             return max(0, random.gauss(6, 3))
         type(self).determine_proc_stmt_count = determine_proc_stmt_count

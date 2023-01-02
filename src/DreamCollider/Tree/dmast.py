@@ -60,13 +60,13 @@ class AST(object):
             self.body = []              # List[AST.Stmt]
 
     class ProcArgument(object):
-        attrs = ["name", "param_type"]
-        subtree = ["default", "possible_values"]
+        attrs = ["name"]
+        subtree = ["path_type", "default", "possible_values"]
         def __init__(self):
-            self.name = None            # str
-            self.param_type = None      # AST.ParamPath
-            self.default = None         # AST.Expr
-            self.possible_values = None # ???
+            self.name = None                    # str
+            self.path_type = None               # AST.Path
+            self.default = None                 # AST.Expr
+            self.possible_values = None         # AST.AsType
 
     class Stmt(object):
         class Expression(object):
@@ -274,6 +274,12 @@ class AST(object):
                 def __init__(self):
                     self.name = None        # Union[str,None]
                     self.value = None       # AST.Expr
+
+        class AsType(object):
+            attrs = ["flags"]
+            traits = ["astype"]
+            def __init__(self):
+                self.flags = []             # List[str]
 
         class Super(object):
             traits = ["terminal", "callable"]
@@ -530,6 +536,7 @@ class AST(object):
                 setattr(node, attr, [AST.unmarshall(d) for d in data[attr]])
             else:
                 setattr(node, attr, AST.unmarshall(data[attr]))
+        return node
 
     trait_index = collections.defaultdict(list)
 

@@ -57,7 +57,7 @@ class NGram(object):
         return counts
 
     def calculate_ordinals(self):
-        i = 15
+        i = 16
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue    
@@ -115,6 +115,8 @@ class NGram(object):
                 return "13"
             if token["text_type"] == "proclike":
                 return "14"
+            if token["text_type"] == "asflag":
+                return "15"
             raise Exception(token)
         if token["type"] == "Keyword":
             return self.keyword_ords[ token["text"] ]

@@ -327,14 +327,15 @@ class Unparse(object):
     class ProcArgument(object):
         def shape(self):
             yield _Line()
-            if self.param_type is not None:
-                yield from Unparse.subshape( self.param_type )
-            yield from [_Ident(self.name, "name"), _Whitespace()]
+            if self.path_type is not None:
+                yield from Unparse.subshape( self.path_type )
+                yield from [_Fuzz(), _Symbol("/")]
+            yield _Ident(self.name, "name")
             if self.default is not None:
-                yield from [_Symbol("="), _Whitespace()]
+                yield from [_Whitespace(1), _Symbol("="), _Whitespace(1)]
                 yield from Unparse.subshape( self.default )
             if self.possible_values is not None:
-                yield from [_Keyword("as"), _Whitespace()]
+                yield from [_Whitespace(1), _Keyword("as"), _Whitespace(1)]
                 yield from Unparse.subshape( self.possible_values )
 
     class Stmt(object):
@@ -641,6 +642,14 @@ class Unparse(object):
                 if self.in_list is not None:
                     yield from [_Whitespace(1), _Keyword("in"), _Whitespace(1)]
                     yield from Unparse.subshape(self.in_list)
+
+        class AsType(object):
+            def shape(self):
+                yield from [_Fuzz(), _Line()]
+                for i, flag in enumerate(self.flags):
+                    yield _Text(flag, type="asflag")
+                    if i < len(self.flags) - 1:
+                        yield from [_Whitespace(1), _Symbol('|'), _Whitespace(1)]
 
         class ModifiedType(object):
             def shape(self):

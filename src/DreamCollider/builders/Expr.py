@@ -146,7 +146,8 @@ class RandomExprGenerator(object):
                     entry.p = self.expression(env, 1, "numeric")
                     entry.val = self.expression(env, depth-1, "rval")
                     expr.options.append( entry )
-
+            elif type(expr) is AST.Expr.AsType:
+                expr.value = self.randomDMValueType()
             else:
                 raise Exception("cannot initialize", type(expr))
             return expr

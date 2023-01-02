@@ -48,5 +48,14 @@ class RandomProcs(object):
 class SimpleProcCreator(object):
     def create_proc_param(self, env):
         arg = self.initialize_node( AST.ProcArgument() )
-        arg.name = "arg"
+        arg.name = self.randomString(1, 3)
+
+        if random.random() < self.config.attr.define.proc.arg.has_path_prob:
+            arg.path_type = self.random_path()
+        if random.random() < self.config.attr.define.proc.arg.has_default_prob:
+            arg.default = self.expression(env, depth=3, arity="rval")
+        if random.random() < self.config.attr.define.proc.arg.has_astype_prob:
+            for i in range(0,random.randint(1,3)):
+                arg.possible_values = AST.Expr.AsType()
+                arg.possible_values.flags.append( self.randomDMValueType() )
         return arg
