@@ -1,5 +1,4 @@
 
-from . import Toplevel
 from . import Object
 from . import Proc
 from . import Expr
@@ -10,7 +9,6 @@ from . import DefaultConfig
 from ..model import *
 
 class FullRandomBuilder(
-        Toplevel.Toplevel,
         Object.RandomObjects,
         Proc.RandomProcs,
         Proc.SimpleProcCreator,

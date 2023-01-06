@@ -64,6 +64,13 @@ class Unparser(object):
     def raw_write(self, s):
         self.s.write(s)
 
+    def fuzz_shape(self, shape):
+        return self.coalesce_newlines( self.fuzz_stream( shape ) )
+
+    def unparse(self, tokens):
+        for token in self.strip_nonprintable( self, tokens ):
+            self.write_token( token )
+
     def fuzz_stream(self, tokens):
         for token in tokens:
             yield from self.fuzz_token(token)
@@ -707,6 +714,7 @@ class Unparse(object):
                 raise Exception("bad fixity")
         if self.parent and self.parent.prec >= self.prec:
             yield from [_Fuzz(), _Symbol(")"), _Fuzz() ]
+
 
     def initialize():
         for ty in Shared.Type.iter_types(AST):

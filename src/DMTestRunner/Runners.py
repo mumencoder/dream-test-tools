@@ -2,15 +2,15 @@
 from .common import *
 
 from .Dotnet import clr
-from .Metadata import *
 
-import ClopenDream
-import DMCompiler
-from DMCompiler.Compiler.DM import DMAST
-from System import *
-import System.Threading.Tasks
-import System.IO
-from System.Collections.Generic import List
+if import_dotnet:
+    import ClopenDream
+    import DMCompiler
+    from DMCompiler.Compiler.DM import DMAST
+    from System import *
+    import System.Threading.Tasks
+    import System.IO
+    from System.Collections.Generic import List
 
 async def compile_byond(tenv):
     cenv = tenv.branch()

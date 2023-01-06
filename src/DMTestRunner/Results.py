@@ -1,7 +1,6 @@
 
 from .common import *
 
-from .Metadata import *
 from .Display import *
 from .Errors import *
 

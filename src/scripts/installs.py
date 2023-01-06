@@ -5,6 +5,18 @@ from startup import base_setup
 import mumenrepo as Shared
 import DMShared
 
+def copy_dmstandard():
+    src = baseenv.attr.envs.clopendream.attr.install.dir / 'OpenDream' / 'DMCompiler' / 'DMStandard'
+    dst = baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0' / 'DMStandard'
+    if not os.path.exists( dst ):
+        shutil.copytree(src , dst)
+
+    src = baseenv.attr.envs.clopendream.attr.install.dir / 'OpenDream' / 'DMCompiler' / 'bin' / 'Debug' / 'net7.0' / 'SharpZstd.Interop.dll'
+    dst = baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0' / 'SharpZstd.Interop.dll'
+    if not os.path.exists( dst ):
+        shutil.copy(src , dst)
+
+copy_dmstandard()
 class Byond:
     async def install(env):
         ienv = env.branch()

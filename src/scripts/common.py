@@ -1,27 +1,34 @@
 
-import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random, shutil
+import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random, shutil, requests, gzip
 
 import mumenrepo as Shared
-from startup import base_setup
 
-baseenv = base_setup( Shared.Environment(), sys.argv[2] )
-sys.path.append( str( baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0') )
+def base_setup(env, output_dir):
+    env = env.branch()
+    env.attr.dirs.output = Shared.Path( output_dir )
 
-def copy_dmstandard():
-    src = baseenv.attr.envs.clopendream.attr.install.dir / 'OpenDream' / 'DMCompiler' / 'DMStandard'
-    dst = baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0' / 'DMStandard'
-    if not os.path.exists( dst ):
-        shutil.copytree(src , dst)
+    env.attr.shell.env = os.environ
+    env.attr.process.stdout = sys.stdout
+    env.attr.dirs.tmp = env.attr.dirs.output / 'tmp'
 
-    src = baseenv.attr.envs.clopendream.attr.install.dir / 'OpenDream' / 'DMCompiler' / 'bin' / 'Debug' / 'net7.0' / 'SharpZstd.Interop.dll'
-    dst = baseenv.attr.envs.clopendream.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0' / 'SharpZstd.Interop.dll'
-    if not os.path.exists( dst ):
-        shutil.copy(src , dst)
+def setup_installs(env):
+    benv = env.branch()
+    benv.attr.version.major = 514
+    benv.attr.version.minor = 1589
+    benv.attr.install.dir =  env.attr.dirs.output / 'byond' / 'main'
 
-copy_dmstandard()
+    oenv = env.branch()
+    oenv.attr.install.dir =  env.attr.dirs.output / 'opendream' / 'main'
+
+    clenv = env.branch()
+    clenv.attr.install.dir = env.attr.dirs.output / 'clopendream' / 'main'
+    sys.path.append( str( clenv.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0') )
+
+    env.attr.envs.byond = benv
+    env.attr.envs.opendream = oenv
+    env.attr.envs.clopendream = clenv
+
+    return env
 
 import DMTestRunner as DMTR
-import DMShared, DreamCollider
-
-import sys
-
+import DMShared, DreamCollider as DreamCollider

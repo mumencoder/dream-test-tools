@@ -261,8 +261,7 @@ class AST(object):
                 self.ops = None         # List[str]
 
         class Call(object):
-            subtree = ["expr"]
-            attrs = ["args"]
+            subtree = ["expr", "args"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
                 self.expr = None        # AST.Expr
@@ -301,7 +300,7 @@ class AST(object):
                 self.in_list = None         # AST.Expr
 
         class ModifiedType(object):
-            attrs = ["mods", "path"]
+            subtree = ["mods", "path"]
             traits = ["rval", "nonterminal"]
             def __init__(self):
                 self.path = None            # AST.Expr.Path
@@ -447,6 +446,8 @@ class AST(object):
             h.op("AssignOr", fixity="_||=_", arity=["lval", "rval"], prec=200)
 
     def print(node, s, depth=0, seen=None):
+        if seen is None:
+            seen = set()
         if id(node) in seen:
             print( s.getvalue() )
             raise Exception("loop")
@@ -537,6 +538,13 @@ class AST(object):
             else:
                 setattr(node, attr, AST.unmarshall(data[attr]))
         return node
+
+    def count_nodes_by_type(node, idx=None):
+        if idx is None:
+            idx = collections.defaultdict(int)
+        for subnode in AST.walk_subtree(node):
+            idx[ type(subnode) ] += 1
+        return idx
 
     trait_index = collections.defaultdict(list)
 
