@@ -5,11 +5,10 @@ class App(object):
     host = 'localhost'
     port = 8010
     queue_size = 256
+    upload_level = 3
 
     def __init__(self):
         self.state = "start"
-        self.fresh_ast = set()
-
         self.sifter = DMTR.Sifter( self.queue_size )
 
     def generate_ast(self):
@@ -20,10 +19,10 @@ class App(object):
 
         upar = DreamCollider.Unparser()
         renv = Shared.Environment()
-        renv.attr.ast = DreamCollider.AST.marshall( builder.toplevel )
-        renv.attr.ast_tokens = upar.fuzz_shape( builder.toplevel.shape() )
-        renv.attr.ngram_info = DreamCollider.NGram.compute_info( renv.attr.ast_tokens )
-        renv.attr.status = "fresh"
+        renv.attr.test.ast = builder.toplevel
+        renv.attr.test.ast_tokens = list( upar.fuzz_shape( builder.toplevel.shape() ) )
+        renv.attr.test.ngram_info = DreamCollider.NGram.compute_info( renv.attr.test.ast_tokens )
+
         return renv
 
     def state_change(self, state):
@@ -31,45 +30,55 @@ class App(object):
             print( f"{self.state} -> {state}")
             self.state = state
 
+    def upload(self, pile):
+        print("uploading data...")
+        content = {"tests":[], "pile": {}}
+        for tenv in pile.iter_tests():
+            test = {}
+            test["ast"] = DreamCollider.AST.marshall( tenv.attr.test.ast )
+            test["tokens"] = DreamCollider.Unparser.marshall_tokens( tenv.attr.test.ast_tokens )
+            test["test_ngrams"] = tenv.attr.test.ngram_info
+            content["tests"].append( test )
+        content["pile"]["level"] = pile.level
+        content["pile"]["ngram_counts"] = pile.ngram_counts
+        try:
+            requests.post(f'http://{self.host}:{self.port}/ast_gen', data = gzip.compress( json.dumps(content).encode('ascii') ) )
+            self.sifter.remove_pile( pile )
+            self.state_change("start")
+        except Exception as e:
+            print(e)
+            self.state_change("waiting")
+
     def run(self):
         update_time = time.time() - 8
+        last_upload = time.time()
         wait_until = None
 
         while not self.state == "finished":
             if self.state == "start":
-                pile = DMTR.Pile.Memory()
-                self.state_change( "generate" )
+                merge_level = self.sifter.find_smallest_merge_level()
+                if merge_level is not None:
+                    piles = self.sifter.choose_random_piles( merge_level )
+                    self.sifter.merge_piles( *piles )
+                    self.sifter.show_index()
+                elif self.sifter.has_pile_at_level(self.upload_level):
+                    self.state_change( "upload" )
+                else:
+                    pile = DMTR.Pile.Memory()
+                    self.state_change( "generate" )
             elif self.state == "generate":
                 pile.add_test( self.generate_ast() )
                 if pile.test_count() >= self.queue_size:
                     self.state_change("pile_up")
             elif self.state == "pile_up":
                 self.sifter.add_pile( pile )
-                self.state_change( "sift" )
-            elif self.state == "sift":
-                merge_level = self.sifter.find_smallest_merge_level()
-                if merge_level is not None:
-                    piles = self.sifter.choose_random_piles( merge_level )
-                    result = self.sifter.merge_piles( *piles )
+                pile = None
                 self.state_change( "start" )
             elif self.state == "upload":
-                print("uploading data...")
-                content = []    
-                for renv in self.fresh_ast:
-                    if renv.attr.status != "fresh":
-                        continue
-                    content.append( renv.attr.ast )
-                    renv.attr.uploaded = True
-                if len(content) != 0:
-                    try:
-                        requests.post(f'http://{self.host}:{self.port}/ast_gen', data = gzip.compress( json.dumps(content).encode('ascii') ) )
-                        for renv in self.fresh_ast:
-                            renv.attr.status = "uploaded"
-                    except Exception as e:
-                        print(e)
-                        self.state_change("waiting")
-                else:
-                    self.state_change("waiting")
+                print(f"upload in {time.time() - last_upload}sec")
+                upload_pile = self.sifter.choose_random_pile(self.upload_level)
+                self.upload(upload_pile)
+                last_upload = time.time()
             elif self.state == "waiting":
                 if wait_until is None:
                     wait_until = time.time() + 10
@@ -81,7 +90,6 @@ class App(object):
                 raise Exception("unknown state")
 
             if time.time() - update_time > 10.0:
-                print( f"state: {self.state}, cache: {len(self.fresh_ast)}")
                 update_time = time.time()
 
 app = App()

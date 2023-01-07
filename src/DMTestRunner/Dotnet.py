@@ -1,11 +1,10 @@
 
 from .common import *
 
-import pythonnet
-pythonnet.load("coreclr")
-import clr
-
 def load_dotnet(env):
+    import pythonnet
+    pythonnet.load("coreclr")
+    import clr
     sys.path.append( str( env.attr.install.dir / 'DMCompiler' / 'bin' / 'Release' / 'net7.0') )
     sys.path.append( str( env.attr.install.dir / 'bin' / 'Content.Server' ) )
     sys.path.append( str( env.attr.install.dir / 'bin' / 'Content.Tests' ) )

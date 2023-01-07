@@ -46,7 +46,7 @@ class Unparser(object):
 
         self.block_mode = [ {"type":"toplevel", 'indent':''} ]
         self.node_stack = []
-
+ 
     def update_mode(self, token):
         if token["type"] == "BeginNode":
             self.node_stack.append( token["node"] )
@@ -234,6 +234,16 @@ class Unparser(object):
             indent += '\t'
         return indent
 
+    def marshall_tokens(tokens):
+        result = []
+        for token in tokens:
+            if token["type"] == "BeginNode":
+                result.append( {"type":"BeginNode", "node": id(token["node"])} )
+            elif token["type"] == "EndNode":
+                result.append( {"type":"EndNode", "node": id(token["node"])} )
+            else:
+                result.append( dict(token) )
+        return result
 
 class Unparse(object):
     def subshape( node ):

@@ -521,6 +521,7 @@ class AST(object):
             else:
                 fields[attr] = AST.marshall( v ) 
         fields["_subtree"] = AST.marshall_ty2str[ty]
+        fields["_id"] = id(node)
         return fields
 
     def unmarshall(data):
@@ -537,6 +538,7 @@ class AST(object):
                 setattr(node, attr, [AST.unmarshall(d) for d in data[attr]])
             else:
                 setattr(node, attr, AST.unmarshall(data[attr]))
+        node.marshall_id = data["_id"]
         return node
 
     def count_nodes_by_type(node, idx=None):

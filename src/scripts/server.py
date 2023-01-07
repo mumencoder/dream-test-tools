@@ -12,4 +12,4 @@ app = fastapi.FastAPI()
 @app.post("/ast_gen")
 async def root(request : fastapi.Request):
     print( len( await request.body() ) )
- 
+    print( len( gzip.decompress( await request.body() ) ) )

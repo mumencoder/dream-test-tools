@@ -1,9 +1,8 @@
 
 from .common import *
 
-from .Dotnet import clr
-
 if import_dotnet:
+    from .Dotnet import clr
     import ClopenDream
     import DMCompiler
     from DMCompiler.Compiler.DM import DMAST
