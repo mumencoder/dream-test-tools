@@ -7,9 +7,10 @@ class App(object):
     queue_size = 256
 
     def __init__(self):
-        self.state = "generate"
-        self.ast_cache = {}
+        self.state = "start"
         self.fresh_ast = set()
+
+        self.sifter = DMTR.Sifter( self.queue_size )
 
     def generate_ast(self):
         benv = Shared.Environment()
@@ -21,6 +22,7 @@ class App(object):
         renv = Shared.Environment()
         renv.attr.ast = DreamCollider.AST.marshall( builder.toplevel )
         renv.attr.ast_tokens = upar.fuzz_shape( builder.toplevel.shape() )
+        renv.attr.ngram_info = DreamCollider.NGram.compute_info( renv.attr.ast_tokens )
         renv.attr.status = "fresh"
         return renv
 
@@ -30,20 +32,26 @@ class App(object):
             self.state = state
 
     def run(self):
-        running = True
         update_time = time.time() - 8
         wait_until = None
-        last_directive = None
 
-        while running:
-            if len(self.fresh_ast) < self.queue_size:
-                self.state_change("generate")
-            elif len(self.fresh_ast) >= self.queue_size:
-                if self.state == "generate":
-                    self.state_change("upload")
-
-            if self.state == "generate":
-                self.fresh_ast.add( self.generate_ast( ) )
+        while not self.state == "finished":
+            if self.state == "start":
+                pile = DMTR.Pile.Memory()
+                self.state_change( "generate" )
+            elif self.state == "generate":
+                pile.add_test( self.generate_ast() )
+                if pile.test_count() >= self.queue_size:
+                    self.state_change("pile_up")
+            elif self.state == "pile_up":
+                self.sifter.add_pile( pile )
+                self.state_change( "sift" )
+            elif self.state == "sift":
+                merge_level = self.sifter.find_smallest_merge_level()
+                if merge_level is not None:
+                    piles = self.sifter.choose_random_piles( merge_level )
+                    result = self.sifter.merge_piles( *piles )
+                self.state_change( "start" )
             elif self.state == "upload":
                 print("uploading data...")
                 content = []    
@@ -68,7 +76,7 @@ class App(object):
                 time.sleep(0.1)
                 if time.time() > wait_until:
                     wait_until = None
-                    self.state_change("generate")
+                    self.state_change("start")
             else:
                 raise Exception("unknown state")
 

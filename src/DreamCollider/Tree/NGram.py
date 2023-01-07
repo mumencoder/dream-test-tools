@@ -16,9 +16,6 @@ class NGram(object):
     keyword_ords = {}
     symbol_ords = {}
 
-    def __init__(self):
-        self.calculate_ordinals()
-
     @staticmethod
     def new_accum():
         return {"ngram_counts": collections.defaultdict(int), "token_count":0}
@@ -30,6 +27,7 @@ class NGram(object):
         for k, c in info["ngram_counts"].items():
             counts[k] += c
 
+    @staticmethod
     def score_test(pool_accum, test_accum):
         score = 0.0
         for ngram, ct in test_accum["ngram_counts"].items():
@@ -40,41 +38,46 @@ class NGram(object):
                 score += ct * pool_accum["token_count"]
         return score / test_accum["token_count"]
 
-    def ngram_to_str(self, ng):
+    @staticmethod
+    def ngram_to_str(ng):
         return ",".join(ng)
     
-    def compute_info(self, tokens):
+    @staticmethod
+    def compute_info(tokens):
         tokens = itertools.tee( tokens, 2)
         info = {}
-        info["ngram_counts"] = self.compute_ngram_counts( self.iter_ngram(tokens[0], 2) )
+        info["ngram_counts"] = NGram.compute_ngram_counts( NGram.iter_ngram(tokens[0], 2) )
         info["token_count"] = len( list(tokens[1]) )
         return info
 
-    def compute_ngram_counts(self, ngs):
+    @staticmethod
+    def compute_ngram_counts(ngs):
         counts = collections.defaultdict(int)
         for ng in ngs:
-            counts[ self.ngram_to_str(ng) ] += 1
+            counts[ NGram.ngram_to_str(ng) ] += 1
         return counts
 
-    def calculate_ordinals(self):
+    @staticmethod
+    def calculate_ordinals():
         i = 16
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue    
-            self.begin_node_ords[ty] = str(i)
-            self.end_node_ords[ty] = str(i+1)
+            NGram.begin_node_ords[ty] = str(i)
+            NGram.end_node_ords[ty] = str(i+1)
             i += 2
-        for keyword in self.keywords:
-            self.keyword_ords[keyword] = str(i)
+        for keyword in NGram.keywords:
+            NGram.keyword_ords[keyword] = str(i)
             i += 1
-        for symbol in self.symbols:
-            self.symbol_ords[symbol] = str(i)
+        for symbol in NGram.symbols:
+            NGram.symbol_ords[symbol] = str(i)
             i += 1
 
-    def iter_ngram(self, stream, n):
+    @staticmethod
+    def iter_ngram(stream, n):
         q = collections.deque()
         for token in stream:
-            ctoken = self.convert_token(token)
+            ctoken = NGram.convert_token(token)
             if ctoken is None:
                 continue
             q.append( ctoken )
@@ -83,7 +86,8 @@ class NGram(object):
             if len(q) == n:
                 yield list(q)
 
-    def convert_token(self, token):
+    @staticmethod
+    def convert_token(token):
         if token["type"] == "Line":
             return None
         if token["type"] == "Newline":
@@ -119,11 +123,13 @@ class NGram(object):
                 return "15"
             raise Exception(token)
         if token["type"] == "Keyword":
-            return self.keyword_ords[ token["text"] ]
+            return NGram.keyword_ords[ token["text"] ]
         if token["type"] == "Symbol":
-            return self.symbol_ords[ token["text"] ]
+            return NGram.symbol_ords[ token["text"] ]
         if token["type"] == "BeginNode":
-            return self.begin_node_ords[ type(token["node"]) ]
+            return NGram.begin_node_ords[ type(token["node"]) ]
         if token["type"] == "EndNode":
-            return self.end_node_ords[ type(token["node"]) ]
+            return NGram.end_node_ords[ type(token["node"]) ]
         raise Exception(token)
+
+NGram.calculate_ordinals()

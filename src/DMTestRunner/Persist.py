@@ -60,3 +60,12 @@ class Persist:
             Persist.load_test(tenv)
             if Persist.is_generated(tenv):
                 yield tenv
+
+    def clean_tests(tests_dir, known_tests):
+        cleaned = 0
+        start_time = time.time()
+        for test_dir in os.listdir(tests_dir):
+            if test_dir not in known_tests:
+                shutil.rmtree( tests_dir / test_dir )
+                cleaned += 1
+        print(f"cleaned {cleaned} tests in {time.time()-start_time}")
