@@ -5,7 +5,7 @@ class App(object):
     host = 'localhost'
     port = 8010
     queue_size = 256
-    upload_level = 3
+    upload_level = 5
 
     def __init__(self):
         self.state = "start"

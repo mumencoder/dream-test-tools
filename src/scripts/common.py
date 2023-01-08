@@ -30,5 +30,15 @@ def setup_installs(env):
 
     return env
 
+def load_config():
+    if os.path.exists('server_config.yaml'):
+        with open( 'server_config.yaml', "r") as f:
+            config = yaml.load( f, yaml.Loader )
+        for path_id, path in config["paths"].items():
+            config["paths"][path_id] = Shared.Path( path )
+    else:
+        raise Exception("cannot read config")
+    return config
+
 import DMTestRunner as DMTR
 import DMShared, DreamCollider as DreamCollider

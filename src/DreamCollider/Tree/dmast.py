@@ -521,7 +521,11 @@ class AST(object):
             else:
                 fields[attr] = AST.marshall( v ) 
         fields["_subtree"] = AST.marshall_ty2str[ty]
-        fields["_id"] = id(node)
+        if not hasattr(node, 'marshall_id'):
+            fields["_id"] = id(node)
+        else:
+            fields["_id"] = node.marshall_id
+
         return fields
 
     def unmarshall(data):
@@ -627,8 +631,8 @@ class AST(object):
             # Builder relevant fields
             elif attr in ["define_mode"]:
                 pass
-            # Unparse relevant fields
-            elif attr in ["lineno"]:
+            # Marshall relevant fields
+            elif attr in ["marshall_id"]:
                 pass
             elif attr in type(self).attrs or attr in type(self).subtree:
                 pass

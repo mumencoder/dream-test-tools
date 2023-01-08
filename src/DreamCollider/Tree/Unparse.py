@@ -42,12 +42,23 @@ def _Fuzz():
 class Unparser(object):
     def __init__(self):
         self.s = io.StringIO()
-        self.current_line = 1
+        self.reset_state()
 
+    def reset_state(self):
+        self.current_line = 1
+        self.node_lines = {}
         self.block_mode = [ {"type":"toplevel", 'indent':''} ]
         self.node_stack = []
- 
-    def update_mode(self, token):
+
+    def raw_write(self, s):
+        self.s.write(s)
+
+    def unparse(self, tokens):
+        for token in self.strip_nonprintable( tokens ):
+            self.write_token( token )
+        return self.s.getvalue()
+
+    def update_state(self, token):
         if token["type"] == "BeginNode":
             self.node_stack.append( token["node"] )
         if token["type"] == "EndNode":
@@ -56,24 +67,31 @@ class Unparser(object):
         if token["type"] == "Line":
             node = self.node_stack[-1]
             if not hasattr(node, 'lineno'):
-                node.lineno = self.current_line
+                self.node_lines[node] = self.current_line
 
         if token["type"] == "Newline":
             self.current_line += 1
 
-    def raw_write(self, s):
-        self.s.write(s)
-
     def fuzz_shape(self, shape):
         return self.coalesce_newlines( self.fuzz_stream( shape ) )
 
-    def unparse(self, tokens):
-        for token in self.strip_nonprintable( self, tokens ):
-            self.write_token( token )
-
     def fuzz_stream(self, tokens):
+        self.reset_state()
         for token in tokens:
+            self.update_state(token)
             yield from self.fuzz_token(token)
+
+    def token_lines(self, tokens):
+        self.reset_state()
+        current_line = 1
+        current_tokens = []
+        for token in tokens:
+            while current_line < self.current_line:
+                yield current_tokens
+                current_tokens = []
+                current_line += 1
+            current_tokens.append( token )
+            self.update_state(token)
 
     def coalesce_newlines(self, tokens):
         newline = True
@@ -94,7 +112,6 @@ class Unparser(object):
 
     def strip_nonprintable(self, tokens):
         for token in tokens:
-            self.update_mode(token)
             if token["type"] in ["Text", "Symbol", "Ident", "Keyword", "Newline"]:
                 yield token
             else:
@@ -244,6 +261,20 @@ class Unparser(object):
             else:
                 result.append( dict(token) )
         return result
+
+    def unmarshall_tokens(tokens, ast):
+        nodes = {}
+        for node in AST.walk_subtree(ast):
+            if node is None:
+                continue
+            nodes[ node.marshall_id ] = node
+        for token in tokens:
+            if token["type"] == "BeginNode":
+                yield {"type":"BeginNode", "node": nodes[token["node"]]}
+            elif token["type"] == "EndNode":
+                yield {"type":"EndNode", "node": nodes[token["node"]]}
+            else:
+                yield dict(token)
 
 class Unparse(object):
     def subshape( node ):
