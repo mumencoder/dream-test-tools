@@ -8,7 +8,6 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 root_env = Shared.Environment()
 config = load_config()
 
-        
 def get_nav_bar():
     return html.Div([
         dcc.Link('Home', href='/'),

@@ -2,53 +2,11 @@
 from ..common import *
 
 from .dmast import *
-
-def _Line():
-    return {"type":"Line"}
-def _BeginNode(node):
-    return {"type":"BeginNode", "node":node}
-def _EndNode(node):
-    return {"type":"EndNode", "node":node}
-
-def _Symbol(text):
-    return {"type":"Symbol", "text":text}
-def _Keyword(text):
-    return {"type":"Keyword", "text":text}
-def _Ident(text, type=None):
-    return {"type":"Ident", "text":text, "id_type":type}
-def _Text(text, type=None):
-    return {"type":"Text", "text":text, "text_type":type}
-def _BeginParen():
-    return {"type":"BeginParen"}
-def _EndParen():
-    return {"type":"EndParen"}
-def _Newline():
-    return {"type":"Newline"}
-def _Whitespace(n=0):
-    return {"type":"Whitespace", "n":n}
-
-def _BeginBlock():
-    return {"type":"BeginBlock"}
-def _EndBlock():
-    return {"type":"EndBlock"}
-def _BeginLine():
-    return {"type":"BeginLine"}
-def _EndLine():
-    return {"type":"EndLine"}
-
-def _Fuzz():
-    return {"type":"Fuzz"}
+from .Shape import *
 
 class Unparser(object):
     def __init__(self):
         self.s = io.StringIO()
-        self.reset_state()
-
-    def reset_state(self):
-        self.current_line = 1
-        self.node_lines = {}
-        self.block_mode = [ {"type":"toplevel", 'indent':''} ]
-        self.node_stack = []
 
     def raw_write(self, s):
         self.s.write(s)
@@ -58,117 +16,10 @@ class Unparser(object):
             self.write_token( token )
         return self.s.getvalue()
 
-    def update_state(self, token):
-        if token["type"] == "BeginNode":
-            self.node_stack.append( token["node"] )
-        if token["type"] == "EndNode":
-            self.node_stack.pop()
-
-        if token["type"] == "Line":
-            node = self.node_stack[-1]
-            if not hasattr(node, 'lineno'):
-                self.node_lines[node] = self.current_line
-
-        if token["type"] == "Newline":
-            self.current_line += 1
-
-    def fuzz_shape(self, shape):
-        return self.coalesce_newlines( self.fuzz_stream( shape ) )
-
-    def fuzz_stream(self, tokens):
-        self.reset_state()
-        for token in tokens:
-            self.update_state(token)
-            yield from self.fuzz_token(token)
-
-    def token_lines(self, tokens):
-        self.reset_state()
-        current_line = 1
-        current_tokens = []
-        for token in tokens:
-            while current_line < self.current_line:
-                yield current_tokens
-                current_tokens = []
-                current_line += 1
-            current_tokens.append( token )
-            self.update_state(token)
-
-    def coalesce_newlines(self, tokens):
-        newline = True
-        for token in tokens:
-            if token["type"] == "Newline":
-                if newline is True:
-                    pass
-                else:
-                    yield token
-                newline = True
-            elif token["type"] in ["Text", "Symbol", "Keyword", "Ident", "Whitespace"]:
-                newline = False
-                yield token
-            elif token["type"] in ["BeginNode", "EndNode", "Line"]:
-                yield token
-            else:
-                raise Exception("unknown token", token)
-
-    def strip_nonprintable(self, tokens):
-        for token in tokens:
-            if token["type"] in ["Text", "Symbol", "Ident", "Keyword", "Newline"]:
-                yield token
-            else:
-                pass
-
-    def fuzz_indent(self, mode):
-        if "indent" not in mode:
-            raise Exception("no indent", mode)
-        yield _Text( mode["indent"], type="indent" )
-    
-    def fuzz_token(self, token):
-        if token["type"] == "Fuzz":
-            pass
-        elif token["type"] == "BeginBlock":
-            # TODO: check for single leafs in node
-            if self.block_mode[-1]["type"] == "oneline":
-                self.block_mode.append( {"type":"oneline"} )
-            else:
-                a = random.random()
-                if a < 0.05:
-                    self.block_mode.append( {"type":"oneline"} )
-                elif a < 0.66:
-                    self.block_mode.append( {"type":"indent", "indent": self.inc_indent()} )
-                else:
-                    self.block_mode.append( {"type":"nice_bracket", "indent": self.inc_indent()})
-            yield from self.begin_block()
-        elif token["type"] == "EndBlock":
-            yield from self.end_block()
-            self.block_mode.pop()
-        elif token["type"] == "BeginLine":
-            yield from self.begin_line()
-        elif token["type"] == "EndLine":
-            yield from self.end_line()
-        elif token["type"] == "BeginParen":
-            yield _Symbol('(')
-        elif token["type"] == "EndParen":
-            yield _Symbol(')')
-        elif token["type"] == "Whitespace":
-            if token["n"] == 0:
-                a = random.random()
-                if a < 0.5:
-                    yield _Text(" ", type="ws")
-            elif token["n"] == 1:
-                a = random.random()
-                if a < 0.95:
-                    yield _Text(" ", type="ws")
-            else:
-                raise Exception(token)
-        else:
-            yield token
-
     def write_token(self, token):
         if token["type"] == "Text":
             self.raw_write( token["text"] )
         elif token["type"] == "Symbol":
-            self.raw_write( token["text"] )
-        elif token["type"] == "Ident":
             self.raw_write( token["text"] )
         elif token["type"] == "Keyword":
             self.raw_write( token["text"] )
@@ -177,104 +28,20 @@ class Unparser(object):
         else:
             raise Exception("unknown token", token)
 
-    def begin_block(self):
-        if self.block_mode[-1]["type"] == "oneline":
-            yield from self.fuzz_token( _Whitespace() )
-            yield from self.fuzz_token( _Symbol('{') )
-            yield from self.fuzz_token( _Whitespace(1) )
-        elif self.block_mode[-1]["type"] == "indent":
-            yield from self.fuzz_token( _Newline() )
-            yield from self.fuzz_indent( self.block_mode[-1] )
-        elif self.block_mode[-1]["type"] == "nice_bracket":
-            yield from self.fuzz_token( _Whitespace() )
-            yield from self.fuzz_token( _Symbol('{') )
-            yield from self.fuzz_token( _Fuzz() )
-            yield from self.fuzz_token( _Newline() )
-            yield from self.fuzz_indent( self.block_mode[-1] )
-        else:
-            raise Exception("bad block mode", self.block_mode[-1])
-
-    def end_block(self):
-        if self.block_mode[-1]["type"] == "oneline":
-            yield from self.fuzz_token( _Symbol('}') )
-            yield from self.fuzz_token( _Whitespace(1) )
-        elif self.block_mode[-1]["type"] == "indent":
-            pass
-        elif self.block_mode[-1]["type"] == "nice_bracket":
-            yield from self.fuzz_token( _Newline() )
-            yield from self.fuzz_indent( self.block_mode[-2] )
-            yield from self.fuzz_token( _Symbol('}') )
-        else:
-            raise Exception("bad block mode", self.block_mode[-1])
-
-    def begin_line(self):
-        if self.block_mode[-1]["type"] == "oneline":
-            pass
-        elif self.block_mode[-1]["type"] == "toplevel":
-            pass
-        elif self.block_mode[-1]["type"] == "indent":
-            yield from self.fuzz_token( _Newline() )
-            yield from self.fuzz_indent( self.block_mode[-1] )
-        elif self.block_mode[-1]["type"] == "nice_bracket":
-            yield from self.fuzz_token( _Newline() )
-            yield from self.fuzz_indent( self.block_mode[-1] )
-        else:
-            raise Exception("bad block mode", self.block_mode[-1])
-
-    def end_line(self):
-        if self.block_mode[-1]["type"] == "oneline":
-            yield from self.fuzz_token( _Symbol(';') )
-            yield from self.fuzz_token( _Whitespace(1) )
-        elif self.block_mode[-1]["type"] == "toplevel":
-            yield from self.fuzz_token( _Newline() )
-        elif self.block_mode[-1]["type"] == "indent":
-            yield from self.fuzz_token( _Newline() )
-        elif self.block_mode[-1]["type"] == "nice_bracket":
-            yield from self.fuzz_token( _Newline() )
-        else:
-            raise Exception("bad block mode", self.block_mode[-1])
-
-    def get_min_indent(self):
-        mindent = None
-        for mode in self.block_mode:
-            if "indent" in mode:
-                mindent = mode
-        return mindent
-
-    def inc_indent(self):
-        mindent = self.get_min_indent()
-        indent = mindent["indent"]
-        a2 = random.random()
-        if a2 < 0.5:
-            indent += ' '
-        else:
-            indent += '\t'
-        return indent
-
-    def marshall_tokens(tokens):
-        result = []
-        for token in tokens:
-            if token["type"] == "BeginNode":
-                result.append( {"type":"BeginNode", "node": id(token["node"])} )
-            elif token["type"] == "EndNode":
-                result.append( {"type":"EndNode", "node": id(token["node"])} )
-            else:
-                result.append( dict(token) )
-        return result
-
-    def unmarshall_tokens(tokens, ast):
-        nodes = {}
-        for node in AST.walk_subtree(ast):
-            if node is None:
-                continue
-            nodes[ node.marshall_id ] = node
-        for token in tokens:
-            if token["type"] == "BeginNode":
-                yield {"type":"BeginNode", "node": nodes[token["node"]]}
-            elif token["type"] == "EndNode":
-                yield {"type":"EndNode", "node": nodes[token["node"]]}
-            else:
-                yield dict(token)
+_Line = Shape.Line
+_BeginNode = Shape.BeginNode
+_EndNode = Shape.EndNode
+_Keyword = Shape.Keyword
+_Symbol = Shape.Symbol
+_Text = Shape.Text
+_BeginParen = Shape.BeginParen
+_EndParen = Shape.EndParen
+_Whitespace = Shape.Whitespace
+_BeginBlock = Shape.BeginBlock
+_EndBlock = Shape.EndBlock
+_BeginLine = Shape.BeginLine
+_EndLine = Shape.EndLine
+_Fuzz = Shape.Fuzz
 
 class Unparse(object):
     def subshape( node ):
@@ -290,15 +57,21 @@ class Unparse(object):
             yield _EndNode(self)
             
     class TextNode(object):
+        def symbols_used(self):
+            return ["general"]
+
         def shape(self):
             yield from [ _Line(), _Text(self.text, type="general") ]
 
     class ObjectBlock(object):
+        def tokens_used():
+            return ["/", "name"]
+
         def shape(self):
             yield from [_BeginLine(), _Line() ]
             if self.parent is None:
                 yield from [ _Symbol("/"), _Fuzz() ]
-            yield from [ _Ident(self.name), _Fuzz() ]
+            yield from [ _Text(self.name, "name"), _Fuzz() ]
             if len(self.leaves) == 1 and self.leaves[0].can_join_path and self.leaves[0].should_join_path:
                 yield from [ _Symbol("/"), _Fuzz() ]
                 yield from Unparse.subshape( self.leaves[0] )
@@ -311,16 +84,23 @@ class Unparse(object):
                 yield _EndLine()
 
     class GlobalVarDefine(object):
+        def tokens_used():
+            return ["/", "=", "path", "name", "var"]
+
         def shape(self):
             yield from [_BeginLine(), _Line(), _Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz() ]
             for seg in self.var_path:
-                yield from [ _Ident(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
-            yield from [ _Ident( self.name, "name" ) ]
+                yield from [ _Text(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
+            yield from [ _Text( self.name, "name" ) ]
             if self.expression is not None:
                 yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
                 yield from Unparse.subshape( self.expression )
             yield _EndLine()
+
     class ObjectVarDefine(object):
+        def tokens_used():
+            return ["/", "=", "path", "name", "var"]
+
         def shape(self):
             if len(self.parent.leaves) != 1:
                 yield _BeginLine()
@@ -328,8 +108,8 @@ class Unparse(object):
             if not self.is_override:
                 yield from [_Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 for seg in self.var_path:
-                    yield from [ _Ident(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
-            yield from [ _Ident( self.name, "name" ), _Fuzz() ]
+                    yield from [ _Text(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
+            yield from [ _Text( self.name, "name" ), _Fuzz() ]
             if self.expression is not None:
                 yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
                 yield from Unparse.subshape( self.expression )
@@ -337,6 +117,9 @@ class Unparse(object):
                 yield _EndLine()
 
     class ObjectProcDefine(object):
+        def tokens_used():
+            return ["/", ",", "name", "verb", "proc"]
+
         def shape(self):
             if len(self.parent.leaves) != 1:
                 yield _BeginLine()
@@ -347,7 +130,7 @@ class Unparse(object):
                 else:
                     proc_type = _Keyword("proc")
                 yield from [proc_type, _Symbol("/"), _Fuzz()]
-            yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
+            yield from [_Text(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
                 if i < len(self.params) - 1:
@@ -360,9 +143,12 @@ class Unparse(object):
                 yield _EndLine()
 
     class GlobalProcDefine(object):
+        def tokens_used():
+            return ["/", ",", "name", "proc"]
+
         def shape(self):
-            yield from [_BeginLine(), _Line(), _Symbol("/"), _Fuzz(), _Ident("proc"), _Fuzz(), _Symbol("/"), _Fuzz()]
-            yield from [_Ident(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
+            yield from [_BeginLine(), _Line(), _Symbol("/"), _Fuzz(), _Keyword("proc"), _Fuzz(), _Symbol("/"), _Fuzz()]
+            yield from [_Text(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
                 if i < len(self.params) - 1:
@@ -373,12 +159,15 @@ class Unparse(object):
             yield _EndBlock()
             yield _EndLine()
     class ProcArgument(object):
+        def tokens_used():
+            return ["/", "=", "name", "as"]
+
         def shape(self):
             yield _Line()
             if self.path_type is not None:
                 yield from Unparse.subshape( self.path_type )
                 yield from [_Fuzz(), _Symbol("/")]
-            yield _Ident(self.name, "name")
+            yield _Text(self.name, "name")
             if self.default is not None:
                 yield from [_Whitespace(1), _Symbol("="), _Whitespace(1)]
                 yield from Unparse.subshape( self.default )
@@ -394,18 +183,24 @@ class Unparse(object):
                 yield _EndLine()
                 
         class VarDefine(object):
+            def tokens_used():
+                return ["/", "=", "name", "var"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 if self.var_type is not None:
                     yield from Unparse.subshape( self.var_type )
-                yield from [_Ident(self.name, "name")]
+                yield from [_Text(self.name, "name")]
                 if self.expr is not None:
                     yield from [_Whitespace(1), _Symbol("="), _Whitespace(1) ]
                     yield from Unparse.subshape( self.expr )
                 yield _EndLine()
 
         class Return(object):
+            def tokens_used():
+                return ["return"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("return"), _Whitespace(1)]
@@ -413,27 +208,39 @@ class Unparse(object):
                 yield _EndLine()
 
         class Break(object):
+            def symbols_used(self):
+                return ["break", "label"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword("break"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield from [_Keyword("break"), _Whitespace(1), _Text(self.label, "label"), _Fuzz()]
                 yield _EndLine()
 
         class Continue(object):
+            def symbols_used(self):
+                return ["continue", "label"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword("continue"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield from [_Keyword("continue"), _Whitespace(1), _Text(self.label, "label"), _Fuzz()]
                 yield _EndLine()
 
         class Goto(object):
+            def symbols_used(self):
+                return ["goto", "label"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword("goto"), _Whitespace(1), _Ident(self.label, "label"), _Fuzz()]
+                yield from [_Keyword("goto"), _Whitespace(1), _Text(self.label, "label"), _Fuzz()]
                 yield _EndLine()
 
         class Label(object):
+            def symbols_used(self):
+                return [":", "label"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Ident(self.label, "label"), _Fuzz()]
+                yield from [_Text(self.label, "label"), _Fuzz()]
                 if self.has_colon:
                     yield from [_Symbol(":"), _Fuzz()]
                 yield _BeginBlock()
@@ -443,6 +250,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class Del(object):
+            def tokens_used():
+                return ["del"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("del"), _Whitespace(1) ]
@@ -450,13 +260,19 @@ class Unparse(object):
                 yield _EndLine()
 
         class Set(object):
+            def symbols_used(self):
+                return ["set", "attr", "="]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword("set"), _Whitespace(1), _Ident(self.attr, "attr"), _Whitespace(), _Symbol("="), _Whitespace()]
+                yield from [_Keyword("set"), _Whitespace(1), _Text(self.attr, "attr"), _Whitespace(), _Symbol("="), _Whitespace()]
                 yield from Unparse.subshape( self.expr )
                 yield _EndLine()
 
         class Spawn(object):
+            def tokens_used():
+                return ["spawn"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword["spawn"], _Fuzz(), _BeginParen(), _Whitespace() ]
@@ -468,6 +284,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class If(object):
+            def tokens_used():
+                return ["if", "else"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword["if"], _Fuzz(), _BeginParen(), _Whitespace() ]
@@ -484,6 +303,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class For(object):
+            def symbols_used(self):
+                return ["for", ";"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword["for"], _Fuzz(), _BeginParen(), _Whitespace() ]
@@ -502,6 +324,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class ForEnumerator(object):
+            def tokens_used():
+                return ["for", "in"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("for"), _Fuzz(), _BeginParen(), _Whitespace()]
@@ -515,6 +340,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class While(object):
+            def tokens_used():
+                return ["while"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("while"), _Fuzz(), _BeginParen(), _Whitespace()]
@@ -526,6 +354,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class DoWhile(object):
+            def tokens_used():
+                return ["do", "while"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword["do"], _Fuzz(), _BeginBlock()]
@@ -538,6 +369,9 @@ class Unparse(object):
                 yield _EndLine()
 
         class Switch(object):
+            def tokens_used():
+                return ["switch"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("switch"), _Fuzz(), _BeginParen(), _Whitespace()]
@@ -549,6 +383,9 @@ class Unparse(object):
                 yield _EndLine()
 
             class IfCase(object):
+                def tokens_used():
+                    return ["if"]
+
                 def shape(self):
                     yield from [_BeginLine(), _Line()]
                     yield from [_Keyword("if"), _Fuzz(), _BeginParen(), _Whitespace()]
@@ -560,6 +397,9 @@ class Unparse(object):
                     yield _EndLine()
 
             class ElseCase(object):
+                def tokens_used():
+                    return ["else"]
+
                 def shape(self):
                     yield from [_BeginLine(), _Line()]
                     yield from [_Keyword("else"), _Whitespace(1), _BeginBlock()]
@@ -569,6 +409,9 @@ class Unparse(object):
                     yield _EndLine()
 
         class Try(object):
+            def tokens_used():
+                return ["try", "catch"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("try"), _BeginBlock()]
@@ -588,6 +431,9 @@ class Unparse(object):
                     yield from Unparse( self.expr )
 
         class Throw(object):
+            def tokens_used():
+                return ["throw"]
+
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("throw"), _Whitespace(1) ]
@@ -596,60 +442,93 @@ class Unparse(object):
 
     class Expr(object):
         class Identifier(object):
+            def tokens_used():
+                return ["ident"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Ident(self.name), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(self.name, "ident"), _Fuzz()]
 
         class GlobalIdentifier(object):
+            def tokens_used():
+                return ["global_id", "ident"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text("global.", type="global_id"), _Ident(self.name), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text("global.", "global_id"), _Text(self.name, "ident"), _Fuzz()]
                 
         class Integer(object):
+            def tokens_used():
+                return ["int"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text(str(self.n), type="int"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(str(self.n), "int"), _Fuzz()]
 
         class Float(object):
+            def tokens_used():
+                return ["float"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text(str(self.n), type="float"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text(str(self.n), "float"), _Fuzz()]
                 
         class String(object):
+            def tokens_used():
+                return ['"', "string"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Symbol('"'), _Text(str(self.s), type="string"), _Symbol('"'), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol('"'), _Text(str(self.s), "string"), _Symbol('"'), _Fuzz()]
 
         class FormatString(object):
+            def tokens_used():
+                return ['"', "[", "]", "fmt_string"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line(), _Symbol('"')]
                 i = 0
                 while i < len(self.exprs):
-                    yield from [_Text(str(self.strings[i]), type="fmt_string"), _Symbol('['), _Whitespace(1) ] 
+                    yield from [_Text(str(self.strings[i]), "fmt_string"), _Symbol('['), _Whitespace(1) ] 
                     yield from Unparse.subshape( self.exprs[i])
                     yield from [_Whitespace(1), _Symbol("]")]
                     i += 1
-                yield from [_Text(str(self.strings[i]), type="fmt_string"), _Symbol('"'), _Fuzz()]
+                yield from [_Text(str(self.strings[i]), "fmt_string"), _Symbol('"'), _Fuzz()]
 
         class Resource(object):
+            def tokens_used():
+                return ["'", "resource"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Symbol("'"), _Text(str(self.s), type="resource"), _Symbol("'"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol("'"), _Text(str(self.s), "resource"), _Symbol("'"), _Fuzz()]
 
         class Null(object):
+            def tokens_used():
+                return ["null"]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text("null", type="null"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Text("null", "null"), _Fuzz()]
 
         class Property(object):
+            def tokens_used():
+                return ["property"]
+
             def shape(self):
-                yield from [_Line(), _Text(self.name, type="property"), _Fuzz()]
+                yield from [_Line(), _Text(self.name, "property"), _Fuzz()]
 
         class Path(object):
+            def tokens_used():
+                return [".", ":", "/", "path"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 if self.prefix is not None:
                     yield _Symbol(self.prefix)
                 i = 0
                 while i < len(self.ops):
-                    yield from [ _Ident(self.types[i], "path"), _Symbol(self.ops[i])]
+                    yield from [ _Text(self.types[i], "path"), _Symbol(self.ops[i])]
                     i += 1
-                yield from [_Ident(self.types[i], "path"), _Fuzz()]
+                yield from [_Text(self.types[i], "path"), _Fuzz()]
 
         class Call(object):
+            def tokens_used():
+                return [","]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 yield from Unparse.subshape( self.expr )
@@ -661,24 +540,36 @@ class Unparse(object):
                 yield from [_Whitespace(), _EndParen()]
 
             class Param(object):
+                def tokens_used():
+                    return ["=", "param"]
+
                 def shape(self):
                     yield from [_Fuzz(), _Line()]
                     if self.name is not None:
-                        yield from [_Ident(self.name, "param"), _Whitespace(1), _Symbol("="), _Whitespace(1)]
+                        yield from [_Text(self.name, "param"), _Whitespace(1), _Symbol("="), _Whitespace(1)]
                     yield from Unparse.subshape( self.value )
 
         class Super(object):
+            def tokens_used():
+                return [".."]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text("..", type="super"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol(".."), _Fuzz()]
 
         class Self(object):
+            def tokens_used():
+                return ["."]
+
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text(".", type="self"), _Fuzz()]
+                yield from [_Fuzz(), _Line(), _Symbol("."), _Fuzz()]
 
         class Input(object):
+            def tokens_used():
+                return [",", "proclike", "as", "in", "asflag"] 
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
-                yield from [_Text("input", type="proclike"), _Fuzz()]
+                yield from [_Text("input", "proclike"), _Fuzz()]
                 yield from [_Whitespace(), _BeginParen(), _Whitespace(1)]
                 for i, arg in enumerate(self.args):
                     yield from Unparse.subshape(arg)
@@ -686,26 +577,32 @@ class Unparse(object):
                         yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
                 yield from [_Whitespace(), _EndParen()]
                 if self.as_type is not None:
-                    yield from [_Whitespace(1), _Keyword("as"), _Whitespace(1), _Ident(self.as_type)]
+                    yield from [_Whitespace(1), _Keyword("as"), _Whitespace(1), _Text(self.as_type, "asflag")]
                 if self.in_list is not None:
                     yield from [_Whitespace(1), _Keyword("in"), _Whitespace(1)]
                     yield from Unparse.subshape(self.in_list)
 
         class AsType(object):
+            def tokens_used():
+                return ["|", "asflag"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 for i, flag in enumerate(self.flags):
-                    yield _Text(flag, type="asflag")
+                    yield _Text(flag, "asflag")
                     if i < len(self.flags) - 1:
                         yield from [_Whitespace(1), _Symbol('|'), _Whitespace(1)]
 
         class ModifiedType(object):
+            def tokens_used():
+                return ["{", "=", ",", "}", "varname"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 yield from Unparse.subshape(self.path)
                 yield from [_Whitespace(), _Symbol("{"), _Whitespace(1)]
                 for i, mod in enumerate(self.mods):
-                    yield _Ident(mod.var)
+                    yield _Text(mod.var, "varname")
                     yield from [_Whitespace(1), _Symbol('='), _Whitespace(1)]
                     yield from Unparse.subshape(mod.val)
                     if i < len(self.mods) - 1:
@@ -713,6 +610,9 @@ class Unparse(object):
                 yield from [_Whitespace(1), _Symbol('}')]
 
         class Pick(object):
+            def tokens_used():
+                return [";", ",", "proclike"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 yield from [_Text("pick", type='proclike')]
@@ -726,6 +626,9 @@ class Unparse(object):
                 yield from [_Whitespace(), _EndParen()]
                 
         class New(object):
+            def tokens_used():
+                return [",", "proclike"]
+
             def shape(self):
                 yield from [_Fuzz(), _Line()]
                 yield from [_Text("new", type="proclike")]                
@@ -735,6 +638,16 @@ class Unparse(object):
                     if i < len(self.args) - 1:
                         yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]    
                 yield from [_Whitespace(), _EndParen()]
+
+    @staticmethod
+    def op_tokens_used(ty):
+        tokens = []
+        for e in ty.fixity:
+            if e == "_":
+                continue
+            if type(e) is str:
+                tokens.append( e )
+        return tokens
 
     @staticmethod
     def op_shape(self):
@@ -770,8 +683,10 @@ class Unparse(object):
         for ty in Shared.Type.iter_types(AST.Op):
             if ty is AST.Op:
                 continue
-            if not hasattr('ty', 'shape'):
+            if not hasattr(ty, 'shape'):
                 ty.shape = Unparse.op_shape
+            if not hasattr(ty, 'tokens_used'):
+                ty.tokens_used = lambda ty=ty: Unparse.op_tokens_used(ty)
             ty.spacing = True
 
         for ty in Shared.Type.iter_types(AST.Expr):
@@ -784,5 +699,15 @@ class Unparse(object):
             op.spacing = False
 
         Shared.Type.mix_fn(AST, Unparse, 'shape')
+        Shared.Type.mix_fn(AST, Unparse, 'tokens_used')
+
+        for ty in Shared.Type.iter_types(AST):
+            if ty in [AST, AST.Op, AST.Expr]:
+                continue
+            if not hasattr(ty, 'tokens_used'):
+                ty.tokens_used = lambda: []        
+
+        from . import NGram
+        NGram.calculate_ordinals()
 
 Unparse.initialize()

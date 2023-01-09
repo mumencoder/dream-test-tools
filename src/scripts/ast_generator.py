@@ -5,7 +5,7 @@ class App(object):
     host = 'localhost'
     port = 8010
     queue_size = 256
-    upload_level = 5
+    upload_level = 3
 
     def __init__(self):
         self.state = "start"
@@ -20,7 +20,8 @@ class App(object):
         upar = DreamCollider.Unparser()
         renv = Shared.Environment()
         renv.attr.test.ast = builder.toplevel
-        renv.attr.test.ast_tokens = list( upar.fuzz_shape( builder.toplevel.shape() ) )
+        fuzzer = DreamCollider.Fuzzer()
+        renv.attr.test.ast_tokens = list(fuzzer.fuzz_shape( builder.toplevel.shape() ) )
         renv.attr.test.ngram_info = DreamCollider.NGram.compute_info( renv.attr.test.ast_tokens )
 
         return renv
@@ -36,8 +37,8 @@ class App(object):
         for tenv in pile.iter_tests():
             test = {}
             test["ast"] = DreamCollider.AST.marshall( tenv.attr.test.ast )
-            test["tokens"] = DreamCollider.Unparser.marshall_tokens( tenv.attr.test.ast_tokens )
-            test["test_ngrams"] = tenv.attr.test.ngram_info
+            test["tokens"] = DreamCollider.Shape.marshall( tenv.attr.test.ast_tokens )
+            test["ngrams"] = tenv.attr.test.ngram_info
             content["tests"].append( test )
         content["pile"]["level"] = pile.level
         content["pile"]["ngram_counts"] = pile.ngram_counts

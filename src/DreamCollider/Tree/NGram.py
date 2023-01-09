@@ -2,19 +2,48 @@
 from ..common import *
 
 from .dmast import *
+from .Shape import *
 
 class NGram(object):
-    keywords = ["var", "proc", "verb", "return", "as", "in"]
-    symbols = ["/", "{", "}", "[", "]", "(", ")", "--", "++", 
-        "~", ".", ":", "?.", "?:", "<=", ">=", "<", ">", "+", "-", "*", "%", "**", "^", "'", '"', ";", "!", "?", "?[",
-        "&", "|", "||", "&&", "<<", ">>",
-        "=", "==", "!=", "~!", "~=", "<>",
-        "in", "to", "as", ',']
+    ignore_tokens = set( ["Line"] )
+
+    token_types = set( ["Newline"] )
+    generic_text = set( ["ws", "indent"] )
+    generic_symbols = set( ["(", ")", "{", "}", ";"] )
 
     begin_node_ords = {}
     end_node_ords = {}
-    keyword_ords = {}
+
+    node_ords = {}
+    type_ords = {}
+    text_ords = {}
     symbol_ords = {}
+
+    @staticmethod
+    def calculate_ordinals():
+        i = 0
+
+        for tt in NGram.token_types:
+            NGram.type_ords[ tt ] = str(i)
+            i += 1
+
+        for tt in NGram.generic_text:
+            NGram.text_ords[ tt ] = str(i)
+            i += 1
+
+        for sym in NGram.generic_symbols:
+            NGram.symbol_ords[ sym ] = str(i)
+            i += 1
+
+        for ty in Shared.Type.iter_types(AST):
+            if ty in [AST, AST.Op, AST.Expr]:
+                continue    
+            NGram.begin_node_ords[ty] = str(i)
+            NGram.end_node_ords[ty] = str(i+1)
+            i += 2
+            for token in ty.tokens_used():
+                NGram.node_ords[(ty,token)] = str(i)
+                i += 1
 
     @staticmethod
     def new_accum():
@@ -58,26 +87,12 @@ class NGram(object):
         return counts
 
     @staticmethod
-    def calculate_ordinals():
-        i = 16
-        for ty in Shared.Type.iter_types(AST):
-            if ty in [AST, AST.Op, AST.Expr]:
-                continue    
-            NGram.begin_node_ords[ty] = str(i)
-            NGram.end_node_ords[ty] = str(i+1)
-            i += 2
-        for keyword in NGram.keywords:
-            NGram.keyword_ords[keyword] = str(i)
-            i += 1
-        for symbol in NGram.symbols:
-            NGram.symbol_ords[symbol] = str(i)
-            i += 1
-
-    @staticmethod
     def iter_ngram(stream, n):
+        si = ShapeIter(stream)
         q = collections.deque()
         for token in stream:
-            ctoken = NGram.convert_token(token)
+            si.update_state(token)
+            ctoken = NGram.convert_token(si, token)
             if ctoken is None:
                 continue
             q.append( ctoken )
@@ -87,49 +102,35 @@ class NGram(object):
                 yield list(q)
 
     @staticmethod
-    def convert_token(token):
-        if token["type"] == "Line":
+    def convert_token(si, token):
+        if token["type"] in NGram.ignore_tokens:
             return None
-        if token["type"] == "Newline":
-            return "1"
-        if token["type"] == "Ident":
-            return "2"
-        if token["type"] == "Text":
-            if token["text_type"] == "indent":
-                return "3"
-            if token["text_type"] == "ws":
-                return "4"
-            if token["text_type"] == "super":
-                return "5"
-            if token["text_type"] == "self":
-                return "6"
-            if token["text_type"] == "null":
-                return "7"
-            if token["text_type"] == "int":
-                return "8"
-            if token["text_type"] == "float":
-                return "9"
-            if token["text_type"] == "string":
-                return "10"
-            if token["text_type"] == "global_id":
-                return "11"
-            if token["text_type"] == "fmt_string":
-                return "12"
-            if token["text_type"] == "property":
-                return "13"
-            if token["text_type"] == "proclike":
-                return "14"
-            if token["text_type"] == "asflag":
-                return "15"
-            raise Exception(token)
-        if token["type"] == "Keyword":
-            return NGram.keyword_ords[ token["text"] ]
+        if token["type"] in NGram.token_types:
+            return NGram.type_ords[ token["type"] ]
         if token["type"] == "Symbol":
-            return NGram.symbol_ords[ token["text"] ]
+            key = ( type(si.current_node()), token["text"] )
+            result = NGram.node_ords.get( key, None )
+            if result is not None:
+                return result
+            elif token["text"] in NGram.generic_symbols:
+                return NGram.symbol_ords[ token["text"] ]
+            else:
+                raise Exception("missing ordinal", token)
+        if token["type"] == "Keyword":
+            key = ( type(si.current_node()), token["text"] )
+            return NGram.node_ords[ key ]
+        if token["type"] == "Text":
+            key = ( type(si.current_node()), token["subtype"] )
+            result = NGram.node_ords.get( key, None )
+            if result is not None:
+                return result
+            elif token["subtype"] in NGram.generic_text:
+                return NGram.text_ords[ token["subtype"] ]
+            else:
+                raise Exception("missing ordinal", token)
+
         if token["type"] == "BeginNode":
             return NGram.begin_node_ords[ type(token["node"]) ]
         if token["type"] == "EndNode":
             return NGram.end_node_ords[ type(token["node"]) ]
         raise Exception(token)
-
-NGram.calculate_ordinals()
