@@ -12,7 +12,7 @@ class Unparser(object):
         self.s.write(s)
 
     def unparse(self, tokens):
-        for token in self.strip_nonprintable( tokens ):
+        for token in Shape.strip_nonprintable( tokens ):
             self.write_token( token )
         return self.s.getvalue()
 
@@ -63,74 +63,50 @@ class Unparse(object):
         def shape(self):
             yield from [ _Line(), _Text(self.text, type="general") ]
 
+    class ObjectPath(object):
+        def tokens_used():
+            return ["/", ".", ":", "name", "var", "proc", "verb"]
+
+        def shape(self):
+            for segment in self.segments:
+                if segment in ["/", ".", ":"]:
+                    yield _Symbol(segment)
+                elif segment in ["var", "proc", "verb"]:
+                    yield _Keyword(segment)
+                else:
+                    yield _Text(segment, "name")
+
     class ObjectBlock(object):
         def tokens_used():
-            return ["/", "name"]
+            return []
 
         def shape(self):
             yield from [_BeginLine(), _Line() ]
-            if self.parent is None:
-                yield from [ _Symbol("/"), _Fuzz() ]
-            yield from [ _Text(self.name, "name"), _Fuzz() ]
-            if len(self.leaves) == 1 and self.leaves[0].can_join_path and self.leaves[0].should_join_path:
-                yield from [ _Symbol("/"), _Fuzz() ]
-                yield from Unparse.subshape( self.leaves[0] )
-                yield _EndLine()
-            else:
-                yield _BeginBlock()
-                for leaf in self.leaves:
-                    yield from Unparse.subshape( leaf )
-                yield _EndBlock() 
-                yield _EndLine()
-
-    class GlobalVarDefine(object):
-        def tokens_used():
-            return ["/", "=", "path", "name", "var"]
-
-        def shape(self):
-            yield from [_BeginLine(), _Line(), _Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz() ]
-            for seg in self.var_path:
-                yield from [ _Text(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
-            yield from [ _Text( self.name, "name" ) ]
-            if self.expression is not None:
-                yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
-                yield from Unparse.subshape( self.expression )
+            yield from Unparse.subshape( self.path )
+            yield _BeginBlock()
+            for leaf in self.leaves:
+                yield from Unparse.subshape( leaf )
+            yield _EndBlock() 
             yield _EndLine()
 
     class ObjectVarDefine(object):
         def tokens_used():
-            return ["/", "=", "path", "name", "var"]
+            return ["="]
 
         def shape(self):
-            if len(self.parent.leaves) != 1:
-                yield _BeginLine()
             yield _Line()
-            if not self.is_override:
-                yield from [_Fuzz(), _Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
-                for seg in self.var_path:
-                    yield from [ _Text(seg, "path"), _Fuzz(), _Symbol("/"), _Fuzz() ]
-            yield from [ _Text( self.name, "name" ), _Fuzz() ]
+            yield from Unparse.subshape( self.path )
             if self.expression is not None:
                 yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
                 yield from Unparse.subshape( self.expression )
-            if len(self.parent.leaves) != 1:
-                yield _EndLine()
-
-    class ObjectProcDefine(object):
+    class ProcDefine(object):
         def tokens_used():
-            return ["/", ",", "name", "verb", "proc"]
+            return [","]
 
         def shape(self):
-            if len(self.parent.leaves) != 1:
-                yield _BeginLine()
             yield _Line()
-            if not self.is_override:
-                if self.is_verb:
-                    proc_type = _Keyword("verb")
-                else:
-                    proc_type = _Keyword("proc")
-                yield from [proc_type, _Symbol("/"), _Fuzz()]
-            yield from [_Text(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
+            yield from Unparse.subshape( self.path )
+            yield from [_Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
                 if i < len(self.params) - 1:
@@ -142,22 +118,6 @@ class Unparse(object):
             if len(self.parent.leaves) != 1:
                 yield _EndLine()
 
-    class GlobalProcDefine(object):
-        def tokens_used():
-            return ["/", ",", "name", "proc"]
-
-        def shape(self):
-            yield from [_BeginLine(), _Line(), _Symbol("/"), _Fuzz(), _Keyword("proc"), _Fuzz(), _Symbol("/"), _Fuzz()]
-            yield from [_Text(self.name, "name"), _Fuzz(), _BeginParen(), _Whitespace()]
-            for i, param in enumerate(self.params):
-                yield from Unparse.subshape( param )
-                if i < len(self.params) - 1:
-                    yield from [_Whitespace(1), _Symbol(','), _Whitespace(1)]
-            yield from [_EndParen(), _BeginBlock() ]
-            for stmt in self.body:
-                yield from Unparse.subshape( stmt )
-            yield _EndBlock()
-            yield _EndLine()
     class ProcArgument(object):
         def tokens_used():
             return ["/", "=", "name", "as"]
@@ -678,7 +638,7 @@ class Unparse(object):
 
         AST.ObjectBlock.can_join_path = True
         AST.ObjectVarDefine.can_join_path = True
-        AST.ObjectProcDefine.can_join_path = True
+        AST.ProcDefine.can_join_path = True
 
         for ty in Shared.Type.iter_types(AST.Op):
             if ty is AST.Op:

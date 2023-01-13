@@ -10,28 +10,23 @@ class RandomProcs(object):
 
     def proc_stmts_left(self, env):
         proc_stmts = 0
-        for obj, info in self.proc_defines.items():
-            proc_stmts += info["stmts"]
+        for node in self.proc_defines:
+            proc_stmts += self.node_info[node]["stmts"]
         return proc_stmts > 0
 
     def proc_args_left(self, env):
         proc_args = 0
-        for obj, info in self.proc_defines.items():
-            proc_args += info["args"]
+        for node in self.proc_defines:
+            proc_args += self.node_info[node]["args"]
         return proc_args > 0
 
     def declare_proc(self, env):
         current_block = env.attr.current_object
-        if type(current_block) is AST.Toplevel:
-            proc_define = self.initialize_node( AST.GlobalProcDefine() )
-        elif type(current_block) is AST.ObjectBlock:
-            proc_define = self.initialize_node( AST.ObjectProcDefine() )
-        else:
-            raise Exception("bad block")
+        proc_define = self.initialize_node( AST.ProcDefine() )
         env = env.branch()
         env.attr.proc_define = proc_define
         proc_define.name = self.get_proc_name(env)
-        self.proc_defines[proc_define] = {"args": self.determine_proc_arg_count(env), "stmts": self.determine_proc_stmt_count(env) }
+        self.node_info[proc_define] = {"args": self.determine_proc_arg_count(env), "stmts": self.determine_proc_stmt_count(env) }
         return proc_define
 
     def get_proc_name(self, env):

@@ -61,20 +61,19 @@ class Shape(object):
             else:
                 yield dict(token)
 
-    def token_lines(self, tokens):
-        si = ShapeIter()
-        self.reset_state()
+    def token_lines(tokens):
+        si = ShapeIter(tokens)
         current_line = 1
         current_tokens = []
         for token in tokens:
-            while current_line < self.current_line:
+            while current_line < si.current_line:
                 yield current_tokens
                 current_tokens = []
                 current_line += 1
             current_tokens.append( token )
-            self.update_state(token)
+            si.update_state(token)
 
-    def coalesce_newlines(self, tokens):
+    def coalesce_newlines(tokens):
         newline = True
         for token in tokens:
             if token["type"] == "Newline":
@@ -91,7 +90,7 @@ class Shape(object):
             else:
                 raise Exception("unknown token", token)
 
-    def strip_nonprintable(self, tokens):
+    def strip_nonprintable(tokens):
         for token in tokens:
             if token["type"] in ["Text", "Symbol", "Keyword", "Newline"]:
                 yield token

@@ -4,11 +4,117 @@ from .Errors import *
 from ..Tree import *
 
 class Semantics(object):
+    class ObjectTree(object):
+        class Node(object):
+            def __init__(self):
+                self.root = None
+                self.path = tuple()
+                self.trunk = None
+                self.leaves = {}
+
+            def add_node(self, name):
+                if name in self.leaves:
+                    return self.leaves[name]
+                node = Semantics.ObjectTree.Node()
+                node.root = self.root
+                node.trunk = self
+                node.path = self.path + tuple([name])
+                self.leaves[name] = node
+                return node
+
+            def leaf_search(self, name):
+                if name not in self.leaves:
+                    return None
+                return self.leaves[name]
+
+            def upwards_search(self, name):
+                current_node = self
+                while current_node is not None:
+                    found_node = self.leaf_search( current_node, name )
+                    if found_node is not None:
+                        return found_node
+                    else:
+                        current_node = self.trunk
+                return None
+
+            def downwards_search(self, name):
+                current_node = self
+                found_node = self.leaf_search( current_node, name )
+                if found_node is not None:
+                    return found_node
+                else:
+                    for subnode in self.leaves.values():
+                        found_node = subnode.downwards_search( name )
+                        if found_node is not None:
+                            return found_node 
+                return None
+
+        def __init__(self):
+            self.root = Semantics.ObjectTree.Node()
+            self.nodes_by_path = {}
+
+        def add_node(self, trunk, name):
+            node = trunk.add_node( name )
+            self.nodes_by_path[node.path]( name )
+            return node
+
+        def add_path(self, path):
+            current_node = self.root
+            for name in path:
+                current_node = current_node.add_node( name )
+            return current_node
+
+        def resolve(self, resolve_path, start_node=None):
+            if start_node is None:
+                node = self.root
+            else:
+                node = start_node
+            
+            current_segment = 0
+            def next_segment():
+                nonlocal current_segment
+                if current_segment >= len(resolve_path):
+                    return None
+                segment = resolve_path[current_segment]
+                current_segment += 1
+                return segment
+
+            def resolve_name(name):
+                if name[0] in ["/", ".", ":"]:
+                    return name[1:]
+                else:
+                    return name
+
+            segment = next_segment()
+            state = None
+            while segment != None:
+                if segment not in [".",":","/"] and state == None:
+                    state = "op"
+                    name = resolve_name(segment)
+                    node = node.leaf_search( name )
+                elif segment in ['.',":","/"]:
+                    name_segment = next_segment()
+                    if name_segment in ['.',':','/']:
+                        raise Exception("expected path name got ", name_segment)
+                    match segment:
+                        case ".":
+                            node = node.upwards_search( name_segment )
+                        case ":":
+                            node = node.downwards_search( name_segment )
+                        case "/":
+                            node = node.leaf_search( name_segment )
+                else:
+                    raise Exception("unexpected segment", segment, state)
+                segment = next_segment()
+
+            return node
+
     class Toplevel:
         def init_semantics(self):
+            self.tree = Semantics.ObjectTree()
+
             # local indices
             # TODO: these need to be ordered by tree position
-            self.object_blocks_by_name = collections.defaultdict(list)
             self.global_vars_by_name = collections.defaultdict(list)
             self.global_procs_by_name = collections.defaultdict(list)
 
@@ -27,22 +133,6 @@ class Semantics(object):
         def get_vars(self):
             return list(self.global_vars_by_name.values())
 
-        def iter_objects(self):
-            yield self
-            for leaf_list in list(self.object_blocks_by_name.values()):
-                for leaf in leaf_list:
-                    yield leaf
-
-        def iter_vars(self):
-            for var_list in list(self.global_vars_by_name.values()):
-                for var in var_list:
-                    yield var
-
-        def iter_procs(self):
-            for proc_list in list(self.global_procs_by_name.values()):
-                for proc in proc_list:
-                    yield proc
-
         def iter_var_defines(self):
             for block in self.iter_objects():
                 for var in block.iter_vars():
@@ -56,21 +146,17 @@ class Semantics(object):
         ### Builders
         def add_leaf(self, leaf):
             if type(leaf) is AST.ObjectBlock:
-                self.object_blocks_by_name[leaf.name].append( leaf )
-            elif type(leaf) is AST.GlobalVarDefine:
+                self.note_object_block( leaf )
+            elif type(leaf) is AST.ObjectVarDefine:
                 self.global_vars_by_name[leaf.name].append( leaf )
-                leaf.assign_block( self )
-            elif type(leaf) is AST.GlobalProcDefine:
+            elif type(leaf) is AST.ProcDefine:
                 self.global_procs_by_name[leaf.name].append( leaf )
-                leaf.assign_block( self )
             else:
                 raise Exception("invalid leaf", leaf)
             leaf.root = self
             leaf.parent = None
             self.leaves.append( leaf )
-            if type(leaf) is AST.ObjectBlock:
-                leaf.compute_path()
-                self.note_object_block( leaf )
+            leaf.assign_block( self )
 
         def add_branch(self, branch):
             if len(branch) == 0:
@@ -114,9 +200,9 @@ class Semantics(object):
         def init_semantics(self):
             self.root = None
             self.parent = None
+            self.resolved_path = None
 
             # TODO: these need to be ordered by tree position
-            self.object_blocks_by_name = collections.defaultdict(list)
             self.object_vars_by_name = collections.defaultdict(list)
             self.object_procs_by_name = collections.defaultdict(list)
 
@@ -147,22 +233,18 @@ class Semantics(object):
                     yield proc
 
         def add_leaf(self, leaf):
-            if type(leaf) is AST.ObjectBlock:
-                self.object_blocks_by_name[leaf.name].append( leaf )
-            elif type(leaf) is AST.ObjectVarDefine:
-                self.object_vars_by_name[leaf.name].append( leaf )
-                leaf.assign_block(self)
-            elif type(leaf) is AST.ObjectProcDefine:
-                self.object_procs_by_name[leaf.name].append( leaf )
-                leaf.assign_block( self )
-            else:
-                raise Exception("invalid leaf", leaf)
             leaf.root = self.root
             leaf.parent = self
             self.leaves.append( leaf )
             if type(leaf) is AST.ObjectBlock:
-                leaf.compute_path()
                 self.root.note_object_block( leaf )
+            elif type(leaf) is AST.ObjectVarDefine:
+                self.object_vars_by_name[leaf.name].append( leaf )
+            elif type(leaf) is AST.ProcDefine:
+                self.object_procs_by_name[leaf.name].append( leaf )
+            else:
+                raise Exception("invalid leaf", leaf)
+            leaf.assign_block( self )
 
         def add_branch(self, branch):
             if len(branch) == 0:
@@ -172,13 +254,8 @@ class Semantics(object):
             branch.pop()
             node.add_branch( list(branch) )
 
-        def compute_path(self):
-            path = []
-            cnode = self
-            while cnode is not None:
-                path.append(cnode.name)
-                cnode = cnode.parent
-            self.path = Semantics.Path( list(reversed(path)) )
+        def assign_block(self, block):
+            self.block = block
 
         # TODO: support parent_type assignment
         def parent_chain(self, include_self=True, include_root=True):
@@ -209,22 +286,37 @@ class Semantics(object):
             else:
                 raise UsageError(self, use, 'INTERNAL')
 
-    class GlobalVarDefine:
+    class ObjectVarDefine:
         def init_semantics(self):
             pass
 
         def get_storage_id(self):
-            return f"gvd@{self.name}"
+            if self.is_global:
+                return f"gvd@{self.name}"
+            else:
+                return f"ovd@{self.block.path}@{self.name}"
 
         def assign_block(self, block):
             self.block = block
-            self.block.note_var( self )
+            if type(self.block) is AST.Toplevel:
+                self.is_global = True
+                self.block.note_var( self )
+            else:
+                self.is_global = False
+                self.block.root.note_var( self )
 
         def initialization_mode(self):
             #TODO: if override, inherits mode of overriden
-            if "const" in self.var_path:
-                return "const"
-            return "dynamic"
+            if self.is_global:
+                if "const" in self.var_path:
+                    return "const"
+                return "dynamic"
+            else:
+                #TODO: if override, inherits mode of overriden
+                if "static" in self.var_path:
+                    return "dynamic"
+                else:
+                    return "const"
 
         def set_expression(self, expr):
             self.expression = expr
@@ -236,57 +328,18 @@ class Semantics(object):
                 self.block.add_dependency( self, usage )
                 if self.block.check_usage_cycle( self, usage ) is True:
                     self.errors.append( GeneralError('USAGE_CYCLE') )
-
-    class ObjectVarDefine:
+    class ProcDefine:
         def init_semantics(self):
             pass
 
-        def get_storage_id(self):
-            return f"ovd@{self.block.path}@{self.name}"
-
         def assign_block(self, block):
             self.block = block
-            self.block.root.note_var( self )
-
-        def initialization_mode(self):
-            #TODO: if override, inherits mode of overriden
-            if "static" in self.var_path:
-                return "dynamic"
+            if type(self.block) is AST.Toplevel:
+                self.is_global = True
+                self.block.note_proc( self )
             else:
-                return "const"
-
-        def set_expression(self, expr):
-            self.expression = expr
-            expr.validate()
-            usages = expr.get_usage(self.block)
-            if not expr.is_const(self) and self.initialization_mode() == "const":
-                self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
-            for usage in usages:
-                self.block.root.add_dependency( self, usage )
-                if self.block.root.check_usage_cycle( self, usage ) is True:
-                    self.expr_errors.append( GeneralError('USAGE_CYCLE') )
-
-    class GlobalProcDefine:
-        def init_semantics(self):
-            pass
-
-        def assign_block(self, block):
-            self.block = block
-            self.block.note_proc( self )
-
-        def add_param(self, param):
-            self.params.append( param )
-
-        def add_stmt(self, stmt):
-            self.body.append( stmt )
-
-    class ObjectProcDefine:
-        def init_semantics(self):
-            pass
-
-        def assign_block(self, block):
-            self.block = block
-            self.block.root.note_proc( self )
+                self.is_global = False
+                self.block.root.note_proc( self )
 
         def add_param(self, param):
             self.params.append( param )

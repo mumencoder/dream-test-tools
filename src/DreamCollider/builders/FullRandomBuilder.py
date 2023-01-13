@@ -20,40 +20,38 @@ class FullRandomBuilder(
     stdlib = Stdlib.initialize()
 
     def __init__(self):
+        self.node_info = {}
+        self.proc_defines = []
+        self.var_defines = []
+
         self.toplevel = self.initialize_node( AST.Toplevel() )
+        for path in self.stdlib.objects.items():
+            self.toplevel.tree.add_path( path )
 
         self.initialize_config()
 
-        self.proc_defines = {}
-        self.var_defines = []
-        self.user_object_blocks = []
-        self.stdlib_object_blocks = []
+        self.declare_block_stack = [self.toplevel]
 
     def initialize_node(self, node):
+        self.node_info[node] = {}
         Semantics.init_semantics( node )
         if hasattr(node, 'init_semantics'):
             node.init_semantics()
         return node
 
     def finalize_node(self, parent_node, node):
-        if type(node) in [AST.ObjectBlock, AST.ObjectProcDefine, AST.ObjectVarDefine]:
-            node.should_join_path = random.random() < self.config.attr.path_join_prob
-
-            if type(node) in [AST.ObjectProcDefine, AST.ObjectVarDefine]:
-                if parent_node.define_mode == "user":
-                    node.is_override = random.random() < self.config.attr.override_user_define_prob
-                elif parent_node.define_mode == "stdlib":
+        if type(node) in [AST.ObjectBlock, AST.ProcDefine, AST.ObjectVarDefine]:
+            if type(node) in [AST.ProcDefine, AST.ObjectVarDefine] and type(parent_node) is not AST.Toplevel:
+                if parent_node.resolved_path in self.stdlib.objects.items():
                     node.is_override = random.random() < self.config.attr.override_stdlib_define_prob
                 else:
-                    raise Exception("unindexed node", node)
-
-            if type(node) is AST.ObjectProcDefine:
-                node.is_verb = random.random() < self.config.attr.define.proc.is_verb_prob
+                    node.is_override = random.random() < self.config.attr.override_user_define_prob
 
     def generate(self, env):
         env = env.branch()
         env.attr.builder.init_node = self.initialize_node
-        eligible_actions = ["object_declare", "var_declare", "proc_declare", "var_define", "add_proc_parameter", "add_proc_stmt"]
+        #eligible_actions = ["object_declare", "var_declare", "proc_declare", "var_define", "add_proc_parameter", "add_proc_stmt"]
+        eligible_actions = ["object_declare"]
 
         generating = True
         while generating:
@@ -63,11 +61,15 @@ class FullRandomBuilder(
             action = random.choice( eligible_actions )
             env.attr.action = action
 
+            #print(  self.object_declare_remaining(env) )
             if action == "object_declare":
                 if self.object_declare_remaining(env) <= 0:
                     eligible_actions.remove( "object_declare" )
                     continue
                 self.declare_object(env)
+                pops = random.choice( [0,0,0,1,1,1,2,2,3] )
+                while pops > 0 and len(self.declare_block_stack) > 1:
+                    self.declare_block_stack.pop()
 
             if action == "var_declare":
                 if self.var_declare_remaining(env) <= 0:
@@ -112,7 +114,7 @@ class FullRandomBuilder(
                 env.attr.current_proc = current_proc
                 proc_param = self.create_proc_param(env)
                 current_proc.add_param( proc_param )
-                self.proc_defines[ current_proc ]["args"] -= 1
+                self.node_info[ current_proc ]["args"] -= 1
                     
             if action == "add_proc_stmt":
                 if self.proc_stmts_left(env) is False:
@@ -123,6 +125,6 @@ class FullRandomBuilder(
                 env.attr.current_proc = current_proc
                 proc_stmt = self.create_proc_stmt(env)
                 current_proc.add_stmt( proc_stmt )
-                self.proc_defines[ current_proc ]["stmts"] -= 1
+                self.node_info[ current_proc ]["stmts"] -= 1
 
         

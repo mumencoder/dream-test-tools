@@ -11,53 +11,36 @@ class AST(object):
 
     class TextNode(object):
         attrs = ["text"]
+        subtree = []
         def __init__(self, text):
             self.text = text
 
-    class ObjectBlock(object):
-        attrs = ["name", "should_join_path"]
-        subtree = ["leaves"]
+    class ObjectPath(object):
+        attrs = ["segments"]
+        subtree = []
         def __init__(self):
-            self.name = None
-            self.should_join_path = False
-            self.leaves = []
+            self.segments = []              # List[str] 
 
-    class GlobalVarDefine(object):
-        attrs = ["name", "var_path"]
-        subtree = ["expression"]
+    class ObjectBlock(object):
+        attrs = []
+        subtree = ["path", "leaves"]
         def __init__(self):
-            self.name = None            # str
-            self.var_path = []          # AST.VarPath
-            self.expression = None      # AST.Expr
+            self.path = None                # AST.ObjectPath  
+            self.leaves = []                # List[AST.ObjectBlock|AST.ObjectVarDefine|AST.ProcDefine]
 
     class ObjectVarDefine(object):
-        attrs = ["name", "var_path", "is_override", "should_join_path"]
-        subtree = ["expression"]
+        attrs = ["is_override"]
+        subtree = ["path", "expression"]
         def __init__(self):
-            self.name = None            # str
-            self.var_path = []          # AST.VarPath
-            self.is_override = False    # bool
-            self.should_join_path = False
-            self.expression = None      # AST.Expr
-
-    class GlobalProcDefine(object):
-        attrs = ["name"]
-        subtree = ["params", "body"]
+            self.path = None               # AST.ObjectPath  
+            self.expression = None         # AST.Expr
+    class ProcDefine(object):
+        attrs = []
+        subtree = ["path", "params", "body"]
         def __init__(self):
-            self.name = None            # str
-            self.params = []            # List[AST.ProcArgument]
-            self.body = []              # List[AST.Stmt]
-
-    class ObjectProcDefine(object):
-        attrs = ["name", "is_override", "is_verb", "should_join_path"]
-        subtree = ["params", "body"]
-        def __init__(self):
-            self.name = None            # str
-            self.is_override = False    # bool
-            self.is_verb = False
-            self.should_join_path = False
-            self.params = []            # List[AST.ProcArgument]
-            self.body = []              # List[AST.Stmt]
+            self.path = None              # AST.ObjectPath  
+            self.params = []              # List[AST.ProcArgument]
+            self.body = []                # List[AST.Stmt]
 
     class ProcArgument(object):
         attrs = ["name"]
@@ -564,7 +547,7 @@ class AST(object):
             if ty in [AST, AST.Op, AST.Expr, AST.Stmt]:
                 continue
             if ty.__name__ in AST.marshall_names:
-                raise Exception("node name clash")
+                raise Exception("node name clash", ty)
             AST.marshall_names.add( ty.__name__ )
             AST.marshall_ty2str[ ty ] = ty.__name__
             AST.marshall_str2ty[ ty.__name__ ] = ty 
@@ -623,13 +606,18 @@ class AST(object):
             if attr == "errors":
                 pass
             # Semantics
-            elif attr in ["object_blocks_by_name", "global_vars_by_name", "global_procs_by_name", 
-                    "object_blocks", "vars", "procs", "object_blocks_by_path", "decl_deps", "decl_cycles"]:
+            elif type(self) is AST.Toplevel and attr in [
+                "tree", "object_blocks", 
+                "object_blocks_by_path", "global_vars_by_name", "global_procs_by_name", "vars", "procs",  "decl_deps", "decl_cycles"]:
                 pass
-            elif attr in ["block", "root", "parent", "object_vars_by_name", "object_procs_by_name", "path"]:
+            elif type(self) is AST.ObjectBlock and attr in [
+                "resolved_path", "block", "root", "object_vars_by_name", "object_procs_by_name", "path"]:
                 pass
-            # Builder relevant fields
-            elif attr in ["define_mode"]:
+            elif type(self) is AST.ObjectVarDefine and attr in ["root", "block", "is_global", "is_override", "var_path"]:
+                pass
+            elif type(self) is AST.ProcDefine and attr in ["root", "block", "is_global", "is_override"]:
+                pass
+            elif attr in ["parent"]:
                 pass
             # Marshall relevant fields
             elif attr in ["marshall_id"]:

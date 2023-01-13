@@ -27,7 +27,7 @@ class DefaultConfig:
         self.choose_option = choose_option
 ### Global
     	# total # of object blocks that will be added to AST 
-        self.config.attr.object_block_count = max(0, random.gauss(10, 5))
+        self.config.attr.object_block_count = max(1, round( random.gauss(12, 6))) 
 
         def object_declare_remaining(self, env):
             return self.config.attr.object_block_count - len(self.toplevel.object_blocks)
@@ -43,72 +43,19 @@ class DefaultConfig:
         self.config.attr.override_stdlib_define_prob = 0.5
 
 ### Object Blocks
+        self.config.attr.obj.extend_path_prob = 0.25
 
-    	# weight that object block will belong to an existing user type
-        self.config.attr.obj.weights.type.user = 8
-    	# weight that object block will belong to a stdlib type
-        self.config.attr.obj.weights.type.stdlib = 1
-    	# weight that object block will belong to a new type
-        self.config.attr.obj.weights.type.new_user = 2
-    	# weight that object block will belong to a new type with a stdlib path prefix
-        self.config.attr.obj.weights.type.new_user_stdlib = 2
+        self.config.attr.obj.choices.op_extend.leaf = 8
+        self.config.attr.obj.choices.op_extend.upwards = 1
+        self.config.attr.obj.choices.op_extend.downwards = 1
+
+        self.config.attr.obj.choices.path_prefix.absolute = 1
+        self.config.attr.obj.choices.path_prefix.upwards = 4
+        self.config.attr.obj.choices.path_prefix.downwards = 4
+        self.config.attr.obj.choices.path_prefix.relative = 8
     	# which stdlib types can show up as an object block
         self.config.attr.obj.allowed_stdlib_types = list( self.stdlib.objects.keys() )
         generate_choices('.obj')
-
-        def declare_object(self, env):
-            def user_block(parent_block, name):
-                block = self.initialize_node( AST.ObjectBlock() )
-                block.name = name
-                block.define_mode = "user"
-                self.user_object_blocks.append( block )
-                self.finalize_node( parent_block, block )
-                parent_block.add_leaf( block )
-                return block
-
-            def stdlib_block(parent_block, name):
-                block = self.initialize_node( AST.ObjectBlock() )
-                block.name = path
-                block.define_mode = "stdlib"
-                self.stdlib_object_blocks.append( block )
-                self.finalize_node( parent_block, block )
-                parent_block.add_leaf( block )
-                return block
-
-            declare_type = self.choose_option( self.config.attr.obj.choices.type )
-
-            if declare_type == "new_user":
-                if len( self.user_object_blocks ) == 0:
-                    parent_block = self.toplevel
-                else:
-                    parent_block = random.choice( [self.toplevel] + self.user_object_blocks )
-                user_block(parent_block, f'ty{str( random.choice( list(range(0, 5)) ) )}')
-            elif declare_type == "user":
-                if len( self.user_object_blocks ) == 0:
-                    return
-                copy_block = random.choice( self.user_object_blocks )
-                copy_path = []
-                while copy_block is not None:
-                    copy_path.append( copy_block )
-                    copy_block = copy_block.parent
-                ast_block = self.toplevel
-                for copy_block in reversed(copy_path):
-                    ast_block = user_block(ast_block, copy_block.name)
-            elif declare_type == 'new_user_stdlib':
-                stdlib_path = random.choice( self.config.attr.obj.allowed_stdlib_types )
-                ast_block = self.toplevel
-                for path in reversed(stdlib_path):
-                    ast_block = stdlib_block(ast_block, path)
-                user_block(ast_block, f'ty{str( random.choice( list(range(0, 5)) ) )}')
-            elif declare_type == "stdlib":
-                stdlib_path = random.choice( self.config.attr.obj.allowed_stdlib_types )
-                ast_block = self.toplevel
-                for path in reversed(stdlib_path):
-                    ast_block = stdlib_block(ast_block, path)
-            else:
-                raise Exception("unknown block selection")
-
-        type(self).declare_object = declare_object
 
 ### Defines/Variables
         self.config.attr.define.var.empty_initializer_prob = 0.05

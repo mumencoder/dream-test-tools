@@ -17,7 +17,6 @@ class App(object):
         builder = DreamCollider.FullRandomBuilder( )
         builder.generate( benv )
 
-        upar = DreamCollider.Unparser()
         renv = Shared.Environment()
         renv.attr.test.ast = builder.toplevel
         fuzzer = DreamCollider.Fuzzer()

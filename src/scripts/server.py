@@ -7,6 +7,9 @@ from redis.commands.json.path import Path
 
 config = load_config()
 
+if os.path.exists( config["paths"]["piles"] ):
+    shutil.rmtree( config["paths"]["piles"] )
+
 client = redis.Redis(host='localhost', port=6379, db=0)
 
 app = fastapi.FastAPI()

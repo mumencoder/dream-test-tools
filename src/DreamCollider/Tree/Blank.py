@@ -2,15 +2,13 @@
 class Blank(object):
     class Toplevel(object): pass
     class ObjectBlock(object): pass
-    class GlobalVarDefine(object): pass
-    class ObjectVarDefine(object): pass
+    class VarDefine(object): pass
     #class ObjectMultiVarDefine(object): pass
-    class GlobalProcDefine(object): pass
-    class ObjectProcDefine(object): pass
+    class ProcDefine(object): pass
     class ProcArgument(object): pass
     class Stmt(object):
         class Expression(object): pass
-        class VarDefine(object): pass
+        class ObjectVarDefine(object): pass
         #class MultiVarDefine(object): pass
         class Return(object): pass
         class Break(object): pass

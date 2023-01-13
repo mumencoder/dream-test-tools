@@ -34,10 +34,10 @@ def render_random_test():
 
     test = random.choice( tests["tests"] )
     ast = DreamCollider.AST.unmarshall( test["ast"] )
-    tokens = list(DreamCollider.Unparser.unmarshall_tokens( test["tokens"], ast))
+    tokens = list(DreamCollider.Shape.unmarshall( test["tokens"], ast))
     upar = DreamCollider.Unparser()
 
-    token_str = "\n".join( [str(e) for e in upar.token_lines(tokens)] )
+    token_str = "\n".join( [str(e) for e in DreamCollider.Shape.token_lines(tokens)] )
 
     content = dbc.Row([ 
         dbc.Col( html.Pre(upar.unparse(tokens)), width=6 ), 

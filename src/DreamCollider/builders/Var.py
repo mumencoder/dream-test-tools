@@ -18,15 +18,11 @@ class RandomVars(object):
 
     def declare_var(self, env):
         current_block = env.attr.current_object
-        if type(current_block) is AST.Toplevel:
-            var_define = self.initialize_node( AST.GlobalVarDefine() )
-        elif type(current_block) is AST.ObjectBlock:
-            var_define = self.initialize_node( AST.ObjectVarDefine() )
-        else:
-            raise Exception("bad block")
+        var_define = self.initialize_node( AST.ObjectVarDefine() )
         env = env.branch()
         env.attr.var_define = var_define
         var_define.name = self.get_var_name( env )
+        var_define.var_path = tuple()
         self.var_defines.append( var_define )
         return var_define
 
