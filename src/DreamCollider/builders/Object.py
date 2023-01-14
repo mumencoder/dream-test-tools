@@ -8,11 +8,30 @@ class RandomObjects(object):
             return None
         return random.choice( self.toplevel.object_blocks ) 
 
-    def declare_object_path(self, parent_block):
-        path = []
+    def generate_object_path(self, parent_block):
+        prefix_type = self.choose_option( self.config.attr.obj.choices.path_prefix )
         extend_chance = self.config.attr.obj.extend_path_prob
-        extend = True
-        state = random.choice( ["op", "name"] )
+
+        match prefix_type:
+            case 'absolute':
+                path = ["/"]
+                extend = random.random() < 0.999
+                state = "name"
+            case 'upwards':
+                path = ["."]
+                extend = random.random() < 0.999
+                state = "name"
+            case 'downwards':
+                path = [":"]
+                extend = random.random() < 0.999
+                state = "name"
+            case 'relative':
+                name = f'ty{str(random.choice(list(range(0, 5))))}'
+                path = [name]
+                extend = random.random() < extend_chance
+                extend_chance /= 2.0
+                state = "op"
+
         while extend:
             if state == "op":
                 op_type = self.choose_option( self.config.attr.obj.choices.op_extend )
@@ -42,7 +61,7 @@ class RandomObjects(object):
         parent_block = self.declare_block_stack[-1]
         new_block = self.initialize_node( AST.ObjectBlock() )
 
-        new_block.path = self.declare_object_path(parent_block)
+        new_block.path = self.generate_object_path(parent_block)
 
         self.finalize_node( parent_block, new_block )
         parent_block.add_leaf( new_block )
