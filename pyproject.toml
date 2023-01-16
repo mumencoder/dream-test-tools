@@ -17,10 +17,17 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-mumenrepo = { git = "http://github.com/mumencoder/mumenrepo.git" }
+
+pyyaml = "*"
 
 celery = "*"
-fastapi = "*"
 flower = "*"
+
 redis = "*"
+
+requests = "*"
+fastapi = "*"
 uvicorn = "*"
+
+dash = "*"
+dash_bootstrap_components = "*"
