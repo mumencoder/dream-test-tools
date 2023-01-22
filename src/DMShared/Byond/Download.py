@@ -19,6 +19,5 @@ class Download(object):
         url = f'https://www.byond.com/download/build/{env.attr.version.major}/{filename}'
         if not os.path.exists(env.attr.install.save_path):
             penv = env.branch()
-            penv.attr.shell.env = os.environ
             penv.attr.shell.command = f"wget {url} -O {env.attr.install.save_path}"
             await Shared.Process.shell(penv)

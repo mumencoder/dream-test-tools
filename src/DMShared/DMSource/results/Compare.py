@@ -1,5 +1,5 @@
 
-from .common import *
+from ...common import *
 
 class Compare(object):
     @staticmethod
@@ -27,31 +27,6 @@ class Compare(object):
                 return
            
         ctenv.attr.compare.result = Compare.compare_results(renv, penv, nenv)
-        
-    def load_result(renv, tenv):
-        def read_json(s):
-            try:
-                return json.loads(s)
-            except json.JSONDecodeError:
-                return None
-
-        renv.merge(tenv, inplace=True)
-        TestCase.prepare_exec(renv)
-        renv.attr.result.ccode = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.returncode.log")
-        renv.attr.result.compilelog = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.log.txt")
-        renv.attr.result.runlog = Shared.File.read_if_exists(renv.attr.test.base_dir / "run_log.out", read_json )
-
-        if renv.attr.result.ccode is None:
-            renv.attr.result.exists = False
-            return
-        renv.attr.result.ccode = int(renv.attr.result.ccode)
-        
-        if renv.attr.result.ccode == 0:
-            if renv.attr.result.runlog is None:
-                renv.attr.result.exists = False
-                return
-        renv.attr.result.exists = True
-        return
 
     @staticmethod
     def match_ccode(env1, env2):

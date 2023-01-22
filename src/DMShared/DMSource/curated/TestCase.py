@@ -1,27 +1,13 @@
 
-from .common import *
+from ...common import *
 
 class TestCase(object):
     @staticmethod
-    def prepare_task(env):
-        relpath = os.path.relpath(env.attr.test.source_file.parent, env.attr.tests.dirs.root)
-
-        if relpath != ".":
-            env.attr.test.groups += relpath.split("/")
-
-        env.attr.test.name = env.attr.test.source_file.with_suffix("").name
-        env.attr.test.id = "-".join(env.attr.test.groups + [env.attr.test.name]) 
-        env.attr.test.root_dir = env.attr.tests.dirs.output / env.attr.test.id
-
     def prepare_exec(env):
         env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
         env.attr.test.files.fin = env.attr.test.base_dir / 'fin.out'
         env.attr.test.files.run_log = env.attr.test.base_dir / 'run_log.out'
         env.attr.test.files.run_unexpected = env.attr.test.base_dir / 'run_unexpected.out'
-
-    def prepare_codetree_compile(env):
-        env.attr.compilation.file_path = env.attr.test.dm_file_path
-        env.attr.compilation.out = env.attr.test.base_dir / 'test.codetree'
 
     def prepare_compile(env):
         env.attr.process.log_mode = "file"

@@ -1,5 +1,5 @@
 
-from .common import *
+from ...common import *
 
 from .Display import *
 from .Errors import *
@@ -9,16 +9,14 @@ def process_test(tenv):
     tenv.attr.test.errors = {}
 
     get_file(tenv, 'dm_file')
-    if tenv.attr_exists('.test.files.dm_file'):
-        tenv.attr.test.dm_lines["dm_file"] = Display.dm_file_info( tenv.attr.test.files.dm_file )
-    else:
+    if not tenv.attr_exists('.test.files.dm_file'):
         return
 
-    get_file(tenv, 'byond_codetree_return')
+    get_file(tenv, 'byond_codetree.return')
     if tenv.attr_exists('.test.files.byond_codetree_return'):
-        get_file(tenv, "byond_errors")  
-        get_file(tenv, 'byond_codetree_errors')
-        get_file(tenv, 'byond_codetree_stdout')
+        get_file(tenv, "byond.errors")  
+        get_file(tenv, 'byond_codetree.errors')
+        get_file(tenv, 'byond_codetree.stdout')
         if tenv.attr_exists('.test.files.byond_errors'):
             tenv.attr.test.dm_lines["byond_errors"] = Display.byond_errors_info( tenv.attr.test.files.byond_errors )
             tenv.attr.test.errors["byond"] = Errors.collect_errors( tenv.attr.test.dm_lines["byond_errors"], Errors.byond_category)
@@ -47,23 +45,30 @@ def process_test(tenv):
     if tenv.attr_exists('.test.files.ngram_info'):
         tenv.attr.test.files.ngram_info = json.loads( tenv.attr.test.files.ngram_info )
 
+def load_result(renv, tenv):
+    def read_json(s):
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError:
+            return None
 
-def iter_tests(root_env):
-    for path, dirs, files in os.walk(root_env.attr.tests.root_dir):
-        tenv = root_env.branch()
-        tenv.attr.test.root_dir = Shared.Path( path )
-        Metadata.load_test(tenv)
-        if tenv.attr_exists('.test.metadata.name'):
-            yield tenv
+    renv.merge(tenv, inplace=True)
+    TestCase.prepare_exec(renv)
+    renv.attr.result.ccode = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.returncode.log")
+    renv.attr.result.compilelog = Shared.File.read_if_exists(renv.attr.test.base_dir / "compile.log.txt")
+    renv.attr.result.runlog = Shared.File.read_if_exists(renv.attr.test.base_dir / "run_log.out", read_json )
 
-async def process_errors(env):
-    if env.attr_exists('.test.metadata.paths.byond_errors'):
-        with open( env.attr.test.root_dir / env.attr.test.metadata.paths.byond_errors, "r") as f:
-            byond_errors = Display.byond_errors_info( f.read() )
-            for line in byond_errors["lines"]:
-                Errors.byond_category(line)
-    if env.attr_exists('.test.metadata.paths.opendream_errors'):
-        with open( env.attr.test.root_dir / env.attr.test.metadata.paths.opendream_errors, "r") as f:
-            opendream_errors = Display.opendream_errors_info( f.read() )
-            for line in opendream_errors["lines"]:
-                Errors.opendream_category(line)
+    if renv.attr.result.ccode is None:
+        renv.attr.result.exists = False
+        return
+    renv.attr.result.ccode = int(renv.attr.result.ccode)
+    
+    if renv.attr.result.ccode == 0:
+        if renv.attr.result.runlog is None:
+            renv.attr.result.exists = False
+            return
+    renv.attr.result.exists = True
+    return
+
+
+

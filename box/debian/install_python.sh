@@ -1,5 +1,5 @@
 
 DEBIAN_FRONTEND=noninteractive
 
-sudo add-apt-repository ppa:deadsnakes/ppa
-apt install python3.11-dev
+add-apt-repository -y ppa:deadsnakes/ppa
+apt -y install python3.11-dev python3.11-venv

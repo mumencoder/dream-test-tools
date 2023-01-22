@@ -1,5 +1,5 @@
 
-from .common import *
+from ...common import *
 
 class Persist:
     def is_generated(env):
@@ -27,11 +27,6 @@ class Persist:
         with open( env.attr.test.metadata_path, "w" ) as f:
             f.write( json.dumps(md) )
                 
-    def try_init_test_instance(env):
-        env.attr.test.metadata.name = Shared.Random.generate_string(24)
-        env.attr.test.root_dir = env.attr.tests.root_dir / env.attr.test.metadata.name
-        Persist.load_test(env)
-
     def save_test_dm(tenv):
         tenv.attr.test.metadata.paths.dm_file = 'test.dm'
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.dm_file, "w") as f:
@@ -53,19 +48,6 @@ class Persist:
         with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.collider_model, "w") as f:
             f.write( json.dumps(tenv.attr.collider.builder.get_model(), cls=DreamCollider.ModelEncoder) )
 
-    def iter_existing_tests(env):
-        for path, dirs, files in os.walk(env.attr.tests.root_dir):
-            tenv = env.branch()
-            tenv.attr.test.root_dir = Shared.Path( path )
-            Persist.load_test(tenv)
-            if Persist.is_generated(tenv):
-                yield tenv
 
-    def clean_tests(tests_dir, known_tests):
-        cleaned = 0
-        start_time = time.time()
-        for test_dir in os.listdir(tests_dir):
-            if test_dir not in known_tests:
-                shutil.rmtree( tests_dir / test_dir )
-                cleaned += 1
-        print(f"cleaned {cleaned} tests in {time.time()-start_time}")
+
+

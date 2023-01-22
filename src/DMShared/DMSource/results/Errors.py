@@ -1,5 +1,5 @@
 
-from .common import *
+from ...common import *
 
 class Errors:
     @staticmethod
@@ -107,3 +107,4 @@ class Errors:
                 for line in o_lines:
                     o_cats.add( Errors.opendream_category( line ))
                 yield b_lines, b_cats, o_lines, o_cats
+

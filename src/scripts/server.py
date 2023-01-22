@@ -1,25 +1,21 @@
 
 from common import *
 
-import fastapi
-import redis
-from redis.commands.json.path import Path
-
-config = load_config()
-
-if os.path.exists( config["paths"]["piles"] ):
-    shutil.rmtree( config["paths"]["piles"] )
-
-client = redis.Redis(host='localhost', port=6379, db=0)
+root_env = Shared.Environment()
+setup_base(root_env)
+load_config(root_env)
+DMShared.PileArchive.load(root_env)
 
 app = fastapi.FastAPI()
 
 @app.post("/ast_gen")
 async def root(request : fastapi.Request):
-    pile_id = Shared.Random.generate_string(24)
+    env = root_env.branch()
+    env.attr.pile.id = Shared.Random.generate_string(24)
+
     data = json.loads( gzip.decompress( await request.body() ) )
     for test in data["tests"]:
         test["id"] = Shared.Random.generate_string(24)
 
-    with open( config["paths"]["piles"] / f"{pile_id}.json", "wb") as f:
-        f.write( gzip.compress( json.dumps( data ).encode('ascii') ) )
+    env.attr.pile.data = data
+    DMShared.PileArchive.Pile.save(env)

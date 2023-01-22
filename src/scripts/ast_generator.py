@@ -9,21 +9,7 @@ class App(object):
 
     def __init__(self):
         self.state = "start"
-        self.sifter = DMTR.Sifter( self.queue_size )
-
-    def generate_ast(self):
-        benv = Shared.Environment()
-        benv.attr.expr.depth = 3
-        builder = DreamCollider.FullRandomBuilder( )
-        builder.generate( benv )
-
-        renv = Shared.Environment()
-        renv.attr.test.ast = builder.toplevel
-        fuzzer = DreamCollider.Fuzzer()
-        renv.attr.test.ast_tokens = list(fuzzer.fuzz_shape( builder.toplevel.shape() ) )
-        renv.attr.test.ngram_info = DreamCollider.NGram.compute_info( renv.attr.test.ast_tokens )
-
-        return renv
+        self.sifter = DMShared.Sifter( self.queue_size )
 
     def state_change(self, state):
         if self.state != state:
@@ -34,10 +20,7 @@ class App(object):
         print("uploading data...")
         content = {"tests":[], "pile": {}}
         for tenv in pile.iter_tests():
-            test = {}
-            test["ast"] = DreamCollider.AST.marshall( tenv.attr.test.ast )
-            test["tokens"] = DreamCollider.Shape.marshall( tenv.attr.test.ast_tokens )
-            test["ngrams"] = tenv.attr.test.ngram_info
+            test = marshall_test( tenv )
             content["tests"].append( test )
         content["pile"]["level"] = pile.level
         content["pile"]["ngram_counts"] = pile.ngram_counts
@@ -67,7 +50,7 @@ class App(object):
                     pile = DMTR.Pile.Memory()
                     self.state_change( "generate" )
             elif self.state == "generate":
-                pile.add_test( self.generate_ast() )
+                pile.add_test( generate_ast() )
                 if pile.test_count() >= self.queue_size:
                     self.state_change("pile_up")
             elif self.state == "pile_up":

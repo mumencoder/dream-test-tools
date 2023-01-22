@@ -1,10 +1,5 @@
 
-import os, sys, json, textwrap, collections, io, time, shutil, random, statistics
-
-import mumenrepo as Shared
-import DMShared, DreamCollider
-
-import_dotnet = False
+from ..common import *
 
 def get_file(tenv, path):
     if tenv.attr_exists(f'.test.metadata.paths.{path}'):

@@ -11,7 +11,6 @@ repository = "https://github.com/mumencoder/dream-test-tools"
 license = "MIT"
 packages = [
     {include = "DMShared", from = "src"},
-    {include = "DMTestRunner", from = "src"},
     {include = "DreamCollider", from = "src"}
 ]
 

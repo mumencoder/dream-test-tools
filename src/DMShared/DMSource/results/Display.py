@@ -100,3 +100,19 @@ class Display:
 
             current_line += 1
         return text
+
+    def all(tenv):
+        if tenv.attr_exists('.test.files.dm_file'):
+            tenv.attr.test.dm_lines["dm_file"] = Display.dm_file_info( tenv.attr.test.files.dm_file )
+
+    async def process_errors(env):
+        if env.attr_exists('.test.metadata.paths.byond_errors'):
+            with open( env.attr.test.root_dir / env.attr.test.metadata.paths.byond_errors, "r") as f:
+                byond_errors = Display.byond_errors_info( f.read() )
+                for line in byond_errors["lines"]:
+                    Errors.byond_category(line)
+        if env.attr_exists('.test.metadata.paths.opendream_errors'):
+            with open( env.attr.test.root_dir / env.attr.test.metadata.paths.opendream_errors, "r") as f:
+                opendream_errors = Display.opendream_errors_info( f.read() )
+                for line in opendream_errors["lines"]:
+                    Errors.opendream_category(line)

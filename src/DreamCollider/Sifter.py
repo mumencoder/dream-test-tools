@@ -1,6 +1,6 @@
 
-from .common import *
-from . import Persist
+from ...common import *
+from .. import Persist
 
 class Pile:
     class Memory(object):

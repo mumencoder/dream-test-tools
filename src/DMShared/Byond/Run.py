@@ -6,9 +6,13 @@ class Run(object):
     def get_args(args={}):
         preargs = ""
         postargs = ""
-        if "trusted" in args:
+        if "trusted" in args and args["trusted"] is True:
             postargs += "-trusted "
         return (preargs, postargs)    
+
+    @staticmethod
+    def default_args():
+        return {"trusted":None}
 
     @staticmethod 
     def get_bytecode_file(filename):
@@ -37,7 +41,7 @@ class Run(object):
                 pass
 
     @staticmethod
-    async def run(env):
+    async def invoke_server(env):
         penv = env.branch()
         preargs, postargs = Run.get_args(env.attr.run.args)
         install_dir = env.attr.install.dir
@@ -47,3 +51,26 @@ class Run(object):
         penv.attr.shell.command = f"{install_dir}/byond/bin/DreamDaemon {preargs} {penv.attr.run.dm_file_path} {postargs}"
         penv.attr.shell.env = os.environ
         await Shared.Process.shell(penv)
+
+    async def managed_run(tenv, cenv):
+        renv = None
+        if cenv.attr.compilation.returncode == 0:
+            renv = tenv.branch()
+            renv.attr.run.exit_condition = Byond.Run.wait_test_output
+            renv.event_handlers['process.wait'] = Byond.Run.wait_run_complete
+            renv.attr.process.stdout = open(renv.attr.test.root_dir / 'byond.run.stdout.txt', "w")
+            renv.attr.run.dm_file_path = Byond.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
+            renv.attr.run.args = {'trusted':True}
+            await Run.invoke_server(renv)
+            renv.attr.process.stdout.close()
+            with open(renv.attr.test.root_dir / 'byond.run.stdout.txt', "r") as f:
+                renv.attr.run.log = f.read()
+            if os.path.exists( renv.attr.test.root_dir / 'test.out.json'):
+                with open( renv.attr.test.root_dir / 'test.out.json', "r" ) as f:
+                    try:
+                        renv.attr.run.output = json.load(f)
+                    except json.decoder.JSONDecodeError:
+                        pass
+                os.remove( renv.attr.test.root_dir / 'test.out.json')
+
+        return renv

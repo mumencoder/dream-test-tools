@@ -1,36 +1,18 @@
 
-import os, sys, asyncio, json, io, time, pathlib, yaml, collections, random, shutil, requests, gzip
+import os, sys, asyncio, json, io, time, re, pathlib, yaml, collections, random, shutil, gzip
+
+import requests 
+
+import dash
+from dash import html, dcc
+import dash_bootstrap_components as dbc
+
+import fastapi
+import redis
 
 import mumenrepo as Shared
 
-def base_setup(env, output_dir):
-    env = env.branch()
-    env.attr.dirs.output = Shared.Path( output_dir )
-
-    env.attr.shell.env = os.environ
-    env.attr.process.stdout = sys.stdout
-    env.attr.dirs.tmp = env.attr.dirs.output / 'tmp'
-
-def setup_installs(env):
-    benv = env.branch()
-    benv.attr.version.major = 514
-    benv.attr.version.minor = 1589
-    benv.attr.install.dir =  env.attr.dirs.output / 'byond' / 'main'
-
-    oenv = env.branch()
-    oenv.attr.install.dir =  env.attr.dirs.output / 'opendream' / 'main'
-
-    clenv = env.branch()
-    clenv.attr.install.dir = env.attr.dirs.output / 'clopendream' / 'main'
-    sys.path.append( str( clenv.attr.install.dir / 'ClopenAST' / 'bin' / 'Debug' / 'net7.0') )
-
-    env.attr.envs.byond = benv
-    env.attr.envs.opendream = oenv
-    env.attr.envs.clopendream = clenv
-
-    return env
-
-def load_config():
+def load_config(env):
     if os.path.exists('server_config.yaml'):
         with open( 'server_config.yaml', "r") as f:
             config = yaml.load( f, yaml.Loader )
@@ -38,7 +20,41 @@ def load_config():
             config["paths"][path_id] = Shared.Path( path )
     else:
         raise Exception("cannot read config")
-    return config
+    env.attr.config = config
+    env.attr.dirs.tmp = Shared.Path( env.attr.config["paths"]["tmp"] )
 
-import DMTestRunner as DMTR
-import DMShared, DreamCollider as DreamCollider
+def setup_base(env):
+    env.attr.shell.env = os.environ
+    env.attr.process.stdout = sys.stdout
+
+def generate_ast():
+    benv = Shared.Environment()
+    benv.attr.expr.depth = 3
+    builder = DreamCollider.FullRandomBuilder( )
+    builder.generate( benv )
+
+    renv = Shared.Environment()
+    renv.attr.ast.ast = builder.toplevel
+    fuzzer = DreamCollider.Fuzzer()
+    renv.attr.ast.ast_tokens = list(fuzzer.fuzz_shape( builder.toplevel.shape() ) )
+    renv.attr.ast.ngram_info = DreamCollider.NGram.compute_info( renv.attr.ast.ast_tokens )
+
+    return renv
+
+def marshall_test(env):
+    test = {}
+    test["ast"] = DreamCollider.AST.marshall( env.attr.ast.ast )
+    test["tokens"] = DreamCollider.Shape.marshall( env.attr.ast.ast_tokens )
+    test["ngrams"] = env.attr.ast.ngram_info
+    return test
+
+def unmarshall_test(env):
+    env.attr.ast.ast = DreamCollider.AST.unmarshall( env.attr.ast.data["ast"] )
+    env.attr.ast.ast_tokens = list(DreamCollider.Shape.unmarshall( env.attr.ast.data["tokens"], env.attr.ast.ast))
+    env.attr.ast.ngram_info = env.attr.ast.data["ngrams"]
+
+def unparse_test(env):
+    upar = DreamCollider.Unparser()
+    env.attr.ast.text = upar.unparse(env.attr.ast.ast_tokens)   
+
+import DMShared, DreamCollider
