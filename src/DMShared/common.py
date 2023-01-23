@@ -1,6 +1,8 @@
 
 import os, sys, asyncio, pathlib, time, shutil, json, random, re, gzip, textwrap
 import collections, io
+import xml.dom.minidom as minidom
+
 import mumenrepo as Shared
 
 def load_dotnet(env):

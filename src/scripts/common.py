@@ -32,6 +32,7 @@ def generate_ast():
     benv.attr.expr.depth = 3
     builder = DreamCollider.FullRandomBuilder( )
     builder.generate( benv )
+    builder.add_proc_paths( benv )
 
     renv = Shared.Environment()
     renv.attr.ast.ast = builder.toplevel

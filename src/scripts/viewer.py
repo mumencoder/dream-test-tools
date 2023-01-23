@@ -25,12 +25,16 @@ async def render_random_ast():
         f.write( ast_env.attr.ast.text )
     await DMShared.Byond.Compilation.managed_compile(cenv)
     DMShared.Byond.Compilation.load_compile(cenv)
+    await DMShared.Byond.Compilation.managed_objtree(cenv)
+    DMShared.Byond.Compilation.load_objtree(cenv)
 
     content = html.Div([ 
         html.Pre(ast_env.attr.ast.text),
         html.Hr(),
         html.Pre(cenv.attr.compilation.stdout),
-        html.Pre(cenv.attr.compilation.returncode)
+        html.Pre(cenv.attr.compilation.returncode),
+        html.Hr(),
+        html.Pre(cenv.attr.compilation.objtree)
     ])
     return render(content)
 

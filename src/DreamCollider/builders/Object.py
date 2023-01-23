@@ -62,8 +62,6 @@ class RandomObjects(object):
         new_block = self.initialize_node( AST.ObjectBlock() )
 
         new_block.path = self.generate_object_path(parent_block)
-
-        self.finalize_node( parent_block, new_block )
         parent_block.add_leaf( new_block )
         self.declare_block_stack.append( new_block )
 

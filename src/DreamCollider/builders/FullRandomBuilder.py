@@ -39,13 +39,26 @@ class FullRandomBuilder(
             node.init_semantics()
         return node
 
-    def finalize_node(self, parent_node, node):
-        if type(node) in [AST.ObjectBlock, AST.ProcDefine, AST.ObjectVarDefine]:
-            if type(node) in [AST.ProcDefine, AST.ObjectVarDefine] and type(parent_node) is not AST.Toplevel:
-                if parent_node.resolved_path in self.stdlib.objects.items():
-                    node.is_override = random.random() < self.config.attr.override_stdlib_define_prob
-                else:
-                    node.is_override = random.random() < self.config.attr.override_user_define_prob
+    def add_proc_paths(self, env):
+        env.attr.builder.init_node = self.initialize_node
+        block = random.choice( self.toplevel.object_blocks )
+        proc_block = self.initialize_node( AST.ObjectBlock() )
+        proc_block.path = self.create_objectpath( ['proc'] )
+        block.add_leaf( proc_block )
+
+        proc = self.initialize_node( AST.ProcDefine() )
+        proc.name = 'print_path'
+        proc_block.add_leaf( proc )
+
+        proc.body = [ AST.create(env, (AST.Stmt.Expression, 
+                {"expr":(AST.Op.ShiftLeft,
+                    {"exprs":[
+                        (AST.Expr.Identifier, {"name":"world"}),
+                        (AST.TextNode, {"text": '"[.....]"'})
+                    ]}
+                )} 
+            ))]
+
 
     def generate(self, env):
         env = env.branch()
@@ -78,7 +91,6 @@ class FullRandomBuilder(
                 current_object = self.choose_object(env)
                 env.attr.current_object = current_object
                 var_declare = self.declare_var(env)
-                self.finalize_node( current_object, var_declare )
                 current_object.add_leaf( var_declare )
 
             if action == "proc_declare":
@@ -88,7 +100,6 @@ class FullRandomBuilder(
                 current_object = self.choose_object(env)
                 env.attr.current_object = current_object
                 proc_declare = self.declare_proc(env)
-                self.finalize_node( current_object, proc_declare )
                 current_object.add_leaf( proc_declare )
 
             if action == "var_define":

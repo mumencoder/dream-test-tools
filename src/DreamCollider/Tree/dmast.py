@@ -12,8 +12,8 @@ class AST(object):
     class TextNode(object):
         attrs = ["text"]
         subtree = []
-        def __init__(self, text):
-            self.text = text
+        def __init__(self):
+            self.text = None
 
     class ObjectPath(object):
         attrs = ["segments"]
@@ -30,15 +30,15 @@ class AST(object):
 
     class ObjectVarDefine(object):
         attrs = ["is_override"]
-        subtree = ["path", "expression"]
+        subtree = ["name", "expression"]
         def __init__(self):
-            self.path = None               # AST.ObjectPath  
+            self.name = None               # str  
             self.expression = None         # AST.Expr
     class ProcDefine(object):
         attrs = []
-        subtree = ["path", "params", "body"]
+        subtree = ["name", "params", "body"]
         def __init__(self):
-            self.path = None              # AST.ObjectPath  
+            self.name = None              # str  
             self.params = []              # List[AST.ProcArgument]
             self.body = []                # List[AST.Stmt]
 

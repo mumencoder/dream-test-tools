@@ -56,10 +56,10 @@ class Run(object):
         renv = None
         if cenv.attr.compilation.returncode == 0:
             renv = tenv.branch()
-            renv.attr.run.exit_condition = Byond.Run.wait_test_output
-            renv.event_handlers['process.wait'] = Byond.Run.wait_run_complete
+            renv.attr.run.exit_condition = Run.wait_test_output
+            renv.event_handlers['process.wait'] = Run.wait_run_complete
             renv.attr.process.stdout = open(renv.attr.test.root_dir / 'byond.run.stdout.txt', "w")
-            renv.attr.run.dm_file_path = Byond.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
+            renv.attr.run.dm_file_path = Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             renv.attr.run.args = {'trusted':True}
             await Run.invoke_server(renv)
             renv.attr.process.stdout.close()

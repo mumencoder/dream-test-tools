@@ -57,7 +57,7 @@ class Unparse(object):
             yield _EndNode(self)
             
     class TextNode(object):
-        def symbols_used(self):
+        def tokens_used():
             return ["general"]
 
         def shape(self):
@@ -91,21 +91,21 @@ class Unparse(object):
 
     class ObjectVarDefine(object):
         def tokens_used():
-            return ["="]
+            return ["=", "varname"]
 
         def shape(self):
             yield _Line()
-            yield from Unparse.subshape( self.path )
+            yield _Text(self.name, "varname")
             if self.expression is not None:
                 yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
                 yield from Unparse.subshape( self.expression )
     class ProcDefine(object):
         def tokens_used():
-            return [","]
+            return [",", "procname"]
 
         def shape(self):
             yield _Line()
-            yield from Unparse.subshape( self.path )
+            yield _Text(self.name, "procname")
             yield from [_Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
                 yield from Unparse.subshape( param )
