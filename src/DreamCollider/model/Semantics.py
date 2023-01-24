@@ -12,6 +12,15 @@ class Semantics(object):
                 self.trunk = None
                 self.leaves = {}
 
+                self.is_stdlib = False
+
+            def iter_nodes(self):
+                if len(self.path) > 0 and self.path[-1] == "proc":
+                    return
+                yield self
+                for name, subnode in self.leaves.items():
+                    yield from subnode.iter_nodes()
+                
             def add_node(self, name):
                 if name in self.leaves:
                     return self.leaves[name]
@@ -30,16 +39,16 @@ class Semantics(object):
             def upwards_search(self, name):
                 current_node = self
                 while current_node is not None:
-                    found_node = self.leaf_search( current_node, name )
+                    found_node = current_node.leaf_search( name )
                     if found_node is not None:
                         return found_node
                     else:
-                        current_node = self.trunk
+                        current_node = current_node.trunk
                 return None
 
             def downwards_search(self, name):
                 current_node = self
-                found_node = self.leaf_search( current_node, name )
+                found_node = current_node.leaf_search( name )
                 if found_node is not None:
                     return found_node
                 else:
@@ -53,6 +62,9 @@ class Semantics(object):
             self.root = Semantics.ObjectTree.Node()
             self.nodes_by_path = {}
 
+        def iter_nodes(self):
+            yield from self.root.iter_nodes()
+
         def add_node(self, trunk, name):
             node = trunk.add_node( name )
             self.nodes_by_path[node.path]( name )
@@ -64,7 +76,10 @@ class Semantics(object):
                 current_node = current_node.add_node( name )
             return current_node
 
-        def resolve(self, resolve_path, start_node=None):
+        def resolve(self, resolve_path, start_node=None, create_nodes=False):
+            if type(resolve_path) is not AST.ObjectPath:
+                raise Exception(resolve_path)
+
             if start_node is None:
                 node = self.root
             else:
@@ -73,9 +88,9 @@ class Semantics(object):
             current_segment = 0
             def next_segment():
                 nonlocal current_segment
-                if current_segment >= len(resolve_path):
+                if current_segment >= len(resolve_path.segments):
                     return None
-                segment = resolve_path[current_segment]
+                segment = resolve_path.segments[current_segment]
                 current_segment += 1
                 return segment
 
@@ -90,21 +105,28 @@ class Semantics(object):
             while segment != None:
                 if segment not in [".",":","/"] and state == None:
                     state = "op"
-                    name = resolve_name(segment)
-                    node = node.leaf_search( name )
+                    name_segment = resolve_name(segment)
+                    found_node = node.leaf_search( name_segment )
                 elif segment in ['.',":","/"]:
                     name_segment = next_segment()
                     if name_segment in ['.',':','/']:
                         raise Exception("expected path name got ", name_segment)
                     match segment:
                         case ".":
-                            node = node.upwards_search( name_segment )
+                            found_node = node.upwards_search( name_segment )
                         case ":":
-                            node = node.downwards_search( name_segment )
+                            found_node = node.downwards_search( name_segment )
                         case "/":
-                            node = node.leaf_search( name_segment )
+                            found_node = node.leaf_search( name_segment )
                 else:
                     raise Exception("unexpected segment", segment, state)
+                if found_node is None:
+                    if create_nodes:
+                        node = node.add_node( name_segment )
+                    else:
+                        raise Exception("node is none", segment)
+                else:
+                    node = found_node
                 segment = next_segment()
 
             return node
@@ -146,7 +168,7 @@ class Semantics(object):
         ### Builders
         def add_leaf(self, leaf):
             if type(leaf) is AST.ObjectBlock:
-                self.note_object_block( leaf )
+                self.note_object_block( None, leaf )
             elif type(leaf) is AST.ObjectVarDefine:
                 self.global_vars_by_name[leaf.name].append( leaf )
             elif type(leaf) is AST.ProcDefine:
@@ -166,14 +188,22 @@ class Semantics(object):
             branch.pop()
             node.add_branch( list(branch) )
    
-        def note_object_block(self, leaf):
+        def note_object_block(self, trunk, leaf):
+            if trunk is None:
+                current_node = self.tree.resolve( leaf.path, create_nodes=True)
+                leaf.resolved_path = current_node.path
+            else:
+                trunk_node = self.tree.resolve( trunk.path, create_nodes=True )
+                current_node = self.tree.resolve( leaf.path, start_node=trunk_node, create_nodes=True)
+                leaf.resolved_path = current_node.path
+
             self.object_blocks.append( leaf ) 
             self.object_blocks_by_path[leaf.path].append( leaf )
 
-        def note_var(self, leaf):
+        def note_var(self, trunk, leaf):
             self.vars.append( leaf )
         
-        def note_proc(self, leaf):
+        def note_proc(self, trunk, leaf):
             self.procs.append( leaf )
 
         ### Errors
@@ -237,7 +267,7 @@ class Semantics(object):
             leaf.parent = self
             self.leaves.append( leaf )
             if type(leaf) is AST.ObjectBlock:
-                self.root.note_object_block( leaf )
+                self.root.note_object_block( self, leaf )
             elif type(leaf) is AST.ObjectVarDefine:
                 self.object_vars_by_name[leaf.name].append( leaf )
             elif type(leaf) is AST.ProcDefine:
@@ -336,10 +366,10 @@ class Semantics(object):
             self.block = block
             if type(self.block) is AST.Toplevel:
                 self.is_global = True
-                self.block.note_proc( self )
+                self.block.note_proc( self, block)
             else:
                 self.is_global = False
-                self.block.root.note_proc( self )
+                self.block.root.note_proc( self, block )
 
         def add_param(self, param):
             self.params.append( param )

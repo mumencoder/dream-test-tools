@@ -28,13 +28,18 @@ async def render_random_ast():
     await DMShared.Byond.Compilation.managed_objtree(cenv)
     DMShared.Byond.Compilation.load_objtree(cenv)
 
+    builder_paths = set()
+    for node in ast_env.attr.ast.builder.toplevel.tree.iter_nodes():
+        builder_paths.add( node.path )
+
     content = html.Div([ 
         html.Pre(ast_env.attr.ast.text),
         html.Hr(),
         html.Pre(cenv.attr.compilation.stdout),
         html.Pre(cenv.attr.compilation.returncode),
         html.Hr(),
-        html.Pre(cenv.attr.compilation.objtree)
+        html.Pre( str(cenv.attr.compilation.objtree_text) ),
+        html.Pre( str(cenv.attr.compilation.objtree) )
     ])
     return render(content)
 

@@ -69,10 +69,10 @@ class Compilation(object):
 
     def load_objtree(env):
         with open( env.attr.compilation.root_dir / 'byond.objtree.stdout.txt', "r" ) as f:
-            env.attr.compilation.objtree = f.read()
+            env.attr.compilation.objtree_text = f.read()
         
         lines = []
-        for line in env.attr.compilation.objtree.split('\n'):
+        for line in env.attr.compilation.objtree_text.split('\n'):
             if line.startswith("loading"):
                 continue
             lines.append( line )
@@ -141,8 +141,22 @@ class Compilation(object):
                     if readProc(leafnode):
                         continue
                     raise Exception(leafnode)
-                print(rootobjs)
             if readWS(leafnode):
                 continue
 
             raise Exception(leafnode)
+
+        nodes_left = list(rootobjs)
+        while len(nodes_left) > 0:
+            node = nodes_left[-1]
+            nodes_left.pop()
+            if "parent" not in node:
+                node["path"] = tuple([node["name"]])
+            else:
+                node["path"] = node["parent"]["path"] + tuple([node["name"]])
+
+            if "subobjs" in node:
+                for subobj in node["subobjs"]:
+                    subobj["parent"] = node
+                nodes_left += list(node["subobjs"])
+        env.attr.compilation.objtree = rootobjs

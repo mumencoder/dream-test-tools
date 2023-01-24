@@ -25,12 +25,11 @@ class FullRandomBuilder(
         self.var_defines = []
 
         self.toplevel = self.initialize_node( AST.Toplevel() )
-        for path in self.stdlib.objects.items():
-            self.toplevel.tree.add_path( path )
+        for path in self.stdlib.objects.keys():
+            node = self.toplevel.tree.add_path( path )
+            node.is_stdlib = True
 
         self.initialize_config()
-
-        self.declare_block_stack = [self.toplevel]
 
     def initialize_node(self, node):
         self.node_info[node] = {}
@@ -65,6 +64,7 @@ class FullRandomBuilder(
         env.attr.builder.init_node = self.initialize_node
         #eligible_actions = ["object_declare", "var_declare", "proc_declare", "var_define", "add_proc_parameter", "add_proc_stmt"]
         eligible_actions = ["object_declare"]
+        self.declare_block_stack = [self.toplevel]
 
         generating = True
         while generating:

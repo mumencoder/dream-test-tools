@@ -35,6 +35,7 @@ def generate_ast():
     builder.add_proc_paths( benv )
 
     renv = Shared.Environment()
+    renv.attr.ast.builder = builder
     renv.attr.ast.ast = builder.toplevel
     fuzzer = DreamCollider.Fuzzer()
     renv.attr.ast.ast_tokens = list(fuzzer.fuzz_shape( builder.toplevel.shape() ) )
