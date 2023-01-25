@@ -12,7 +12,7 @@ def render(*content):
     return html.Div( [get_nav_bar(), html.Hr(), *content] )
 
 def render_home():
-    return render(genv, [])
+    return render([])
 
 async def render_random_ast():
     env = Shared.Environment()

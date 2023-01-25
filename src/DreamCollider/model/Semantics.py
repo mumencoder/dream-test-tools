@@ -109,25 +109,48 @@ class Semantics(object):
                     return name
 
             segment = next_segment()
-            state = None
+            if segment == "/":
+                name_segment = next_segment()
+                if name_segment in ['.',':','/']:
+                    raise Exception("expected path name got ", name_segment)
+                if name_segment is None:
+                    node = self.root
+                    segment = None
+                else:
+                    found_node = self.root.leaf_search( name_segment )
+                    if found_node is None:
+                        node = self.root.add_node( name_segment )
+                    else:
+                        node = found_node
+                segment = next_segment()
+            elif segment in [".", ":"]:
+                pass
+            else:
+                name_segment = resolve_name(segment)
+                found_node = node.leaf_search( name_segment )
+                segment = next_segment()
+                if found_node is None:
+                    node = node.add_node( name_segment )
+                else:
+                    node = found_node
+
             while segment != None:
-                if segment not in [".",":","/"] and state == None:
-                    state = "op"
-                    name_segment = resolve_name(segment)
-                    found_node = node.leaf_search( name_segment )
-                elif segment in ['.',":","/"]:
+                if segment in ['.',":","/"]:
                     name_segment = next_segment()
                     if name_segment in ['.',':','/']:
-                        raise Exception("expected path name got ", name_segment)
-                    match segment:
-                        case ".":
-                            found_node = node.upwards_search( name_segment )
-                        case ":":
-                            found_node = node.downwards_search( name_segment )
-                        case "/":
-                            found_node = node.leaf_search( name_segment )
+                        raise Exception("expected path name got ", resolve_path.segments, name_segment)
+                    elif name_segment is None:
+                        found_node = node
+                    else:
+                        match segment:
+                            case ".":
+                                found_node = node.upwards_search( name_segment )
+                            case ":":
+                                found_node = node.downwards_search( name_segment )
+                            case "/":
+                                found_node = node.leaf_search( name_segment )
                 else:
-                    raise Exception("unexpected segment", segment, state)
+                    raise Exception("unexpected segment", segment)
                 if found_node is None:
                     if create_nodes:
                         node = node.add_node( name_segment )

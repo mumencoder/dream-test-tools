@@ -74,7 +74,6 @@ class FullRandomBuilder(
             action = random.choice( eligible_actions )
             env.attr.action = action
 
-            #print(  self.object_declare_remaining(env) )
             if action == "object_declare":
                 if self.object_declare_remaining(env) <= 0:
                     eligible_actions.remove( "object_declare" )
