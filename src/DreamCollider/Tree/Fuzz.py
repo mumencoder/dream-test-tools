@@ -11,8 +11,7 @@ class Fuzzer(object):
 
     def fuzz_stream(self, tokens):
         si = ShapeIter(tokens)
-        for token in tokens:
-            si.update_state(token)
+        for token in si:
             yield from self.fuzz_token(token)
 
     def fuzz_indent(self, mode):

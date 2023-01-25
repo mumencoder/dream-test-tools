@@ -39,11 +39,11 @@ class Compilation(object):
 
         return env
 
-    def load_compile(env):
-        with open( env.attr.compilation.root_dir / 'byond.compile.stdout.txt', "r" ) as f:
-            env.attr.compilation.stdout = f.read()
-        with open( env.attr.compilation.root_dir / 'byond.compile.returncode.txt', "r" ) as f:
-            env.attr.compilation.returncode = int(f.read())
+    def load_compile(senv, denv):
+        with open( senv.attr.compilation.root_dir / 'byond.compile.stdout.txt', "r" ) as f:
+            denv.attr.compilation.stdout = f.read()
+        with open( senv.attr.compilation.root_dir / 'byond.compile.returncode.txt', "r" ) as f:
+            denv.attr.compilation.returncode = int(f.read())
 
     async def managed_codetree(env):
         env = env.branch()
@@ -67,19 +67,19 @@ class Compilation(object):
 
         return env
 
-    def load_objtree(env):
-        with open( env.attr.compilation.root_dir / 'byond.objtree.stdout.txt', "r" ) as f:
-            env.attr.compilation.objtree_text = f.read()
+    def load_objtree(senv, denv):
+        with open( senv.attr.compilation.root_dir / 'byond.objtree.stdout.txt', "r" ) as f:
+            denv.attr.compilation.objtree_text = f.read()
         
         lines = []
-        for line in env.attr.compilation.objtree_text.split('\n'):
+        for line in denv.attr.compilation.objtree_text.split('\n'):
             if line.startswith("loading"):
                 continue
             lines.append( line )
         xml = "\n".join( lines )
 
         objtree_xml = minidom.parseString( xml )
-        env.attr.compilation.objtree_xml = objtree_xml
+        denv.attr.compilation.objtree_xml = objtree_xml
 
         def readDM(node):
             if node.nodeType == node.ELEMENT_NODE and node.nodeName == "dm":
@@ -91,6 +91,9 @@ class Compilation(object):
             if node.nodeType == node.ELEMENT_NODE and node.nodeName == "object":
                 obj_name = None
                 subobjs = []
+                line = None
+                if "file" in node.attributes:
+                    line = int(node.attributes["file"].value.split(":")[1])
                 for leafnode in node.childNodes:
                     if readWS(leafnode):
                         continue
@@ -106,7 +109,7 @@ class Compilation(object):
                     if readProc(leafnode):
                         continue
                     raise Exception(leafnode)
-                return {"name":obj_name, "subobjs":subobjs}
+                return {"name":obj_name, "subobjs":subobjs, "line":line}
             else:
                 return None
 
@@ -159,4 +162,13 @@ class Compilation(object):
                 for subobj in node["subobjs"]:
                     subobj["parent"] = node
                 nodes_left += list(node["subobjs"])
-        env.attr.compilation.objtree = rootobjs
+        denv.attr.compilation.objtree = rootobjs
+
+    def iter_objtree(env):
+        nodes_left = list(env.attr.compilation.objtree)
+        while len(nodes_left) > 0:
+            node = nodes_left[-1]
+            nodes_left.pop()
+            yield node
+            if "subobjs" in node:
+                nodes_left += list(node["subobjs"])

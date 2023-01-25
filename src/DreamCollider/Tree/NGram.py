@@ -90,8 +90,7 @@ class NGram(object):
     def iter_ngram(stream, n):
         si = ShapeIter(stream)
         q = collections.deque()
-        for token in stream:
-            si.update_state(token)
+        for token in si:
             ctoken = NGram.convert_token(si, token)
             if ctoken is None:
                 continue

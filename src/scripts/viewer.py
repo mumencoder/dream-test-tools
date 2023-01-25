@@ -15,31 +15,22 @@ def render_home():
     return render(genv, [])
 
 async def render_random_ast():
-    ast_env = generate_ast()
-    unparse_test(ast_env)
-
-    cenv = benv.branch()
-    cenv.attr.compilation.root_dir = genv.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
-    cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
-    with open( cenv.attr.compilation.dm_file_path, "w") as f:
-        f.write( ast_env.attr.ast.text )
-    await DMShared.Byond.Compilation.managed_compile(cenv)
-    DMShared.Byond.Compilation.load_compile(cenv)
-    await DMShared.Byond.Compilation.managed_objtree(cenv)
-    DMShared.Byond.Compilation.load_objtree(cenv)
-
-    builder_paths = set()
-    for node in ast_env.attr.ast.builder.toplevel.tree.iter_nodes():
-        builder_paths.add( node.path )
-
+    env = Shared.Environment()
+    await random_ast( env )
+    
     content = html.Div([ 
-        html.Pre(ast_env.attr.ast.text),
+        html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
+        None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
+        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
+        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
+        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
+        html.Pre( str(env.attr.compilation.objtree_text) ),
         html.Hr(),
-        html.Pre(cenv.attr.compilation.stdout),
-        html.Pre(cenv.attr.compilation.returncode),
+        dbc.Row( [dbc.Col( html.Pre( env.attr.ast.text ), width=6 ), dbc.Col( html.Pre(env.attr.results.collider_pathlines_text), width=6 )] ),
         html.Hr(),
-        html.Pre( str(cenv.attr.compilation.objtree_text) ),
-        html.Pre( str(cenv.attr.compilation.objtree) )
+        html.Pre(env.attr.compilation.stdout),
+        html.Pre(env.attr.compilation.returncode),
+        html.Hr(),
     ])
     return render(content)
 
@@ -128,8 +119,6 @@ def display_page(url):
         return asyncio.run( render_random_ast() )
     return html.Div(['Not a page how did you get here shoo'])
 
-genv = Shared.Environment()
-benv = genv.branch()
 load_config(genv)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])

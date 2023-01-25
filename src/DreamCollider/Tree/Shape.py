@@ -61,18 +61,6 @@ class Shape(object):
             else:
                 yield dict(token)
 
-    def token_lines(tokens):
-        si = ShapeIter(tokens)
-        current_line = 1
-        current_tokens = []
-        for token in tokens:
-            while current_line < si.current_line:
-                yield current_tokens
-                current_tokens = []
-                current_line += 1
-            current_tokens.append( token )
-            si.update_state(token)
-
     def coalesce_newlines(tokens):
         newline = True
         for token in tokens:
@@ -97,26 +85,40 @@ class Shape(object):
             else:
                 pass
 
+    def node_lines(tokens):
+        si = ShapeIter(tokens)
+        for token in si:
+            if token["type"] == "Line":
+                yield (si.current_node(), si.current_line)
+
 class ShapeIter(object):
     def __init__(self, tokens):
         self.current_line = 1
-        self.node_lines = {}
         self.node_stack = []
 
-        self.tokens = tokens
+        self.tokens = iter(tokens)
+        self.position = -1
+        self.current_token = None
+
+    def __iter__(self):
+        if self.position != -1:
+            raise Exception("iterator reinitialization")
+        return self
+
+    def __next__(self):
+        self.update_state()
+        return self.current_token
 
     def current_node(self):
         return self.node_stack[-1]
 
-    def update_state(self, token):
-        match token["type"]:
+    def update_state(self):
+        self.position += 1
+        self.current_token = next(self.tokens)
+        match self.current_token["type"]:
             case "BeginNode":
-                self.node_stack.append( token["node"] )
+                self.node_stack.append( self.current_token["node"] )
             case "EndNode":
                 self.node_stack.pop()
-            case "Line":
-                node = self.node_stack[-1]
-                if not hasattr(node, 'lineno'):
-                    self.node_lines[node] = self.current_line
             case "Newline":
                 self.current_line += 1

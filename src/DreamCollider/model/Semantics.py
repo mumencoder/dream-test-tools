@@ -76,6 +76,14 @@ class Semantics(object):
                 current_node = current_node.add_node( name )
             return current_node
 
+        def get_node_by_path(self, path):
+            current_node = self.root
+            for name in path:
+                current_node = current_node.leaf_search(name)
+                if current_node is None:
+                    return None
+            return current_node
+
         def resolve(self, resolve_path, start_node=None, create_nodes=False):
             if type(resolve_path) is not AST.ObjectPath:
                 raise Exception(resolve_path)
@@ -193,7 +201,7 @@ class Semantics(object):
                 current_node = self.tree.resolve( leaf.path, create_nodes=True)
                 leaf.resolved_path = current_node.path
             else:
-                trunk_node = self.tree.resolve( trunk.path, create_nodes=True )
+                trunk_node = self.tree.get_node_by_path( trunk.resolved_path )
                 current_node = self.tree.resolve( leaf.path, start_node=trunk_node, create_nodes=True)
                 leaf.resolved_path = current_node.path
 

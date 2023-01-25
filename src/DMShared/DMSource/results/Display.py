@@ -1,5 +1,25 @@
 
+from ...common import *
 class Display:
+    def sparse_to_full(values):
+        result = io.StringIO()
+        current_line = 1
+        it = iter(values)
+        next_line = next(it)
+        while current_line <= next_line["line"]:
+            if current_line == next_line["line"]:
+                result.write( str(next_line["value"]) )
+                current_line += 1
+                result.write('\n')
+                try:
+                    next_line = next(it)
+                except StopIteration:
+                    pass
+            else:
+                current_line += 1
+                result.write('\n')
+        return result.getvalue()
+
     def raw_lines(text):
         i = 1
         for line in text.split('\n'):
