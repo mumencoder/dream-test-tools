@@ -4,7 +4,6 @@ from common import *
 root_env = Shared.Environment()
 setup_base(root_env)
 load_config(root_env)
-DMShared.PileArchive.load(root_env)
 
 app = fastapi.FastAPI()
 

@@ -1,6 +1,6 @@
 
-from ..common import *
-from ..model import *
+from ...common import *
+from ...model import *
 
 class RandomObjects(object):
     def choose_object(self, env):
@@ -65,7 +65,7 @@ class RandomObjects(object):
         parent_block.add_leaf( new_block )
         self.declare_block_stack.append( new_block )
 
-    def random_path(self):
+    def generate_random_path(self):
         path = self.initialize_node( AST.Expr.Path() )
         path.prefix = random.choice( ['.', '/', ':'] )
         path.types = [ random.choice( ['ty1', 'ty2', 'ty3'] ) ]

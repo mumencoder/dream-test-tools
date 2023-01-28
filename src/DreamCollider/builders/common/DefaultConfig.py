@@ -1,7 +1,7 @@
 
-from ..common import *
+from ...common import *
 
-from ..Tree import *
+from ...Tree import *
 
 class DefaultConfig:
 

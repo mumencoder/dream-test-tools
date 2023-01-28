@@ -12,6 +12,15 @@ import redis
 
 import mumenrepo as Shared
 
+### helpers
+
+def print_env(env, title):
+    print(f"=== {title}")
+    for prop in env.unique_properties():
+        print(prop, type(env.get_attr(prop)))
+
+### config
+
 def load_config(env):
     if os.path.exists('server_config.yaml'):
         with open( 'server_config.yaml', "r") as f:
@@ -26,6 +35,8 @@ def load_config(env):
 def setup_base(env):
     env.attr.shell.env = os.environ
     env.attr.process.stdout = sys.stdout
+
+### ast generation
 
 def generate_ast(env):
     benv = Shared.Environment()
@@ -78,6 +89,7 @@ def compare_paths(env):
     env.attr.results.collider_pathlines_text = DMShared.Display.sparse_to_full(
          [{"line":k, "value":v} for k,v in sorted( zip(collider_pathlines.keys(), collider_pathlines.values()), key=lambda e: e[0] )] )
 
+# compilation
 async def byond_compilation(env):
     cenv = benv.branch()
     cenv.attr.compilation.root_dir = genv.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
@@ -95,7 +107,6 @@ async def random_ast(env):
     await byond_compilation(env)
     compare_paths(env)
     
-
 def marshall_test(env):
     test = {}
     test["ast"] = DreamCollider.AST.marshall( env.attr.ast.ast )

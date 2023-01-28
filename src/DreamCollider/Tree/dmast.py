@@ -478,17 +478,15 @@ class AST(object):
                 else:
                     yield from AST.walk_subtree(st)
 
-    def create(env, data):
-        if type(data) is tuple:
-            node = data[0]()
-            env.attr.builder.init_node(node)
-            for key, subdata in data[1].items():
-                setattr(node, key, AST.create(env, subdata))
+    def new_protofn(ty):
+        def new(**attrs):
+            node = ty()
+            for k, v in attrs.items():
+                if k not in ty.attrs and k not in ty.subtree:
+                    raise Exception("invalid leaf")
+                setattr(node, k, v)
             return node
-        if type(data) is list:
-            return [ AST.create(env, subdata) for subdata in data ]
-        else:
-            return data
+        return new
 
     def marshall(node):
         if node is None:
@@ -598,6 +596,7 @@ class AST(object):
         for ty in Shared.Type.iter_types(AST):
             if ty in [AST, AST.Op, AST.Expr]:
                 continue
+            ty.new = AST.new_protofn(ty)
             if hasattr(ty, 'traits'):
                 for trait in ty.traits:
                     AST.trait_index[trait].append( ty )

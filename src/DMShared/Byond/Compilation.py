@@ -78,7 +78,11 @@ class Compilation(object):
             lines.append( line )
         xml = "\n".join( lines )
 
-        objtree_xml = minidom.parseString( xml )
+        try:
+            objtree_xml = minidom.parseString( xml )
+        except:
+            denv.attr.compilation.objtree_xml = None
+            return
         denv.attr.compilation.objtree_xml = objtree_xml
 
         def readDM(node):

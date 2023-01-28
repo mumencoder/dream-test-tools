@@ -1,11 +1,7 @@
 
-from . import Object
-from . import Proc
-from . import Expr
-from . import Var
-from . import Stmt
-from . import DefaultConfig
+# generates code that uses every feature available in the most random manner
 
+from .common import *
 from ..model import *
 
 class FullRandomBuilder(
@@ -21,8 +17,7 @@ class FullRandomBuilder(
 
     def __init__(self):
         self.node_info = {}
-        self.proc_defines = []
-        self.var_defines = []
+        self.undefined_vars = []
 
         self.toplevel = self.initialize_node( AST.Toplevel() )
         for path in self.stdlib.objects.keys():
@@ -45,19 +40,15 @@ class FullRandomBuilder(
         proc_block.path = self.create_objectpath( ['proc'] )
         block.add_leaf( proc_block )
 
-        proc = self.initialize_node( AST.ProcDefine() )
-        proc.name = 'print_path'
+        proc = self.initialize_node( AST.ProcDefine.new(name="print_path") )
+        proc.body = [AST.Stmt.Expression.new( 
+            expr=AST.Op.ShiftLeft.new( 
+                exprs=[ 
+                    AST.Expr.Identifier.new(name="world"), 
+                    AST.TextNode.new(text='"[.....]"')]
+            )
+        )]
         proc_block.add_leaf( proc )
-
-        proc.body = [ AST.create(env, (AST.Stmt.Expression, 
-                {"expr":(AST.Op.ShiftLeft,
-                    {"exprs":[
-                        (AST.Expr.Identifier, {"name":"world"}),
-                        (AST.TextNode, {"text": '"[.....]"'})
-                    ]}
-                )} 
-            ))]
-
 
     def generate(self, env):
         env = env.branch()
@@ -113,7 +104,7 @@ class FullRandomBuilder(
                 else:
                     expr = self.create_var_expr(env)
                     current_var.set_expression( expr )
-                self.var_defines.remove( current_var )
+                self.undefined_vars.remove( current_var )
 
             if action == "add_proc_parameter":
                 if self.proc_args_left(env) is False:

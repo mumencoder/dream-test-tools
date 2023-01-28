@@ -1,6 +1,6 @@
 
-from ..common import *
-from ..model import *
+from ...common import *
+from ...model import *
 
 class RandomProcs(object):
     def choose_proc_declare(self, env):
@@ -10,13 +10,13 @@ class RandomProcs(object):
 
     def proc_stmts_left(self, env):
         proc_stmts = 0
-        for node in self.proc_defines:
+        for node in self.toplevel.iter_proc_defines():
             proc_stmts += self.node_info[node]["stmts"]
         return proc_stmts > 0
 
     def proc_args_left(self, env):
         proc_args = 0
-        for node in self.proc_defines:
+        for node in self.toplevel.iter_proc_defines():
             proc_args += self.node_info[node]["args"]
         return proc_args > 0
 

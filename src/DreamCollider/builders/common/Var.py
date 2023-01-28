@@ -1,6 +1,6 @@
 
-from ..common import *
-from ..model import *
+from ...common import *
+from ...model import *
 
 class RandomVars(object):
     def choose_var_declare(self, env):
@@ -9,12 +9,12 @@ class RandomVars(object):
         return random.choice( self.toplevel.vars )
 
     def choose_undefined_var(self, env):
-        if len(self.var_defines) == 0:
+        if len(self.undefined_vars) == 0:
             return None
-        return random.choice( self.var_defines )
+        return random.choice( self.undefined_vars )
 
     def undefined_vars_left(self, env):
-        return len(self.var_defines) != 0
+        return len(self.undefined_vars) != 0
 
     def declare_var(self, env):
         current_block = env.attr.current_object
@@ -23,7 +23,7 @@ class RandomVars(object):
         env.attr.var_define = var_define
         var_define.name = self.get_var_name( env )
         var_define.var_path = tuple()
-        self.var_defines.append( var_define )
+        self.undefined_vars.append( var_define )
         return var_define
 
     def get_var_name(self, env):
