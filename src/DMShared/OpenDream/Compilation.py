@@ -22,41 +22,40 @@ class Compilation(object):
         return paths
 
     @staticmethod
-    async def compile(env):
-        compilation = env.attr.compilation
+    async def invoke_compiler(env):
+        penv = env.branch()
+        if not penv.attr_exists('.compilation.args'):
+            penv.attr.compilation.args = []
 
-        async def log_returncode(env):
-            compilation.returncode = env.attr.process.instance.returncode
-
-        if not env.attr_exists('.compilation.args'):
-            compilation.args = []
-
-        await env.send_event('opendream.before_compile', env)
-
-        env = env.branch()
-        env.attr.shell.dir = compilation.dm_file_path.parent
-
-        exe_paths = Compilation.get_exe_path(env)
+        penv.attr.build.dir = penv.attr.install.dir / 'DMCompiler'
+        penv.attr.shell.dir = penv.attr.compilation.dm_file_path.parent
+        exe_paths = Compilation.get_exe_path(penv)
         if len(exe_paths) != 1:
             raise Exception("missing/ambiguous path", env.attr.build.dir, exe_paths)
 
-        env.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(compilation.args)} {compilation.dm_file_path.name}"
-        env.attr.shell.env = {}
-        env.event_handlers['process.finished'] = log_returncode
-        await Shared.Process.shell(env)
+        penv.attr.shell.env = os.environ
+        penv.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(penv.attr.compilation.args)} {penv.attr.compilation.dm_file_path.name}"
+        await Shared.Process.shell(penv)
+        env.attr.compilation.returncode = penv.attr.process.instance.returncode
 
-    async def compile_opendream(tenv):
-        cenv = tenv.branch()
+    async def managed_compile(env):
+        env = env.branch()
+        env.attr.process.stdout = open(env.attr.compilation.root_dir / 'opendream.compile.stdout.txt', "w")
+        try:
+            await Compilation.invoke_compiler(env)
+        finally:
+            env.attr.process.stdout.close()
 
-        cenv.attr.build.dir = cenv.attr.install.dir / 'DMCompiler'
-        cenv.attr.process.stdout = open(cenv.attr.test.root_dir / 'opendream.compile.stdout.txt', "w")
-        await DMShared.OpenDream.Compilation.compile( cenv )
+        with open(env.attr.compilation.root_dir / 'opendream.compile.returncode.txt', "w") as f:
+            f.write( str(env.attr.compilation.returncode) )
 
-        with open(cenv.attr.test.root_dir / "opendream.compile.returncode.txt", "w") as f:
-            f.write( str(cenv.attr.compilation.returncode) )
-        cenv.attr.process.stdout.close()
+        return env
 
-        return cenv
+    def load_compile(senv, denv):
+        with open( senv.attr.compilation.root_dir / 'opendream.compile.stdout.txt', "r" ) as f:
+            denv.attr.compilation.stdout = f.read()
+        with open( senv.attr.compilation.root_dir / 'opendream.compile.returncode.txt', "r" ) as f:
+            denv.attr.compilation.returncode = int(f.read())
 
     async def opendream_ast(tenv):
         env = tenv.branch()

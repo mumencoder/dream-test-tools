@@ -16,20 +16,23 @@ def render_home():
 
 async def render_random_ast():
     env = Shared.Environment()
-    await random_ast( env )
+    result = await random_ast( env )
     
     content = html.Div([ 
         html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
         None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
-        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
-        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
-        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
-        html.Pre( str(env.attr.compilation.objtree_text) ),
+        None if len(result["benv"].attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(result['benv'].attr.ast.collider_byond_paths_difference)}" ), 
+        html.Pre( f"Collider paths: {result['benv'].attr.ast.collider_paths}" ), 
+        html.Pre( f"Byond paths: {str(result['benv'].attr.ast.byond_paths)}" ),
+        html.Pre( str(result["benv"].attr.compilation.objtree_text) ),
         html.Hr(),
-        dbc.Row( [dbc.Col( html.Pre( env.attr.ast.text ), width=6 ), dbc.Col( html.Pre(env.attr.results.collider_pathlines_text), width=6 )] ),
+        dbc.Row( [dbc.Col( html.Pre( result['benv'].attr.ast.text ), width=6 ), dbc.Col( html.Pre(result['benv'].attr.results.collider_pathlines_text), width=6 )] ),
         html.Hr(),
-        html.Pre(env.attr.compilation.stdout),
-        html.Pre(env.attr.compilation.returncode),
+        html.Pre(result["benv"].attr.compilation.stdout),
+        html.Pre(result["benv"].attr.compilation.returncode),
+        html.Hr(),
+        html.Pre(result["oenv"].attr.compilation.stdout),
+        html.Pre(result["oenv"].attr.compilation.returncode),
         html.Hr(),
     ])
     return render(content)
@@ -134,6 +137,11 @@ async def main():
 
     DMShared.Byond.load(benv, genv.attr.config["defines"]["byond_main"])
     await DMShared.Byond.install(benv)
+
+    DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["defines"]["opendream_current"])
+    await DMShared.OpenDream.Install.init_repo(oenv)
+    DMShared.OpenDream.Install.load_install_from_repo(oenv)
+    await DMShared.OpenDream.Builder.build(oenv)
 
     app.layout = layout
     app.run_server(debug=True)

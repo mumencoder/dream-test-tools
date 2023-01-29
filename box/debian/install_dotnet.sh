@@ -7,4 +7,4 @@ wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.
     dpkg -i packages-microsoft-prod.deb && \
     rm packages-microsoft-prod.deb
 apt-get update && \
-    apt-get install -y dotnet-sdk-6.0
+    apt-get install -y dotnet-sdk-7.0

@@ -97,15 +97,33 @@ async def byond_compilation(env):
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( env.attr.ast.text )
     await DMShared.Byond.Compilation.managed_compile(cenv)
-    DMShared.Byond.Compilation.load_compile(cenv, env)
     await DMShared.Byond.Compilation.managed_objtree(cenv)
-    DMShared.Byond.Compilation.load_objtree(cenv, env)
+
+    renv = env.branch()
+    DMShared.Byond.Compilation.load_objtree(cenv, renv)
+    DMShared.Byond.Compilation.load_compile(cenv, renv)
+    return renv
+
+async def opendream_compilation(env):
+    cenv = oenv.branch()
+    cenv.attr.compilation.root_dir = genv.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
+    cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
+    with open( cenv.attr.compilation.dm_file_path, "w") as f:
+        f.write( env.attr.ast.text )
+    await DMShared.OpenDream.Compilation.managed_compile(cenv)
+
+    renv = env.branch()
+    DMShared.OpenDream.Compilation.load_compile(cenv, renv)
+    return renv
 
 async def random_ast(env):
+    result = {}
     generate_ast(env)
     unparse_test(env)
-    await byond_compilation(env)
-    compare_paths(env)
+    result["benv"] = await byond_compilation(env)
+    result["oenv"] = await opendream_compilation(env)
+    compare_paths(result["benv"])
+    return result
     
 def marshall_test(env):
     test = {}
@@ -127,3 +145,4 @@ import DMShared, DreamCollider
 
 genv = Shared.Environment()
 benv = genv.branch()
+oenv = genv.branch()

@@ -50,21 +50,12 @@ class Run(object):
             renv = tenv.branch()
             renv.attr.build.dir = Shared.Path( env.attr.collider.config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Server'
             renv.attr.process.stdout = open(renv.attr.test.root_dir / 'opendream.run.stdout.txt', "w")
-            renv.attr.run.dm_file_path = DMShared.OpenDream.Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
+            renv.attr.run.dm_file_path = Run.get_bytecode_file( cenv.attr.compilation.dm_file_path )
             renv.attr.run.args = {}
-            await DMShared.OpenDream.Run.run(renv)
+            await Run.run(renv)
             renv.attr.process.stdout.close()
         return renv
         
-    async def setup_opendream_dotnet():
-        savedir = os.getcwd()
-        os.chdir( str( Shared.Path( env.attr.collider.config["opendream"]["repo_dir"] ) / 'bin' / 'Content.Tests' / 'DMProject' ) )
-        tests = DMTests()
-        tests.BaseSetup()
-        tests.OneTimeSetup()
-        os.chdir( savedir )
-        dreamman = IoCManager.Resolve[IDreamManager]()
-
     async def run_opendream_dotnet():
         cenv = tenv.branch()
 

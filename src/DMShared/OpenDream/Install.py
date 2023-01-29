@@ -5,19 +5,14 @@ from . import Builder
 
 class Install(object):
     @staticmethod
-    def load(env, _id):
-        install = env.prefix('.opendream.install')
-        install.id = _id
-        install.platform = 'opendream'
-        env.attr.install = install
+    def load_repo(env, data):
+        env.attr.git.repo.url = data["url"]
+        env.attr.git.repo.dir = Shared.Path( data["path"] )
 
-    async def install_opendream(env):
-        genv = env.branch()
-        genv.attr.git.repo.url = os.environ['OPENDREAM_REPO']
-        genv.attr.git.repo.dir = env.attr.install.dir
-        await Shared.Git.Repo.clone(genv)
-        await Shared.Git.Repo.init_all_submodules(genv)
+    async def init_repo(env):
+        await Shared.Git.Repo.clone(env)
+        await Shared.Git.Repo.init_all_submodules(env)
 
-        benv = env.branch()
-        benv.attr.dotnet.solution.path = env.attr.install.dir
-        await Builder.build( benv )
+    def load_install_from_repo(env):
+        env.attr.install.dir = env.attr.git.repo.dir
+

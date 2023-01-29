@@ -25,8 +25,9 @@ class Builder(object):
         else:
             dotnet.build.params = {}
 
-        dotnet.build.params['configuration'] = 'Release'
+        dotnet.build.params['configuration'] = 'Debug'
 
+        env.attr.dotnet.solution.path = env.attr.install.dir
         cenv = env.branch()
         Builder.prepare_compiler_project( cenv )
 
