@@ -3,6 +3,13 @@ from ...common import *
 from ...model import *
 
 class RandomVars(object):
+    def config_vars(self, config):
+        config.attr.define.var.empty_initializer_prob = 0.05
+        config.attr.define.var.count = max(0, random.gauss(10, 5))
+        def var_declare_remaining(self, env):
+            return self.config.attr.define.var.count - len(self.toplevel.vars)
+        type(self).var_declare_remaining = var_declare_remaining
+
     def choose_var_declare(self, env):
         if len(self.toplevel.vars) == 0:
             return None

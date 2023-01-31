@@ -4,6 +4,12 @@ from ...common import *
 from ...Tree import *
 
 class RandomStmt(object):
+    def config_stmt(self, config):
+        # "world << expr"
+        config.attr.define.proc.stmt.weights.type.output_normal = 5
+        # "expr << expr"
+        config.attr.define.proc.stmt.weights.type.output_irregular = 1
+
     def create_proc_stmt(self, env):
         stmt_type = self.choose_option( self.config.attr.define.proc.stmt.choices.type )
 

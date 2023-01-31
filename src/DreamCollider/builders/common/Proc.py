@@ -3,6 +3,25 @@ from ...common import *
 from ...model import *
 
 class RandomProcs(object):
+    def config_proc(self, config):
+        config.attr.define.proc.count = max(0, random.gauss(10, 5) )
+        config.attr.define.proc.is_verb_prob = 0.05
+        config.attr.define.proc.arg.has_path_prob = 0.10
+        config.attr.define.proc.arg.has_default_prob = 0.10
+        config.attr.define.proc.arg.has_astype_prob = 0.10
+
+        def determine_proc_stmt_count(self, env):
+            return max(0, random.gauss(6, 3))
+        type(self).determine_proc_stmt_count = determine_proc_stmt_count
+
+        def determine_proc_arg_count(self, env):
+            return max(0, random.gauss(3, 1.5))
+        type(self).determine_proc_arg_count = determine_proc_arg_count
+
+        def proc_declare_remaining(self, env):
+            return self.config.attr.define.proc.count - len(self.toplevel.procs)
+        type(self).proc_declare_remaining = proc_declare_remaining        
+
     def choose_proc_declare(self, env):
         if len(self.toplevel.procs) == 0:
             return None
@@ -40,6 +59,23 @@ class RandomProcs(object):
                 name = vn
         return name
 
+    def add_proc_paths(self, env):
+        env.attr.builder.init_node = self.initialize_node
+        block = random.choice( self.toplevel.object_blocks )
+        proc_block = self.initialize_node( AST.ObjectBlock() )
+        proc_block.path = AST.ObjectPath.new( segments=['proc'] )
+        block.add_leaf( proc_block )
+
+        proc = self.initialize_node( AST.ProcDefine.new(name="print_path") )
+        proc.body = [AST.Stmt.Expression.new( 
+            expr=AST.Op.ShiftLeft.new( 
+                exprs=[ 
+                    AST.Expr.Identifier.new(name="world"), 
+                    AST.TextNode.new(text='"[.....]"')]
+            )
+        )]
+        proc_block.add_leaf( proc )
+        
 class SimpleProcCreator(object):
     def create_proc_param(self, env):
         arg = self.initialize_node( AST.ProcArgument() )

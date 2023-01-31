@@ -41,7 +41,7 @@ def setup_base(env):
 def generate_ast(env):
     benv = Shared.Environment()
     benv.attr.expr.depth = 3
-    builder = DreamCollider.FullRandomBuilder( )
+    builder = DreamCollider.OpenDreamBuilder( )
     builder.generate( benv )
     builder.add_proc_paths( benv )
 

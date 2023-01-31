@@ -141,7 +141,7 @@ async def main():
     DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["defines"]["opendream_current"])
     await DMShared.OpenDream.Install.init_repo(oenv)
     DMShared.OpenDream.Install.load_install_from_repo(oenv)
-    await DMShared.OpenDream.Builder.build(oenv)
+    #await DMShared.OpenDream.Builder.build(oenv)
 
     app.layout = layout
     app.run_server(debug=True)

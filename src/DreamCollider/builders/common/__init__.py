@@ -1,4 +1,5 @@
 
+from . import BaseBuilder
 from . import Object
 from . import Proc
 from . import Expr

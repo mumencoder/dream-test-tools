@@ -8,6 +8,37 @@ class RandomObjects(object):
             return None
         return random.choice( self.toplevel.object_blocks ) 
 
+    def config_object(self, config):
+        def object_declare_remaining(self, env):
+            return config.attr.object_block_count - len(self.toplevel.object_blocks)
+        type(self).object_declare_remaining = object_declare_remaining
+
+    	# total # of object blocks that will be added to AST 
+        config.attr.object_block_count = max(1, round( random.gauss(12, 6))) 
+
+        # probability that a single-leaf declare will be joined with its parent
+        config.attr.path_join_prob = 0.5
+
+        # probability that an user object proc/var declaration will be syntactically an override
+        config.attr.override_user_define_prob = 0.5
+
+        # probability that a stdlib object proc/var declaration will be syntactically an override
+        config.attr.override_stdlib_define_prob = 0.5
+
+        config.attr.obj.extend_path_prob = 0.25
+
+    def config_object_paths(self, config):
+        config.attr.obj.choices.op_extend.leaf = 8
+        config.attr.obj.choices.op_extend.upwards = 1
+        config.attr.obj.choices.op_extend.downwards = 1
+
+        config.attr.obj.choices.path_prefix.absolute = 1
+        config.attr.obj.choices.path_prefix.upwards = 4
+        config.attr.obj.choices.path_prefix.downwards = 4
+        config.attr.obj.choices.path_prefix.relative = 8
+        # which stdlib types can show up as an object block
+        config.attr.obj.allowed_stdlib_types = list( self.stdlib.objects.keys() )
+
     def generate_object_path(self, parent_block):
         prefix_type = self.choose_option( self.config.attr.obj.choices.path_prefix )
         extend_chance = self.config.attr.obj.extend_path_prob
@@ -50,12 +81,7 @@ class RandomObjects(object):
                 state = "op"
                 extend = random.random() < extend_chance
                 extend_chance /= 2.0
-        return self.create_objectpath( tuple(path) )
-
-    def create_objectpath(self, segments):
-        node = AST.ObjectPath()
-        node.segments = segments
-        return node
+        return AST.ObjectPath.new(segments=tuple(path))
 
     def declare_object(self, env):
         parent_block = self.declare_block_stack[-1]

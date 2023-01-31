@@ -52,6 +52,9 @@ class RandomExprGenerator(object):
                 depth -= 1
         return expr
 
+    def config_expr(self, config):
+        config.attr.expr.param.is_named = 0.1
+
     def initialize_expression(self, env, expr, depth):
             if type(expr) is AST.Expr.Property:
                 expr.name = random.choice( ['pa', 'pb', 'pc'] )
