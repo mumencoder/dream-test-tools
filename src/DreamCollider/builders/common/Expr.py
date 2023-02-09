@@ -53,7 +53,7 @@ class RandomExprGenerator(object):
         return expr
 
     def config_expr(self, config):
-        config.attr.expr.param.is_named = 0.1
+        config.set("expr.call.param.is_named", 0.1)
 
     def initialize_expression(self, env, expr, depth):
             if type(expr) is AST.Expr.Property:

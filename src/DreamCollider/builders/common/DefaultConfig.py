@@ -4,26 +4,8 @@ from ...common import *
 from ...Tree import *
 
 class DefaultConfig(object):
-
-    def generate_choices(self, config, pattern):
-        filter_pattern = pattern + '.*'
-        choice_dict = collections.defaultdict(lambda: collections.defaultdict(list))
-        for prop in config.filter_properties(filter_pattern):
-            names = prop.split(".")
-            option = names[-1]
-            wclass = names[-2]
-            weight = config.get_attr(prop)
-            choice_dict[wclass]["options"].append(option)
-            choice_dict[wclass]["weights"].append(weight)
-
-        for wclass, results in choice_dict.items():
-            config.set_attr(f"{pattern}.choices.{wclass}", results)
-
-    def choose_option(self, wclass):
-        return random.choices( wclass["options"], wclass["weights"] )[0]
-        
     def initialize_config(self):
-        self.config = Shared.Environment()
+        self.config = ColliderConfig()
         
         for name in dir(self):
             if name.startswith('config_'):
@@ -31,5 +13,18 @@ class DefaultConfig(object):
                 if hasattr(config_fn, '__call__'):
                     config_fn(self.config)
 
-        self.generate_choices(self.config, '.obj')
-        self.generate_choices(self.config, '.define.proc.stmt')
+    def config_common(self, config):
+    	# total # of object blocks that will be added to AST 
+        config.declare_param("obj.object_block_count")
+
+        # probability that a single-leaf declare will be joined with its parent
+        config.declare_param("obj.path.block_join_prob")
+
+        # declaration will not express a semantically correct override
+        config.declare_param("obj.path.flip_override_prob")
+
+        # path will be extended
+        config.declare_param("obj.path.extend_prob")
+
+        # list of types in tuple form that can show up as ObjectBlocks
+        config.declare_param("obj.path.allowed_stdlib_types")

@@ -15,13 +15,11 @@ class ByondBuilder(
         DefaultConfig.DefaultConfig):
 
     def config_object_paths(self, config):
-        config.attr.obj.choices.op_extend.leaf = 8
-        config.attr.obj.choices.op_extend.upwards = 1
-        config.attr.obj.choices.op_extend.downwards = 1
+        config.set("obj.path.flip_override_prob", 0)
+        config.set("obj.path.op_extend", 0.5)
+        config.set_choice("obj.path.prefix_type", absolute=1, upwards=4, downwards=4, relative=8)
+        config.set_choice("obj.path.extend_type", leaf=8, upwards=1, downwards=1)
+        config.set("obj.path.allowed_stdlib_types", list( self.stdlib.objects.keys() ) )
 
-        config.attr.obj.choices.path_prefix.absolute = 1
-        config.attr.obj.choices.path_prefix.upwards = 4
-        config.attr.obj.choices.path_prefix.downwards = 4
-        config.attr.obj.choices.path_prefix.relative = 8
-        # which stdlib types can show up as an object block
-        config.attr.obj.allowed_stdlib_types = list( self.stdlib.objects.keys() )      
+    def config_fuzzer(self, config):
+        config.set_choice("fuzzer.block_type", oneline=2, indent=11, nice_bracket=11)

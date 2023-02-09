@@ -5,7 +5,10 @@ class Display:
         result = io.StringIO()
         current_line = 1
         it = iter(values)
-        next_line = next(it)
+        try:
+            next_line = next(it)
+        except StopIteration:
+            return []
         while current_line <= next_line["line"]:
             if current_line == next_line["line"]:
                 result.write( str(next_line["value"]) )

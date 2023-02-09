@@ -20,7 +20,6 @@ def print_env(env, title):
         print(prop, type(env.get_attr(prop)))
 
 ### config
-
 def load_config(env):
     if os.path.exists('server_config.yaml'):
         with open( 'server_config.yaml', "r") as f:
@@ -37,17 +36,15 @@ def setup_base(env):
     env.attr.process.stdout = sys.stdout
 
 ### ast generation
-
 def generate_ast(env):
     benv = Shared.Environment()
     benv.attr.expr.depth = 3
     builder = DreamCollider.OpenDreamBuilder( )
-    builder.generate( benv )
-    builder.add_proc_paths( benv )
+    builder.build_all( Shared.Environment() )
 
     env.attr.ast.builder = builder
     env.attr.ast.ast = builder.toplevel
-    env.attr.ast.fuzzer = DreamCollider.Fuzzer()
+    env.attr.ast.fuzzer = DreamCollider.Fuzzer(env.attr.ast.builder.config)
     env.attr.ast.ast_tokens = list(env.attr.ast.fuzzer.fuzz_shape( builder.toplevel.shape() ) )
     env.attr.ast.ngram_info = DreamCollider.NGram.compute_info( env.attr.ast.ast_tokens )
 

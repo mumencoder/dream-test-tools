@@ -2,50 +2,33 @@
 from ...common import *
 from ...model import *
 
-class RandomProcs(object):
-    def config_proc(self, config):
-        config.attr.define.proc.count = max(0, random.gauss(10, 5) )
-        config.attr.define.proc.is_verb_prob = 0.05
-        config.attr.define.proc.arg.has_path_prob = 0.10
-        config.attr.define.proc.arg.has_default_prob = 0.10
-        config.attr.define.proc.arg.has_astype_prob = 0.10
+class ProcDeclareAction(object):
+    def __init__(self, object_tag, proc_tags):
+        self.proc_count = max(0, random.gauss(10, 5))
+        self.current_procs = set()
+        self.proc_generator = self.default_proc_generator
+        self.object_tag = object_tag
+        self.proc_tags = proc_tags
+    
+    def finished(self, env):
+        if self.proc_count - len(self.current_procs) <= 0:
+            return True
+        return False
 
-        def determine_proc_stmt_count(self, env):
-            return max(0, random.gauss(6, 3))
-        type(self).determine_proc_stmt_count = determine_proc_stmt_count
+    def __call__(self, env):
+        current_object = env.attr.gen.find_tagged(self.object_tag)
+        env.attr.current_object = current_object
+        new_proc = self.generate_proc(env)
+        env.attr.gen.toplevel.set_tags(new_proc, self.proc_tags)
+        self.current_procs.add( new_proc )
+        current_object.add_leaf( new_proc )
 
-        def determine_proc_arg_count(self, env):
-            return max(0, random.gauss(3, 1.5))
-        type(self).determine_proc_arg_count = determine_proc_arg_count
-
-        def proc_declare_remaining(self, env):
-            return self.config.attr.define.proc.count - len(self.toplevel.procs)
-        type(self).proc_declare_remaining = proc_declare_remaining        
-
-    def choose_proc_declare(self, env):
-        if len(self.toplevel.procs) == 0:
-            return None
-        return random.choice( self.toplevel.procs )
-
-    def proc_stmts_left(self, env):
-        proc_stmts = 0
-        for node in self.toplevel.iter_proc_defines():
-            proc_stmts += self.node_info[node]["stmts"]
-        return proc_stmts > 0
-
-    def proc_args_left(self, env):
-        proc_args = 0
-        for node in self.toplevel.iter_proc_defines():
-            proc_args += self.node_info[node]["args"]
-        return proc_args > 0
-
-    def declare_proc(self, env):
-        current_block = env.attr.current_object
-        proc_define = self.initialize_node( AST.ProcDefine() )
-        env = env.branch()
-        env.attr.proc_define = proc_define
-        proc_define.name = self.get_proc_name(env)
-        self.node_info[proc_define] = {"args": self.determine_proc_arg_count(env), "stmts": self.determine_proc_stmt_count(env) }
+    def generate_proc(self, env):
+        proc_define = env.attr.gen.initialize_node( AST.ProcDefine() )
+        proc_define.name = env.attr.gen.generate_proc_name(env)
+        env.attr.gen.node_info[proc_define] = {"args": max(0, random.gauss(6, 3)), "stmts": max(0, random.gauss(3, 1.5)) }
+        env.attr.gen.add_tag( proc_define, "needs_random_args" )
+        env.attr.gen.add_tag( proc_define, "needs_random_stmts" )
         return proc_define
 
     def get_proc_name(self, env):
@@ -59,21 +42,51 @@ class RandomProcs(object):
                 name = vn
         return name
 
+class ProcParameterAction(object):
+    def __init__(self, proc_tag, param_tags):
+        self.proc_tag = proc_tag
+        self.param_tags = param_tags
+
+    def finished(self, env):
+        procs = env.attr.find_tagged(self.proc_tag)
+        return len(procs) == 0
+
+    def __call__(self, env):
+        current_proc = self.choose_proc(env)
+        env.attr.current_proc = current_proc
+        proc_param = self.create_proc_param(env)
+        env.attr.gen.add_param( current_proc, proc_param )
+
+class ProcStatementAction(object):
+    def __init__(self, proc_tag, statement_tags):
+        self.proc_tag = proc_tag
+        self.statement_tags = statement_tags
+
+    def finished(self, env):
+        procs = env.attr.find_tagged(self.proc_tag)
+        return len(procs) == 0
+
+    def __call__(self, env):
+        current_proc = self.choose_proc(env)
+        env.attr.current_proc = current_proc
+        proc_stmt = self.create_proc_stmt(env)
+        env.attr.gen.add_stmt( current_proc, proc_stmt )
+
+class RandomProcs(object):
+    def config_proc(self, config):
+        config.set("proc.is_verb_prob", 0.05)
+        config.set("proc.arg.has_path_prob", 0.05)
+        config.set("proc.arg.has_init_prob", 0.10)
+        config.set("proc.arg.has_astype_prob", 0.02)
+
     def add_proc_paths(self, env):
-        env.attr.builder.init_node = self.initialize_node
         block = random.choice( self.toplevel.object_blocks )
         proc_block = self.initialize_node( AST.ObjectBlock() )
         proc_block.path = AST.ObjectPath.new( segments=['proc'] )
         block.add_leaf( proc_block )
 
         proc = self.initialize_node( AST.ProcDefine.new(name="print_path") )
-        proc.body = [AST.Stmt.Expression.new( 
-            expr=AST.Op.ShiftLeft.new( 
-                exprs=[ 
-                    AST.Expr.Identifier.new(name="world"), 
-                    AST.TextNode.new(text='"[.....]"')]
-            )
-        )]
+        proc.body = []
         proc_block.add_leaf( proc )
         
 class SimpleProcCreator(object):

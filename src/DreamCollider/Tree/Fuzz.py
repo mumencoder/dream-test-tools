@@ -1,10 +1,10 @@
 
 from ..common import *
 from .Shape import *
-
 class Fuzzer(object):
-    def __init__(self):
+    def __init__(self, config):
         self.block_mode = [ {"type":"toplevel", 'indent':''} ]
+        self.config = config
 
     def fuzz_shape(self, shape):
         return self.fuzz_stream( shape )
@@ -27,13 +27,13 @@ class Fuzzer(object):
             if self.block_mode[-1]["type"] == "oneline":
                 self.block_mode.append( {"type":"oneline"} )
             else:
-                a = random.random()
-                if a < 0.05:
-                    self.block_mode.append( {"type":"oneline"} )
-                elif a < 0.66:
-                    self.block_mode.append( {"type":"indent", "indent": self.inc_indent()} )
-                else:
-                    self.block_mode.append( {"type":"nice_bracket", "indent": self.inc_indent()})
+                match self.config.choose_option("fuzzer.block_type"):
+                    case "oneline":
+                        self.block_mode.append( {"type":"oneline"} )
+                    case "indent":
+                        self.block_mode.append( {"type":"indent", "indent": self.inc_indent()} )
+                    case "nice_bracket":
+                        self.block_mode.append( {"type":"nice_bracket", "indent": self.inc_indent()})
             yield from self.begin_block()
         elif token["type"] == "EndBlock":
             yield from self.end_block()
