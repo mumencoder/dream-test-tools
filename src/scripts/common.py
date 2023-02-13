@@ -1,5 +1,5 @@
 
-import os, sys, asyncio, json, io, time, re, pathlib, yaml, collections, random, shutil, gzip
+import os, sys, asyncio, json, io, time, re, pathlib, yaml, collections, random, shutil, gzip, threading
 
 import requests 
 
@@ -37,15 +37,11 @@ def setup_base(env):
 
 ### ast generation
 def generate_ast(env):
-    benv = Shared.Environment()
-    benv.attr.expr.depth = 3
-    builder = DreamCollider.OpenDreamBuilder( )
-    builder.build_all( Shared.Environment() )
+    env.attr.expr.depth = 3
+    env.attr.ast.builder.build_all( env )
 
-    env.attr.ast.builder = builder
-    env.attr.ast.ast = builder.toplevel
     env.attr.ast.fuzzer = DreamCollider.Fuzzer(env.attr.ast.builder.config)
-    env.attr.ast.ast_tokens = list(env.attr.ast.fuzzer.fuzz_shape( builder.toplevel.shape() ) )
+    env.attr.ast.ast_tokens = list(env.attr.ast.fuzzer.fuzz_shape( env.attr.ast.builder.toplevel.shape() ) )
     env.attr.ast.ngram_info = DreamCollider.NGram.compute_info( env.attr.ast.ast_tokens )
 
 def compare_paths(env):
@@ -58,7 +54,7 @@ def compare_paths(env):
         collider_paths.add( node.path )
 
     byond_paths = set()
-    for node in DMShared.Byond.Compilation.iter_objtree(env):
+    for node in DMShared.Byond.Compilation.iter_objtree(env.attr.benv):
         byond_paths.add( node["path"] )
 
     path_mismatch = False
@@ -74,7 +70,7 @@ def compare_paths(env):
     for node, line in DreamCollider.Shape.node_lines(env.attr.ast.ast_tokens):
         if type(node) is DreamCollider.AST.ObjectBlock:
             collider_pathlines[line].append( node.resolved_path )
-    for node in DMShared.Byond.Compilation.iter_objtree(env):
+    for node in DMShared.Byond.Compilation.iter_objtree(env.attr.benv):
         if node["path"] not in collider_pathlines[ node["line"] ]:
             known_mismatch = (node["line"], node["path"])
 
@@ -87,6 +83,25 @@ def compare_paths(env):
          [{"line":k, "value":v} for k,v in sorted( zip(collider_pathlines.keys(), collider_pathlines.values()), key=lambda e: e[0] )] )
 
 # compilation
+async def install_byond(benv):
+    benv.attr.process.stdout = io.StringIO()
+    benv.attr.process.stderr = benv.attr.process.stdout
+    benv.attr.process.piped = True
+
+    benv.attr.state.installed = False
+    await DMShared.Byond.install(benv)
+    benv.attr.state.installed = True
+
+async def install_opendream(oenv):
+    oenv.attr.process.stdout = io.StringIO()
+    oenv.attr.process.stderr = oenv.attr.process.stdout
+    oenv.attr.process.piped = True
+
+    oenv.attr.state.installed = False
+    await DMShared.OpenDream.Install.init_repo(oenv)
+    await DMShared.OpenDream.Builder.build(oenv)
+    oenv.attr.state.installed = True
+
 async def byond_compilation(env):
     cenv = benv.branch()
     cenv.attr.compilation.root_dir = genv.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
@@ -117,11 +132,21 @@ async def random_ast(env):
     result = {}
     generate_ast(env)
     unparse_test(env)
-    result["benv"] = await byond_compilation(env)
-    result["oenv"] = await opendream_compilation(env)
-    compare_paths(result["benv"])
+    env.attr.benv = await byond_compilation(env)
+    env.attr.oenv = await opendream_compilation(env)
+    compare_paths(env)
     return result
-    
+
+async def test_opendream(env):
+    env.attr.ast.builder = DreamCollider.OpenDreamBuilder( )
+    await random_ast(env)
+    env.attr.task.finished = True
+
+async def test_byond(env):
+    env.attr.ast.builder = DreamCollider.ByondBuilder( )
+    await random_ast(env)
+    env.attr.task.finished = True
+
 def marshall_test(env):
     test = {}
     test["ast"] = DreamCollider.AST.marshall( env.attr.ast.ast )

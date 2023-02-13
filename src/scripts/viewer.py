@@ -3,39 +3,90 @@ from common import *
 def get_nav_bar():
     return html.Div([
         dcc.Link('Home', href='/'),
+        html.Hr(),
+        dcc.Link("Compile OD", href="compileOD"),
         html.Br(),
-        dcc.Link('Random', href='/random'),
-        html.Br()
+        dcc.Link("Install Byond", href="install_byond"),
+        html.Hr(),
+        dcc.Link('Random Test - Byond', href='/random1'),
+        html.Br(),
+        dcc.Link("Random Test - OD", href='/random2'),
+        html.Hr(),
     ])
 
+@dash.callback(dash.Output('page-content', 'children'), [dash.Input('url', 'pathname')])
+def display_page(url):
+    path = url.split("/")
+    if url == "/":
+        content = render_home()
+    elif url.startswith("/install_byond"):
+        content = render_install_byond() 
+    elif url.startswith("/compileOD"):
+        content = render_compile_OD() 
+    elif url.startswith("/random1"):
+        content = render_test_byond()
+    elif url.startswith("/random2"):
+        content = render_test_opendream()
+    else:
+        content = html.Div(['Not a page how did you get here shoo'])
+    return render(content)
+
 def render(*content):
-    return html.Div( [get_nav_bar(), html.Hr(), *content] )
+    return html.Div( [get_nav_bar(), *content] )
 
 def render_home():
-    return render([])
+    return []
 
-async def render_random_ast():
+def render_install_byond():
+    if not benv.attr_exists('.state.installed'):
+        new_task(install_byond, benv)
+        return html.Div(['Installing...'])
+    else:
+        return html.Div([ html.Pre(benv.attr.process.stdout.getvalue()) ])
+
+def render_compile_OD():
+    if not oenv.attr_exists('.state.installed'):  
+        new_task(install_opendream, oenv)
+        return html.Div(['Installing...'])
+    else:
+        return html.Div([ html.Pre(oenv.attr.process.stdout.getvalue()) ])
+
+def render_test_opendream():
     env = Shared.Environment()
-    result = await random_ast( env )
-    
+    new_task(test_opendream, env)
+    while not env.attr_exists('.task.finished'):
+        time.sleep(0.05)
+    return render_test(env)
+
+def render_test_byond():
+    env = Shared.Environment()
+    new_task(test_byond, env)
+    while not env.attr_exists('.task.finished'):
+        time.sleep(0.05)
+    return render_test(env)
+
+def render_test(env):
+    benv = env.attr.benv
+    oenv = env.attr.oenv
+    result = env.attr.result   
     content = html.Div([ 
         html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
         None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
-        None if len(result["benv"].attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(result['benv'].attr.ast.collider_byond_paths_difference)}" ), 
-        html.Pre( f"Collider paths: {result['benv'].attr.ast.collider_paths}" ), 
-        html.Pre( f"Byond paths: {str(result['benv'].attr.ast.byond_paths)}" ),
-        html.Pre( str(result["benv"].attr.compilation.objtree_text) ),
+        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
+        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
+        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
+        html.Pre( str(benv.attr.compilation.objtree_text) ),
         html.Hr(),
-        dbc.Row( [dbc.Col( html.Pre( result['benv'].attr.ast.text ), width=6 ), dbc.Col( html.Pre(result['benv'].attr.results.collider_pathlines_text), width=6 )] ),
+        dbc.Row( [dbc.Col( html.Pre( str(env.attr.ast.text) ), width=6 ), dbc.Col( html.Pre( str(env.attr.results.collider_pathlines_text)), width=6 )] ),
         html.Hr(),
-        html.Pre(result["benv"].attr.compilation.stdout),
-        html.Pre(result["benv"].attr.compilation.returncode),
+        html.Pre( str(benv.attr.compilation.stdout) ),
+        html.Pre( str(benv.attr.compilation.returncode) ),
         html.Hr(),
-        html.Pre(result["oenv"].attr.compilation.stdout),
-        html.Pre(result["oenv"].attr.compilation.returncode),
+        html.Pre( str(oenv.attr.compilation.stdout)),
+        html.Pre( str(oenv.attr.compilation.returncode)),
         html.Hr(),
     ])
-    return render(content)
+    return content
 
 def render_summary(tenv):
     result = ""
@@ -57,7 +108,7 @@ def render_summary(tenv):
         result += "Collider errors mismatch - "
     return result
 
-def render_test(tenv):
+def render_results(tenv):
     result = []
 
     if tenv.attr_exists('.test.metadata.paths.dm_file'):
@@ -113,15 +164,6 @@ def render_test(tenv):
 
     return result
 
-@dash.callback(dash.Output('page-content', 'children'), [dash.Input('url', 'pathname')])
-def display_page(url):
-    path = url.split("/")
-    if url == "/":
-        return render_home()
-    elif url.startswith("/random"):
-        return asyncio.run( render_random_ast() )
-    return html.Div(['Not a page how did you get here shoo'])
-
 load_config(genv)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -131,17 +173,48 @@ layout = dbc.Container([
     html.Div([], id='page-content')
 ], fluid=True)
 
+pending_tasks = []
+tasks = set()
+
+def new_task(fn, *args, **kwargs):
+    pending_tasks.append( (fn, args, kwargs) )
+
+def async_thread_launch():
+    asyncio.run( async_thread_main() )
+
+async def async_thread_main():
+    global pending_tasks, tasks
+   
+    while True:
+        for fn, args, kwargs in pending_tasks:
+            tasks.add( asyncio.create_task( fn(*args, **kwargs) ) )
+        pending_tasks = []
+
+        try:
+            for co in asyncio.as_completed(tasks, timeout=0.1):
+                await co
+        except TimeoutError:
+            pass
+        
+        remaining_tasks = set()
+        for task in tasks:
+            if not task.done():
+                remaining_tasks.add( task )
+            else:
+                pass
+        tasks = remaining_tasks
+
 async def main():
     setup_base(genv)
     load_config(genv)
 
     DMShared.Byond.load(benv, genv.attr.config["defines"]["byond_main"])
-    await DMShared.Byond.install(benv)
 
     DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["defines"]["opendream_current"])
-    await DMShared.OpenDream.Install.init_repo(oenv)
     DMShared.OpenDream.Install.load_install_from_repo(oenv)
-    #await DMShared.OpenDream.Builder.build(oenv)
+
+    async_thread = threading.Thread(target=async_thread_launch)
+    async_thread.start()
 
     app.layout = layout
     app.run_server(debug=True)

@@ -14,6 +14,9 @@ class ByondBuilder(
         Var.RandomVars,
         DefaultConfig.DefaultConfig):
 
+    def config_actions(self, config):
+        self.eligible_actions.append( Object.BlockDeclareAction( self.toplevel, "phase1_obj" ) )
+
     def config_object_paths(self, config):
         config.set("obj.path.flip_override_prob", 0)
         config.set("obj.path.op_extend", 0.5)
