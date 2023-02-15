@@ -11,11 +11,15 @@ class BaseBuilder(object):
         self.eligible_actions = []
         self.tags = Tags()
 
+        self.initialize_toplevel()
+
+        self.initialize_config()
+
+    def initialize_toplevel(self):
         self.toplevel = self.initialize_node( AST.Toplevel() )
         for path in self.stdlib.objects.keys():
             node = self.toplevel.tree.add_path( path )
             node.is_stdlib = True
-        self.initialize_config()
 
     def initialize_node(self, node):
         self.node_info[node] = {}

@@ -2,22 +2,17 @@
 from ...common import *
 from ...model import *
 
-class BlockDeclareAction(object):
+class RandomObjectDeclareAction(object):
     def __init__(self, start_block, object_tags):
-        self.block_count = max(1, round( random.gauss(12, 6)) )
         self.current_blocks = set()
         self.declare_block_stack = [start_block]
-        self.generate_block = self.default_block_generator
+        self.generate_object_path = None
         self.object_tags = object_tags
-
-    def finished(self, env):
-        if self.block_count - len(self.current_blocks) <= 0:
-            return True
-        return False
 
     def __call__(self, env):
         parent_block = self.current_parent()
-        new_block = self.generate_block(env)
+        new_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
+        new_block.path = self.generate_object_path(env)
 
         env.attr.builder.tags.add(new_block, *self.object_tags)
         self.current_blocks.add( new_block )
@@ -27,22 +22,52 @@ class BlockDeclareAction(object):
             self.declare_block_stack.pop()
 
         parent_block.add_leaf( new_block )
-
-    def default_block_generator(self, env):
-        new_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
-        new_block.path = env.attr.builder.generate_object_path(env)
-        return new_block
+        self.current_count += 1
 
     def current_parent(self):
         return self.declare_block_stack[-1]
-        
-class RandomObjects(object):
-    def config_object_paths(self, config):
-        config.set("obj.path.block_join_prob", 0.10)
-        config.set("obj.path.extend_prob", 0.50)
 
-    def generate_object_path(self, parent_block):
-        extend_chance = self.config.prob( "obj.path.op_extend" )
+class ToplevelDeclareAction(object):
+    def __init__(self):
+        self.choose_path = None
+
+    def __call__(self, env):
+        path = self.choose_path(env)
+        prev_block = None
+        top_block = None
+        for segment in path:
+            current_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
+            current_block.path = AST.ObjectPath.new(segments=tuple(segment))
+            if top_block is None:
+                top_block = current_block
+            if prev_block is not None:
+                prev_block.add_leaf( current_block )
+            prev_block = current_block
+        return top_block
+
+class ObjectPathChooser(object):
+    def __init__(self, path_choices):
+        self.path_choices = list(path_choices)
+
+    def __call__(self, env):
+        path = random.choice( self.path_choices )
+
+class ObjectPathGenerator(object):
+    def new_config(self):
+        config = ColliderConfig()
+
+        config.declare_param("obj.path.prefix_type")
+        config.declare_param("obj.path.extend_path_prob")
+        config.declare_param("obj.path.extend_type")
+
+        return config
+
+    def __init__(self, builder, config):
+        self.builder = builder
+        self.config = config
+
+    def __call__(self, env):
+        extend_chance = self.config.prob( "obj.path.extend_path_prob" )
 
         prefix_type = self.config.choose_option( "obj.path.prefix_type" )
         match prefix_type:
@@ -84,13 +109,3 @@ class RandomObjects(object):
                 extend = random.random() < extend_chance
                 extend_chance /= 2.0
         return AST.ObjectPath.new(segments=tuple(path))
-
-    def generate_random_path(self):
-        path = self.initialize_node( AST.Expr.Path() )
-        path.prefix = random.choice( ['.', '/', ':'] )
-        path.types = [ random.choice( ['ty1', 'ty2', 'ty3'] ) ]
-        path.ops = []
-        for i in range(0, random.randint(0, 2)):
-            path.ops.append( random.choice( ['.', '/', ':'] ) )
-            path.types.append( path.types[i] + random.choice( ['1', '2', '3'] ) )
-        return path

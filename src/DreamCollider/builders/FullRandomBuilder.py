@@ -6,7 +6,6 @@ from ..model import *
 
 class FullRandomBuilder(
         BaseBuilder.BaseBuilder,
-        Object.RandomObjects,
         Proc.RandomProcs,
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
