@@ -25,7 +25,6 @@ class OpenDreamBuilder(
 
     def config_object_paths(self, config):
         config.set("obj.path.flip_override_prob", 0)
-        config.set("obj.path.allowed_stdlib_types", list( self.stdlib.objects.keys() ) )
 
     def config_fuzzer(self, config):
         config.set_choice("fuzzer.block_type", oneline=0, indent=11, nice_bracket=0)

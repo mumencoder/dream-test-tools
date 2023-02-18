@@ -92,7 +92,7 @@ class Compilation(object):
                 return None
 
         def readObject(node):
-            if node.nodeType == node.ELEMENT_NODE and node.nodeName == "object":
+            if node.nodeType == node.ELEMENT_NODE and node.nodeName in ["object", "area", "turf", "obj", "mob"]:
                 obj_name = None
                 subobjs = []
                 line = None
@@ -147,6 +147,7 @@ class Compilation(object):
                         continue
                     if readProc(leafnode):
                         continue
+                    print(xml)
                     raise Exception(leafnode)
             if readWS(leafnode):
                 continue
@@ -169,6 +170,8 @@ class Compilation(object):
         denv.attr.compilation.objtree = rootobjs
 
     def iter_objtree(env):
+        if not env.attr_exists('.compilation.objtree'):
+            return None
         nodes_left = list(env.attr.compilation.objtree)
         while len(nodes_left) > 0:
             node = nodes_left[-1]

@@ -16,9 +16,3 @@ class DefaultConfig(object):
     def config_common(self, config):
         # declaration will not express a semantically correct override
         config.declare_param("obj.path.flip_override_prob")
-
-        # path will be extended
-        config.declare_param("obj.path.extend_prob")
-
-        # list of types in tuple form that can show up as ObjectBlocks
-        config.declare_param("obj.path.allowed_stdlib_types")

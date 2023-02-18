@@ -11,6 +11,8 @@ def get_nav_bar():
         dcc.Link('Random Test - Byond', href='/random1'),
         html.Br(),
         dcc.Link("Random Test - OD", href='/random2'),
+        html.Br(),
+        dcc.Link("Random Test - Byond Experimental", href='/random3'),
         html.Hr(),
     ])
 
@@ -27,6 +29,8 @@ def display_page(url):
         content = render_test_byond()
     elif url.startswith("/random2"):
         content = render_test_opendream()
+    elif url.startswith("/random3"):
+        content = render_test_byond_experimental()
     else:
         content = html.Div(['Not a page how did you get here shoo'])
     return render(content)
@@ -61,6 +65,13 @@ def render_test_opendream():
 def render_test_byond():
     env = Shared.Environment()
     new_task(test_byond, env)
+    while not env.attr_exists('.task.finished'):
+        time.sleep(0.05)
+    return render_test(env)
+
+def render_test_byond_experimental():
+    env = Shared.Environment()
+    new_task(test_byond_experimental, env)
     while not env.attr_exists('.task.finished'):
         time.sleep(0.05)
     return render_test(env)

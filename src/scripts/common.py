@@ -147,6 +147,11 @@ async def test_byond(env):
     await random_ast(env)
     env.attr.task.finished = True
 
+async def test_byond_experimental(env):
+    env.attr.ast.builder = DreamCollider.ByondBuilderExperimental( )
+    await random_ast(env)
+    env.attr.task.finished = True
+
 def marshall_test(env):
     test = {}
     test["ast"] = DreamCollider.AST.marshall( env.attr.ast.ast )

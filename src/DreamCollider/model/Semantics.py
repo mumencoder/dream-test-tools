@@ -181,7 +181,7 @@ class Semantics(object):
 
             self.decl_deps = collections.defaultdict(set)
             self.decl_cycles = set()
-          
+
         ### Accessors
         def get_vars(self):
             return list(self.global_vars_by_name.values())

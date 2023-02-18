@@ -2,45 +2,61 @@
 from ...common import *
 from ...model import *
 
-class ProcDeclareAction(object):
-    def __init__(self, object_tag, proc_tags):
-        self.proc_count = max(0, random.gauss(10, 5))
-        self.current_procs = set()
-        self.proc_generator = self.default_proc_generator
-        self.object_tag = object_tag
-        self.proc_tags = proc_tags
-    
-    def finished(self, env):
-        if self.proc_count - len(self.current_procs) <= 0:
-            return True
-        return False
-
+class RandomProcName(object):
     def __call__(self, env):
-        current_object = env.attr.gen.find_tagged(self.object_tag)
-        env.attr.current_object = current_object
-        new_proc = self.generate_proc(env)
-        env.attr.gen.toplevel.set_tags(new_proc, self.proc_tags)
-        self.current_procs.add( new_proc )
-        current_object.add_leaf( new_proc )
-
-    def generate_proc(self, env):
-        proc_define = env.attr.gen.initialize_node( AST.ProcDefine() )
-        proc_define.name = env.attr.gen.generate_proc_name(env)
-        env.attr.gen.node_info[proc_define] = {"args": max(0, random.gauss(6, 3)), "stmts": max(0, random.gauss(3, 1.5)) }
-        env.attr.gen.add_tag( proc_define, "needs_random_args" )
-        env.attr.gen.add_tag( proc_define, "needs_random_stmts" )
-        return proc_define
-
-    def get_proc_name(self, env):
         name = None
         while name is None:
             letters = random.randint(2,3)
             vn = ""
             for i in range(0, letters):
                 vn += random.choice(string.ascii_lowercase)
-            if vn not in ["as", "to", "in"]:
+            if vn not in ["as", "to", "in", "do", "if"]:
                 name = vn
         return name
+
+class RandomStdlibProcName(object):
+    def __init__(self, stdlib):
+        self.stdlib = stdlib
+
+    def __call__(self, env):
+        choices = self.stdlib.procs[ env.attr.current_object.resolved_path ]
+        print(choices)
+
+class ProcDeclareAction(object):
+    def __init__(self, builder):
+        self.builder = builder
+        self.choose_object = None
+        self.generate_proc_name = None
+    
+    def __call__(self, env):
+        tries = 0
+        current_object = None
+        while current_object is None and tries < 10:
+            current_object = self.choose_object(env)
+            if type(current_object) is AST.ObjectBlock and 'proc' in current_object.resolved_path:
+                current_object = None
+            tries += 1
+        if tries == 10:
+            return None
+        env.attr.current_object = current_object
+
+        proc_block = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
+        proc_block.path = AST.ObjectPath.new(segments=tuple(["proc"]))
+        current_object.add_leaf( proc_block )
+
+        proc_declare = env.attr.builder.initialize_node( AST.ProcDefine.new() )
+        proc_declare.name = self.generate_proc_name(env)
+        proc_block.add_leaf( proc_declare )
+        self.current_count += 1
+
+class ProcDefineAction(object):
+    def __call__(self, env):
+        proc_define = env.attr.gen.initialize_node( AST.ProcDefine() )
+        proc_define.name = env.attr.gen.generate_proc_name(env)
+        env.attr.gen.node_info[proc_define] = {"args": max(0, random.gauss(6, 3)), "stmts": max(0, random.gauss(3, 1.5)) }
+        env.attr.gen.add_tag( proc_define, "needs_random_args" )
+        env.attr.gen.add_tag( proc_define, "needs_random_stmts" )
+        return proc_define
 
 class ProcParameterAction(object):
     def __init__(self, proc_tag, param_tags):

@@ -28,7 +28,8 @@ class RandomObjectDeclareAction(object):
         return self.declare_block_stack[-1]
 
 class ToplevelDeclareAction(object):
-    def __init__(self):
+    def __init__(self, toplevel):
+        self.toplevel = toplevel
         self.choose_path = None
 
     def __call__(self, env):
@@ -37,20 +38,26 @@ class ToplevelDeclareAction(object):
         top_block = None
         for segment in path:
             current_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
-            current_block.path = AST.ObjectPath.new(segments=tuple(segment))
+            current_block.path = AST.ObjectPath.new(segments=tuple([segment]))
             if top_block is None:
                 top_block = current_block
+                self.toplevel.add_leaf( top_block )
             if prev_block is not None:
                 prev_block.add_leaf( current_block )
             prev_block = current_block
+        self.current_count += 1
         return top_block
+
+def ChooseAnyObjectBlock(env, builder):
+    choices = builder.toplevel.object_blocks
+    return random.choice( choices )
 
 class ObjectPathChooser(object):
     def __init__(self, path_choices):
         self.path_choices = list(path_choices)
 
     def __call__(self, env):
-        path = random.choice( self.path_choices )
+        return random.choice( self.path_choices )
 
 class ObjectPathGenerator(object):
     def new_config(self):
