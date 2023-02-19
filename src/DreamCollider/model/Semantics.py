@@ -174,6 +174,7 @@ class Semantics(object):
             # toplevel indices
             # TODO: these need to be ordered by tree position
             self.object_blocks = [self]
+            self.stdlib_object_blocks = []
             self.vars = []
             self.procs = []
 
@@ -228,6 +229,8 @@ class Semantics(object):
                 current_node = self.tree.resolve( leaf.path, start_node=trunk_node, create_nodes=True)
                 leaf.resolved_path = current_node.path
 
+            if leaf.resolved_path in self.stdlib.objects:
+                self.stdlib_object_blocks.append( leaf )
             self.object_blocks.append( leaf ) 
             self.object_blocks_by_path[leaf.path].append( leaf )
 

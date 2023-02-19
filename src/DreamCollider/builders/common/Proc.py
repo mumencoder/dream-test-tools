@@ -15,12 +15,12 @@ class RandomProcName(object):
         return name
 
 class RandomStdlibProcName(object):
-    def __init__(self, stdlib):
-        self.stdlib = stdlib
+    def __init__(self):
+        pass
 
     def __call__(self, env):
-        choices = self.stdlib.procs[ env.attr.current_object.resolved_path ]
-        print(choices)
+        choices = env.attr.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
+        return list(choices.keys())
 
 class ProcDeclareAction(object):
     def __init__(self, builder):
@@ -42,10 +42,14 @@ class ProcDeclareAction(object):
 
         proc_block = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
         proc_block.path = AST.ObjectPath.new(segments=tuple(["proc"]))
-        current_object.add_leaf( proc_block )
 
         proc_declare = env.attr.builder.initialize_node( AST.ProcDefine.new() )
-        proc_declare.name = self.generate_proc_name(env)
+        choices = self.generate_proc_name(env)
+        if len(choices) == 0:
+            return
+        proc_declare.name = random.choice( choices )
+
+        current_object.add_leaf( proc_block )
         proc_block.add_leaf( proc_declare )
         self.current_count += 1
 

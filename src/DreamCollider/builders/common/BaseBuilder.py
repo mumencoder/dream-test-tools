@@ -16,7 +16,8 @@ class BaseBuilder(object):
         self.initialize_config()
 
     def initialize_toplevel(self):
-        self.toplevel = self.initialize_node( AST.Toplevel() )
+        self.toplevel = self.initialize_node( AST.Toplevel.new() )
+        self.toplevel.stdlib = self.stdlib
         for path in self.stdlib.objects.keys():
             node = self.toplevel.tree.add_path( path )
             node.is_stdlib = True

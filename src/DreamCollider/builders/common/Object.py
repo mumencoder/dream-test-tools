@@ -48,9 +48,11 @@ class ToplevelDeclareAction(object):
         self.current_count += 1
         return top_block
 
-def ChooseAnyObjectBlock(env, builder):
-    choices = builder.toplevel.object_blocks
-    return random.choice( choices )
+def AnyObjectBlock(env, builder):
+    return builder.toplevel.object_blocks
+
+def AnyStdlibObjectBlock(env, builder):
+    return builder.toplevel.stdlib_object_blocks
 
 class ObjectPathChooser(object):
     def __init__(self, path_choices):

@@ -26,12 +26,12 @@ class ByondBuilder(
         Action.counted( action, max(1, round( random.gauss(12, 6))) )
         self.eligible_actions.append( action )
 
-        ### ProcDeclareAction
+        ### ProcDeclareAction 
         action = Proc.ProcDeclareAction(self)
-        action.choose_object = lambda env: Object.ChooseAnyObjectBlock(env, self)
+        action.choose_object = lambda env: random.choice( Object.AnyObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomProcName()
 
-        Action.counted( action, max(0, random.gauss(10, 5)) )
+        Action.counted( action, max(0, random.gauss(2, 2)) )
         self.eligible_actions.append( action )
 
     def config_object_paths(self, config):
@@ -42,9 +42,17 @@ class ByondBuilder(
 
 class ByondBuilderExperimental(ByondBuilder):
     def config_extra(self, config):
-        pathc = Object.ObjectPathChooser( list( self.stdlib.objects.keys() ) )
-
+        ### ToplevelDeclareAction for stdlib
         action = Object.ToplevelDeclareAction( self.toplevel )
+
+        pathc = Object.ObjectPathChooser( list( self.stdlib.objects.keys() ) )
         action.choose_path = pathc
         Action.counted( action, max(1, round( random.gauss(4, 2))) )
+        self.eligible_actions.append( action )
+
+        ### ProcDelcareAction for stdlib
+        action = Proc.ProcDeclareAction(self)
+        action.choose_object = lambda env: random.choice( Object.AnyStdlibObjectBlock(env, self) )
+        action.generate_proc_name = Proc.RandomStdlibProcName()
+        Action.counted( action, max(0, random.gauss(2,2)))
         self.eligible_actions.append( action )

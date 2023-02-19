@@ -607,6 +607,7 @@ class AST(object):
             # Semantics
             elif type(self) is AST.Toplevel and attr in [
                 "tree", "object_blocks", 
+                "stdlib", "stdlib_object_blocks",
                 "object_blocks_by_path", "global_vars_by_name", "global_procs_by_name", "vars", "procs",  "decl_deps", "decl_cycles"]:
                 pass
             elif type(self) is AST.ObjectBlock and attr in [
