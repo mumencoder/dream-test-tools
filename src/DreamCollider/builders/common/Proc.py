@@ -24,6 +24,7 @@ class RandomStdlibProcName(object):
 
 class ProcDeclareAction(object):
     def __init__(self, builder):
+        self.config = ColliderConfig()
         self.builder = builder
         self.choose_object = None
         self.generate_proc_name = None
@@ -33,7 +34,7 @@ class ProcDeclareAction(object):
         current_object = None
         while current_object is None and tries < 10:
             current_object = self.choose_object(env)
-            if type(current_object) is AST.ObjectBlock and 'proc' in current_object.resolved_path:
+            if type(current_object) is AST.ObjectBlock and ('proc' in current_object.resolved_path or 'verb' in current_object.resolved_path):
                 current_object = None
             tries += 1
         if tries == 10:
@@ -41,17 +42,21 @@ class ProcDeclareAction(object):
         env.attr.current_object = current_object
 
         proc_block = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
-        proc_block.path = AST.ObjectPath.new(segments=tuple(["proc"]))
+        if self.config.prob('verb_prob'):
+            proc_block.path = AST.ObjectPath.new(segments=tuple(["verb"]))
+        else:
+            proc_block.path = AST.ObjectPath.new(segments=tuple(["proc"]))
 
         proc_declare = env.attr.builder.initialize_node( AST.ProcDefine.new() )
         choices = self.generate_proc_name(env)
         if len(choices) == 0:
-            return
+            return None
         proc_declare.name = random.choice( choices )
 
         current_object.add_leaf( proc_block )
         proc_block.add_leaf( proc_declare )
         self.current_count += 1
+        return True
 
 class ProcDefineAction(object):
     def __call__(self, env):

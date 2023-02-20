@@ -17,7 +17,7 @@ class ByondBuilder(
         ### RandomObjectDeclareAction
         action = Object.RandomObjectDeclareAction( self.toplevel, "phase1_obj" ) 
 
-        opg = Object.ObjectPathGenerator(self, config)
+        opg = Object.ObjectPathGenerator(self)
         opg.config.set("obj.path.extend_path_prob", 0.5)
         opg.config.set_choice("obj.path.prefix_type", absolute=1, upwards=4, downwards=4, relative=8)
         opg.config.set_choice("obj.path.extend_type", leaf=8, upwards=1, downwards=1)
@@ -28,7 +28,8 @@ class ByondBuilder(
 
         ### ProcDeclareAction 
         action = Proc.ProcDeclareAction(self)
-        action.choose_object = lambda env: random.choice( Object.AnyObjectBlock(env, self) )
+        action.config.set("verb_prob", 0.50)
+        action.choose_object = lambda env: safe_choice( Object.AnyObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomProcName()
 
         Action.counted( action, max(0, random.gauss(2, 2)) )
@@ -52,7 +53,8 @@ class ByondBuilderExperimental(ByondBuilder):
 
         ### ProcDelcareAction for stdlib
         action = Proc.ProcDeclareAction(self)
-        action.choose_object = lambda env: random.choice( Object.AnyStdlibObjectBlock(env, self) )
+        action.config.set("verb_prob", 0.05)
+        action.choose_object = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomStdlibProcName()
         Action.counted( action, max(0, random.gauss(2,2)))
         self.eligible_actions.append( action )

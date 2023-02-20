@@ -23,6 +23,7 @@ class RandomObjectDeclareAction(object):
 
         parent_block.add_leaf( new_block )
         self.current_count += 1
+        return True
 
     def current_parent(self):
         return self.declare_block_stack[-1]
@@ -46,7 +47,7 @@ class ToplevelDeclareAction(object):
                 prev_block.add_leaf( current_block )
             prev_block = current_block
         self.current_count += 1
-        return top_block
+        return True
 
 def AnyObjectBlock(env, builder):
     return builder.toplevel.object_blocks
@@ -62,7 +63,7 @@ class ObjectPathChooser(object):
         return random.choice( self.path_choices )
 
 class ObjectPathGenerator(object):
-    def new_config(self):
+    def new_config():
         config = ColliderConfig()
 
         config.declare_param("obj.path.prefix_type")
@@ -71,9 +72,9 @@ class ObjectPathGenerator(object):
 
         return config
 
-    def __init__(self, builder, config):
+    def __init__(self, builder):
         self.builder = builder
-        self.config = config
+        self.config = ObjectPathGenerator.new_config()
 
     def __call__(self, env):
         extend_chance = self.config.prob( "obj.path.extend_path_prob" )

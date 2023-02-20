@@ -10,6 +10,7 @@ class BaseBuilder(object):
         self.undefined_vars = []
         self.eligible_actions = []
         self.tags = Tags()
+        self.action_fails = collections.defaultdict(int)
 
         self.initialize_toplevel()
 
@@ -31,12 +32,20 @@ class BaseBuilder(object):
 
     def build_all(self, env):
         env.attr.builder = self
+        action_count = 0
         while len( self.eligible_actions ) != 0:
             self.next_action(env)
+            if action_count > 10000:
+                raise Exception("too many attempts")
+            action_count += 1
 
     def next_action(self, env):
         action = random.choice(self.eligible_actions)
         if action.finished(env):
             self.eligible_actions.remove( action )
         else:
-            action(env)
+            result = action(env)
+            if result is None:
+                self.action_fails[action] += 1
+            if self.action_fails[action] >= 128:
+                self.eligible_actions.remove( action )

@@ -118,7 +118,7 @@ class Compilation(object):
                 return None
 
         def readProc(node):
-            if node.nodeType == node.ELEMENT_NODE and node.nodeName == "proc":
+            if node.nodeType == node.ELEMENT_NODE and node.nodeName in ["proc", "verb"]:
                 return True
             else:
                 return False
