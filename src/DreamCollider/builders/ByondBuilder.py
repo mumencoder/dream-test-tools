@@ -14,8 +14,7 @@ class ByondBuilder(
         DefaultConfig.DefaultConfig):
 
     def config_actions(self, config):
-        ### RandomObjectDeclareAction
-        action = Object.RandomObjectDeclareAction( self.toplevel, "phase1_obj" ) 
+        action = Object.RandomStackWalkObjectDeclareAction( self.toplevel, "phase1_obj" ) 
 
         opg = Object.ObjectPathGenerator(self)
         opg.config.set("obj.path.extend_path_prob", 0.5)
@@ -26,7 +25,7 @@ class ByondBuilder(
         Action.counted( action, max(1, round( random.gauss(12, 6))) )
         self.eligible_actions.append( action )
 
-        ### ProcDeclareAction 
+        ###
         action = Proc.ProcDeclareAction(self)
         action.config.set("verb_prob", 0.50)
         action.choose_object = lambda env: safe_choice( Object.AnyObjectBlock(env, self) )
@@ -47,7 +46,7 @@ class ByondBuilderExperimental(ByondBuilder):
         action = Object.ToplevelDeclareAction( self.toplevel )
 
         pathc = Object.ObjectPathChooser( list( self.stdlib.objects.keys() ) )
-        action.choose_path = pathc
+        action.generate_object_path = pathc
         Action.counted( action, max(1, round( random.gauss(4, 2))) )
         self.eligible_actions.append( action )
 
@@ -56,5 +55,18 @@ class ByondBuilderExperimental(ByondBuilder):
         action.config.set("verb_prob", 0.05)
         action.choose_object = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomStdlibProcName()
+        Action.counted( action, max(0, random.gauss(2,2)))
+        self.eligible_actions.append( action )
+
+        ### 
+        action = Object.RandomObjectDeclareAction()
+        action.choose_object_block = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
+
+        opg = Object.ObjectPathGenerator(self)
+        opg.config.set("obj.path.extend_path_prob", 0.02)
+        opg.config.set_choice("obj.path.prefix_type", absolute=5, upwards=5, downwards=5, relative=80)
+        opg.config.set_choice("obj.path.extend_type", leaf=90, upwards=5, downwards=5)
+        action.generate_object_path = opg
+    
         Action.counted( action, max(0, random.gauss(2,2)))
         self.eligible_actions.append( action )

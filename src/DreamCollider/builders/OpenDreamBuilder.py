@@ -18,7 +18,7 @@ class OpenDreamBuilder(
         opg.config.set("obj.path.extend_path_prob", 0.5)
         opg.config.set_choice("obj.path.prefix_type", absolute=1, upwards=0, downwards=0, relative=99)
         opg.config.set_choice("obj.path.extend_type", leaf=100, upwards=0, downwards=0)
-        action = Object.RandomObjectDeclareAction( self.toplevel, "phase1_obj" ) 
+        action = Object.RandomStackWalkObjectDeclareAction( self.toplevel, "phase1_obj" ) 
         action.generate_object_path = opg
         Action.counted( action, max(1, round( random.gauss(12, 6))) )
         self.eligible_actions.append( action )

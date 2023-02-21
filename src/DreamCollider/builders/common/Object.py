@@ -2,7 +2,7 @@
 from ...common import *
 from ...model import *
 
-class RandomObjectDeclareAction(object):
+class RandomStackWalkObjectDeclareAction(object):
     def __init__(self, start_block, object_tags):
         self.current_blocks = set()
         self.declare_block_stack = [start_block]
@@ -12,7 +12,7 @@ class RandomObjectDeclareAction(object):
     def __call__(self, env):
         parent_block = self.current_parent()
         new_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
-        new_block.path = self.generate_object_path(env)
+        new_block.path = self.generate_object_path(env)[0]
 
         env.attr.builder.tags.add(new_block, *self.object_tags)
         self.current_blocks.add( new_block )
@@ -28,26 +28,33 @@ class RandomObjectDeclareAction(object):
     def current_parent(self):
         return self.declare_block_stack[-1]
 
-class ToplevelDeclareAction(object):
-    def __init__(self, toplevel):
-        self.toplevel = toplevel
-        self.choose_path = None
+class RandomObjectDeclareAction(object):
+    def __init__(self):
+        self.choose_object_block = None
+        self.generate_object_path = None
 
     def __call__(self, env):
-        path = self.choose_path(env)
+        top_block = self.choose_object_block(env)
+        if top_block is None:
+            return None
+        paths = self.generate_object_path(env)
         prev_block = None
-        top_block = None
-        for segment in path:
+        first_block = None
+        for path in paths:
             current_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
-            current_block.path = AST.ObjectPath.new(segments=tuple([segment]))
-            if top_block is None:
-                top_block = current_block
-                self.toplevel.add_leaf( top_block )
+            current_block.path = path
+            if first_block is None:
+                first_block = current_block
+                top_block.add_leaf( first_block )
             if prev_block is not None:
                 prev_block.add_leaf( current_block )
             prev_block = current_block
         self.current_count += 1
         return True
+
+class ToplevelDeclareAction(RandomObjectDeclareAction):
+    def __init__(self, toplevel):
+        self.choose_object_block = lambda env: toplevel
 
 def AnyObjectBlock(env, builder):
     return builder.toplevel.object_blocks
@@ -60,7 +67,7 @@ class ObjectPathChooser(object):
         self.path_choices = list(path_choices)
 
     def __call__(self, env):
-        return random.choice( self.path_choices )
+        return [ AST.ObjectPath.new(segments=tuple([segment])) for segment in random.choice( self.path_choices ) ]
 
 class ObjectPathGenerator(object):
     def new_config():
@@ -118,4 +125,4 @@ class ObjectPathGenerator(object):
                 state = "op"
                 extend = random.random() < extend_chance
                 extend_chance /= 2.0
-        return AST.ObjectPath.new(segments=tuple(path))
+        return [AST.ObjectPath.new(segments=tuple(path))]

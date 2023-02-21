@@ -75,6 +75,8 @@ class Compilation(object):
         for line in denv.attr.compilation.objtree_text.split('\n'):
             if line.startswith("loading"):
                 continue
+            if ':error:' in line:
+                continue
             lines.append( line )
         xml = "\n".join( lines )
 
