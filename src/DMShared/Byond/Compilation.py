@@ -77,6 +77,8 @@ class Compilation(object):
                 continue
             if ':error:' in line:
                 continue
+            if ':warning:' in line:
+                continue
             lines.append( line )
         xml = "\n".join( lines )
 

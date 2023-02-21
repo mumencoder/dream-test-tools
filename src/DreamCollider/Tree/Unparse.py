@@ -104,7 +104,8 @@ class Unparse(object):
             return [",", "procname"]
 
         def shape(self):
-            yield _Line()
+            # TODO: ability to supress BeginLine if this is the only leaf of the ObjectBlock
+            yield from [_BeginLine(), _Line()]
             yield _Text(self.name, "procname")
             yield from [_Fuzz(), _BeginParen(), _Whitespace()]
             for i, param in enumerate(self.params):
@@ -115,8 +116,7 @@ class Unparse(object):
             for stmt in self.body:
                 yield from Unparse.subshape( stmt )
             yield _EndBlock()
-            if len(self.parent.leaves) != 1:
-                yield _EndLine()
+            yield _EndLine()
 
     class ProcArgument(object):
         def tokens_used():

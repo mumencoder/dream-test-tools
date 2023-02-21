@@ -27,15 +27,13 @@ class ByondBuilder(
 
         ###
         action = Proc.ProcDeclareAction(self)
+        action.config.set("override_prob", 0.02)
         action.config.set("verb_prob", 0.50)
         action.choose_object = lambda env: safe_choice( Object.AnyObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomProcName()
 
         Action.counted( action, max(0, random.gauss(2, 2)) )
         self.eligible_actions.append( action )
-
-    def config_object_paths(self, config):
-        config.set("obj.path.flip_override_prob", 0)
 
     def config_fuzzer(self, config):
         config.set_choice("fuzzer.block_type", oneline=2, indent=11, nice_bracket=11)
@@ -52,6 +50,7 @@ class ByondBuilderExperimental(ByondBuilder):
 
         ### ProcDelcareAction for stdlib
         action = Proc.ProcDeclareAction(self)
+        action.config.set("override_prob", 0.98)
         action.config.set("verb_prob", 0.05)
         action.choose_object = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
         action.generate_proc_name = Proc.RandomStdlibProcName()

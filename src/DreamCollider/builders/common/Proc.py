@@ -41,11 +41,16 @@ class ProcDeclareAction(object):
             return None
         env.attr.current_object = current_object
 
-        proc_block = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
-        if self.config.prob('verb_prob'):
-            proc_block.path = AST.ObjectPath.new(segments=tuple(["verb"]))
+        is_override = self.config.prob('override_prob')
+
+        if is_override:
+            proc_object = None
         else:
-            proc_block.path = AST.ObjectPath.new(segments=tuple(["proc"]))
+            proc_object = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
+            if self.config.prob('verb_prob'):
+                proc_object.path = AST.ObjectPath.new(segments=tuple(["verb"]))
+            else:
+                proc_object.path = AST.ObjectPath.new(segments=tuple(["proc"]))
 
         proc_declare = env.attr.builder.initialize_node( AST.ProcDefine.new() )
         choices = self.generate_proc_name(env)
@@ -53,8 +58,11 @@ class ProcDeclareAction(object):
             return None
         proc_declare.name = random.choice( choices )
 
-        current_object.add_leaf( proc_block )
-        proc_block.add_leaf( proc_declare )
+        if proc_object is None:
+            current_object.add_leaf( proc_declare )
+        else:
+            current_object.add_leaf( proc_object )
+            proc_object.add_leaf( proc_declare )
         self.current_count += 1
         return True
 
