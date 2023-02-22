@@ -34,7 +34,7 @@ class ProcDeclareAction(object):
         current_object = None
         while current_object is None and tries < 10:
             current_object = self.choose_object(env)
-            if type(current_object) is AST.ObjectBlock and ('proc' in current_object.resolved_path or 'verb' in current_object.resolved_path):
+            if type(current_object) is AST.ObjectBlock and keyword_object_block(current_object.resolved_path):
                 current_object = None
             tries += 1
         if tries == 10:

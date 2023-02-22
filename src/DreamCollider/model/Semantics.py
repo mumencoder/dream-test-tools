@@ -364,10 +364,10 @@ class Semantics(object):
             self.block = block
             if type(self.block) is AST.Toplevel:
                 self.is_global = True
-                self.block.note_var( self )
+                self.block.note_var( self, block )
             else:
                 self.is_global = False
-                self.block.root.note_var( self )
+                self.block.root.note_var( self, block )
 
         def initialization_mode(self):
             #TODO: if override, inherits mode of overriden

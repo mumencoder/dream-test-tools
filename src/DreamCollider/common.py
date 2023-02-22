@@ -10,7 +10,10 @@ def safe_choice(l):
         return None
     else:
         return random.choice(l)
-    
+
+def keyword_object_block(path):
+    return 'proc' in path or 'verb' in path or 'var' in path
+
 class Tags(object):
     def __init__(self):
         self.tags = collections.defaultdict(list)

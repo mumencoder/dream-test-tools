@@ -116,10 +116,18 @@ class Compilation(object):
                         continue
                     if readProc(leafnode):
                         continue
+                    if readVar(leafnode):
+                        continue
                     raise Exception(leafnode)
                 return {"name":obj_name, "subobjs":subobjs, "line":line}
             else:
                 return None
+
+        def readVar(node):
+            if node.nodeType == node.ELEMENT_NODE and node.nodeName in ["var"]:
+                return True
+            else:
+                return False
 
         def readProc(node):
             if node.nodeType == node.ELEMENT_NODE and node.nodeName in ["proc", "verb"]:
@@ -150,6 +158,8 @@ class Compilation(object):
                     if readWS(leafnode):
                         continue
                     if readProc(leafnode):
+                        continue
+                    if readVar(leafnode):
                         continue
                     print(xml)
                     raise Exception(leafnode)

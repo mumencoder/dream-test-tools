@@ -57,7 +57,7 @@ class ByondBuilderExperimental(ByondBuilder):
         Action.counted( action, max(0, random.gauss(2,2)))
         self.eligible_actions.append( action )
 
-        ### 
+        ###  RandomObjectDeclareAction for stdlib
         action = Object.RandomObjectDeclareAction()
         action.choose_object_block = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
 
@@ -68,4 +68,13 @@ class ByondBuilderExperimental(ByondBuilder):
         action.generate_object_path = opg
     
         Action.counted( action, max(0, random.gauss(2,2)))
+        self.eligible_actions.append( action )
+
+        ### VarDeclareAction for user types
+        action = Var.VarDeclareAction()
+        action.choose_object = lambda env: safe_choice( Object.AnyObjectBlock(env, self) )
+        action.config.set("override_prob", 0.02)
+        action.generate_var_path = lambda env: Var.EmptyVarPath(env, self)
+        action.generate_var_name = lambda env: Var.RandomVarName(env, self)
+        Action.counted( action, max(0, random.gauss(4, 4)) )
         self.eligible_actions.append( action )

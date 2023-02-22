@@ -94,7 +94,8 @@ class Unparse(object):
             return ["=", "varname"]
 
         def shape(self):
-            yield _Line()
+            # TODO: ability to supress BeginLine if this is the only leaf of the ObjectBlock
+            yield from [_BeginLine(), _Line()]
             yield _Text(self.name, "varname")
             if self.expression is not None:
                 yield from [ _Whitespace(1), _Symbol("="), _Whitespace(1) ]
