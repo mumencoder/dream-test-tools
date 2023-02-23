@@ -478,13 +478,11 @@ class Unparse(object):
 
             def shape(self):
                 yield from [_Fuzz(), _Line()]
-                if self.prefix is not None:
-                    yield _Symbol(self.prefix)
-                i = 0
-                while i < len(self.ops):
-                    yield from [ _Text(self.types[i], "path"), _Symbol(self.ops[i])]
-                    i += 1
-                yield from [_Text(self.types[i], "path"), _Fuzz()]
+                for segment in self.segments:
+                    if segment in [".", ":", "/"]:
+                        yield _Symbol(segment)
+                    else:
+                        yield _Text(segment, "path")
 
         class Call(object):
             def tokens_used():

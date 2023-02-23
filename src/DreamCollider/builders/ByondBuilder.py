@@ -10,10 +10,9 @@ class ByondBuilder(
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,
-        Var.RandomVars,
         DefaultConfig.DefaultConfig):
 
-    def config_actions(self, config):
+    def actions_phase1(self, env):
         action = Object.RandomStackWalkObjectDeclareAction( self.toplevel, "phase1_obj" ) 
 
         opg = Object.ObjectPathGenerator(self)
@@ -39,7 +38,8 @@ class ByondBuilder(
         config.set_choice("fuzzer.block_type", oneline=2, indent=11, nice_bracket=11)
 
 class ByondBuilderExperimental(ByondBuilder):
-    def config_extra(self, config):
+    def actions_phase1(self, env):
+        ByondBuilder.actions_phase1(self, env)
         ### ToplevelDeclareAction for stdlib
         action = Object.ToplevelDeclareAction( self.toplevel )
 
@@ -77,4 +77,12 @@ class ByondBuilderExperimental(ByondBuilder):
         action.generate_var_path = lambda env: Var.EmptyVarPath(env, self)
         action.generate_var_name = lambda env: Var.RandomVarName(env, self)
         Action.counted( action, max(0, random.gauss(4, 4)) )
+        self.eligible_actions.append( action )
+
+    def actions_phase2(self, env): 
+        ### VarDefineAction for user types
+        action = Var.VarDefinitionAction()
+        action.config.set("empty_initializer_prob", 0.33)
+        action.choose_var = lambda env: Var.RandomUndefinedVar(env, self)
+        action.generate_define = lambda env: self.create_var_expr(env)
         self.eligible_actions.append( action )

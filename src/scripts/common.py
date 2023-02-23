@@ -38,6 +38,9 @@ def setup_base(env):
 ### ast generation
 def generate_ast(env):
     env.attr.expr.depth = 3
+    env.attr.ast.builder.actions_phase1( env )
+    env.attr.ast.builder.build_all( env )
+    env.attr.ast.builder.actions_phase2( env )
     env.attr.ast.builder.build_all( env )
 
     env.attr.ast.fuzzer = DreamCollider.Fuzzer(env.attr.ast.builder.config)

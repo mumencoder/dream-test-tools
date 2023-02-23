@@ -111,7 +111,7 @@ class RandomExprGenerator(object):
             elif type(expr) is AST.Expr.Identifier:
                 expr.name = random.choice( ['a', 'b', 'c', 'usr'] )
             elif type(expr) is AST.Expr.Path:
-                expr = self.random_path()
+                expr.segments = ["/"]
             elif type(expr) is AST.Expr.Call:
                 expr.expr = self.create_call_expression(env, random.randint(1, 3) )
                 for i in range( 0, random.randint(1,3) ):

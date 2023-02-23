@@ -10,11 +10,10 @@ class OpenDreamBuilder(
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,
-        Var.RandomVars,
         DefaultConfig.DefaultConfig):
 
-    def config_actions(self, config):
-        opg = Object.ObjectPathGenerator(self, config)
+    def actions_phase1(self, env):
+        opg = Object.ObjectPathGenerator(self)
         opg.config.set("obj.path.extend_path_prob", 0.5)
         opg.config.set_choice("obj.path.prefix_type", absolute=1, upwards=0, downwards=0, relative=99)
         opg.config.set_choice("obj.path.extend_type", leaf=100, upwards=0, downwards=0)

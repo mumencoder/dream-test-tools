@@ -10,7 +10,10 @@ class FullRandomBuilder(
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,
-        Var.RandomVars,
         DefaultConfig.DefaultConfig):
 
-    pass
+    def actions_phase1(self, env):
+        pass
+
+    def actions_phase2(self, env):
+        pass

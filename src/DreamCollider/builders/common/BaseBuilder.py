@@ -6,8 +6,9 @@ class BaseBuilder(object):
     stdlib = Stdlib.initialize()
 
     def __init__(self):
+        self.config = ColliderConfig()
         self.node_info = {}
-        self.undefined_vars = []
+        self.undefined_vars = set()
         self.eligible_actions = []
         self.tags = Tags()
         self.action_fails = collections.defaultdict(int)

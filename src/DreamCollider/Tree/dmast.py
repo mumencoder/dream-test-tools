@@ -236,12 +236,10 @@ class AST(object):
                 self.name = None
 
         class Path(object):
-            attrs = ["prefix", "ops", "types"]
+            attrs = ["segments"]
             traits = ["rval", "path", "terminal", "callable"]
             def __init__(self):
-                self.prefix = None      # str
-                self.types = None       # List[str]
-                self.ops = None         # List[str]
+                self.segments = None    # List[str]
 
         class Call(object):
             subtree = ["expr", "args"]

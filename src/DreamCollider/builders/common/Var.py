@@ -38,6 +38,7 @@ class VarDeclareAction(object):
         else:
             current_object.add_leaf( var_object )
             var_object.add_leaf( var_declare )
+        env.attr.builder.undefined_vars.add( var_declare )
         del env.attr.var_declare
         del env.attr.current_object
         self.current_count += 1
@@ -58,33 +59,33 @@ def RandomVarName(env, builder):
     return name
 
 class VarDefinitionAction(object):
-    def __init__(self, var_declare_tag):
-        self.var_declare_tag = var_declare_tag
-        self.current_defines = set()
-        self.choose_var = self.default_choose_var
+    def __init__(self):
+        self.config = ColliderConfig()
+        self.choose_var = None
+        self.generate_define = None
 
     def finished(self, env):
-        if self.var_count - len(self.current_vars) <= 0:
-            return True
-        return False
+        return len(env.attr.builder.undefined_vars) == 0
 
     def __call__(self, env):
-        current_var = self.choose_var(env)
+        tries = 0
+        current_var = None
+        while current_var is None and tries < 10:
+            current_var = self.choose_var(env)
+            tries += 1
+        if tries == 10:
+            return None
         env.attr.current_var = current_var
-        if self.config.prob("vars.empty_initializer_prob"):
+        if self.config.prob("empty_initializer_prob"):
             pass
         else:
-            expr = self.create_var_expr(env)
+            expr = self.generate_define(env)
             current_var.set_expression( expr )
-
-    def default_choose_var(self, env):
-        choices = env.attr.gen.toplevel.find_tagged(self.object_tag, "undefined")
-        if len(choices) == 0:
-            return None
-        choice = random.choice( choices )
-        env.attr.gen.remove_tag(choice, "undefined")
-
-class RandomVars(object):
-    def config_vars(self, config):
-        config.set("vars.empty_initializer_prob", 0.05)
-
+        env.attr.builder.undefined_vars.remove( current_var )
+        return True
+    
+def RandomUndefinedVar(env, builder):
+    if len(builder.undefined_vars) == 0:
+        return None
+    else:
+        return random.choice( list(builder.undefined_vars) )
