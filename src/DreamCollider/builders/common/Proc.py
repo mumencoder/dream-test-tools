@@ -22,6 +22,12 @@ class RandomStdlibProcName(object):
         choices = env.attr.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
         return list(choices.keys())
 
+def RandomUndefinedProc(env, builder):
+    if len(builder.undefined_procs) == 0:
+        return None
+    else:
+        return random.choice( list(builder.undefined_procs) )
+    
 class ProcDeclareAction(object):
     def __init__(self, builder):
         self.config = ColliderConfig()
@@ -64,74 +70,58 @@ class ProcDeclareAction(object):
             current_object.add_leaf( proc_object )
             proc_object.add_leaf( proc_declare )
         self.current_count += 1
+        env.attr.builder.undefined_procs.add( proc_declare )
         return True
 
-class ProcDefineAction(object):
-    def __call__(self, env):
-        proc_define = env.attr.gen.initialize_node( AST.ProcDefine() )
-        proc_define.name = env.attr.gen.generate_proc_name(env)
-        env.attr.gen.node_info[proc_define] = {"args": max(0, random.gauss(6, 3)), "stmts": max(0, random.gauss(3, 1.5)) }
-        env.attr.gen.add_tag( proc_define, "needs_random_args" )
-        env.attr.gen.add_tag( proc_define, "needs_random_stmts" )
-        return proc_define
-
 class ProcParameterAction(object):
-    def __init__(self, proc_tag, param_tags):
-        self.proc_tag = proc_tag
-        self.param_tags = param_tags
+    def __init__(self):
+        self.config = ColliderConfig()
+        self.choose_proc = None
+        self.generate_proc_param = None
 
     def finished(self, env):
-        procs = env.attr.find_tagged(self.proc_tag)
-        return len(procs) == 0
-
+        return len(env.attr.builder.undefined_procs) == 0
+    
     def __call__(self, env):
         current_proc = self.choose_proc(env)
         env.attr.current_proc = current_proc
-        proc_param = self.create_proc_param(env)
-        env.attr.gen.add_param( current_proc, proc_param )
+        proc_param = self.generate_proc_param(env)
+        current_proc.add_param( proc_param )
+        if self.config.prob('finalize_proc'):
+            env.attr.builder.undefined_procs.remove( current_proc )
 
 class ProcStatementAction(object):
-    def __init__(self, proc_tag, statement_tags):
-        self.proc_tag = proc_tag
-        self.statement_tags = statement_tags
+    def __init__(self):
+        self.config = ColliderConfig()
+        self.choose_proc = None
+        self.generate_proc_stmt = None
 
     def finished(self, env):
-        procs = env.attr.find_tagged(self.proc_tag)
-        return len(procs) == 0
+        return len(env.attr.builder.undefined_procs) == 0
 
     def __call__(self, env):
         current_proc = self.choose_proc(env)
         env.attr.current_proc = current_proc
-        proc_stmt = self.create_proc_stmt(env)
-        env.attr.gen.add_stmt( current_proc, proc_stmt )
+        proc_stmt = self.generate_proc_stmt(env)
+        current_proc.add_stmt( proc_stmt )
+        if self.config.prob('finalize_proc'):
+            env.attr.builder.undefined_procs.remove( current_proc )
 
-class RandomProcs(object):
-    def config_proc(self, config):
-        config.set("proc.is_verb_prob", 0.05)
-        config.set("proc.arg.has_path_prob", 0.05)
-        config.set("proc.arg.has_init_prob", 0.10)
-        config.set("proc.arg.has_astype_prob", 0.02)
-
-    def add_proc_paths(self, env):
-        block = random.choice( self.toplevel.object_blocks )
-        proc_block = self.initialize_node( AST.ObjectBlock() )
-        proc_block.path = AST.ObjectPath.new( segments=['proc'] )
-        block.add_leaf( proc_block )
-
-        proc = self.initialize_node( AST.ProcDefine.new(name="print_path") )
-        proc.body = []
-        proc_block.add_leaf( proc )
-        
 class SimpleProcCreator(object):
+    def config_proc_param(self, config):
+        config.set('proc.arg.has_path_prob', 0.1)
+        config.set('proc.arg.has_default_prob', 0.1)
+        config.set('proc.arg.has_astype_prob', 0.1)
+
     def create_proc_param(self, env):
         arg = self.initialize_node( AST.ProcArgument() )
         arg.name = self.randomString(1, 3)
 
-        if random.random() < self.config.attr.define.proc.arg.has_path_prob:
-            arg.path_type = self.random_path()
-        if random.random() < self.config.attr.define.proc.arg.has_default_prob:
+        if self.config.prob('proc.arg.has_path_prob'):
+            arg.path_type = AST.Expr.Path.new(segments=['static'])
+        if self.config.prob('proc.arg.has_default_prob'):
             arg.default = self.expression(env, depth=3, arity="rval")
-        if random.random() < self.config.attr.define.proc.arg.has_astype_prob:
+        if self.config.prob('proc.arg.has_astype_prob'):
             for i in range(0,random.randint(1,3)):
                 arg.possible_values = AST.Expr.AsType()
                 arg.possible_values.flags.append( self.randomDMValueType() )

@@ -6,7 +6,6 @@ from ..model import *
 
 class OpenDreamBuilder(
         BaseBuilder.BaseBuilder,
-        Proc.RandomProcs,
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,

@@ -9,6 +9,7 @@ class BaseBuilder(object):
         self.config = ColliderConfig()
         self.node_info = {}
         self.undefined_vars = set()
+        self.undefined_procs = set()
         self.eligible_actions = []
         self.tags = Tags()
         self.action_fails = collections.defaultdict(int)

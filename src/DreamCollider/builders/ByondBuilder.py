@@ -6,7 +6,6 @@ from ..model import *
 
 class ByondBuilder(
         BaseBuilder.BaseBuilder,
-        Proc.RandomProcs,
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,
@@ -103,4 +102,11 @@ class ByondBuilderExperimental(ByondBuilder):
         action.config.set("empty_initializer_prob", 0.33)
         action.choose_var = lambda env: Var.RandomUndefinedVar(env, self)
         action.generate_define = lambda env: self.create_var_expr(env)
+        self.eligible_actions.append( action )
+
+        ### ProcParameterAction
+        action = Proc.ProcParameterAction()
+        action.choose_proc = lambda env: Proc.RandomUndefinedProc(env, self)
+        action.generate_proc_param = self.create_proc_param
+        action.config.set('finalize_proc', 0.20)
         self.eligible_actions.append( action )
