@@ -53,7 +53,7 @@ class RandomExprGenerator(object):
         return expr
 
     def config_expr(self, config):
-        config.set("expr.call.param.is_named", 0.1)
+        config.set("expr.param.is_named", 0.1)
 
     def initialize_expression(self, env, expr, depth):
             if type(expr) is AST.Expr.Property:
@@ -116,14 +116,14 @@ class RandomExprGenerator(object):
                 expr.expr = self.create_call_expression(env, random.randint(1, 3) )
                 for i in range( 0, random.randint(1,3) ):
                     param = AST.Expr.Call.Param()
-                    if random.random() < self.config.attr.expr.param.is_named:
+                    if random.random() < self.config.prob('expr.param.is_named'):
                         param.name = self.randomString(0, 3)
                     param.value = self.expression(env, depth-1, "rval")
                     expr.args.append( param )
             elif type(expr) is AST.Expr.Input:
                 for i in range( 0, random.randint(1,3) ):
                     param = AST.Expr.Call.Param()
-                    if random.random() < self.config.attr.expr.param.is_named:
+                    if random.random() < self.config.prob('expr.param.is_named'):
                         param.name = self.randomString(0, 3)
                     param.value = self.expression(env, depth-1, "rval")
                     expr.args.append( param )
@@ -132,7 +132,7 @@ class RandomExprGenerator(object):
             elif type(expr) is AST.Expr.New:
                 for i in range( 0, random.randint(1,3) ):
                     param = AST.Expr.Call.Param()
-                    if random.random() < self.config.attr.expr.param.is_named:
+                    if random.random() < self.config.prob('expr.param.is_named'):
                         param.name = self.randomString(0, 3)
                     param.value = self.expression(env, depth-1, "rval")
                     expr.args.append( param )

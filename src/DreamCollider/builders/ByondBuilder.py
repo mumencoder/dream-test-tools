@@ -79,8 +79,26 @@ class ByondBuilderExperimental(ByondBuilder):
         Action.counted( action, max(0, random.gauss(4, 4)) )
         self.eligible_actions.append( action )
 
+        ### VarDeclareAction new vars for stdlib types
+        action = Var.VarDeclareAction()
+        action.choose_object = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
+        action.config.set("override_prob", 0.02)
+        action.generate_var_path = lambda env: Var.EmptyVarPath(env, self)
+        action.generate_var_name = lambda env: Var.RandomVarName(env, self)
+        Action.counted( action, max(0, random.gauss(4, 4)) )
+        self.eligible_actions.append( action )
+
+        ### VarDeclareAction override vars for stdlib types
+        action = Var.VarDeclareAction()
+        action.choose_object = lambda env: safe_choice( Object.AnyStdlibObjectBlock(env, self) )
+        action.config.set("override_prob", 0.98)
+        action.generate_var_path = lambda env: Var.EmptyVarPath(env, self)
+        action.generate_var_name = Var.RandomStdlibVarName()
+        Action.counted( action, max(0, random.gauss(4, 4)) )
+        self.eligible_actions.append( action )
+
     def actions_phase2(self, env): 
-        ### VarDefineAction for user types
+        ### VarDefineAction for declared vars
         action = Var.VarDefinitionAction()
         action.config.set("empty_initializer_prob", 0.33)
         action.choose_var = lambda env: Var.RandomUndefinedVar(env, self)

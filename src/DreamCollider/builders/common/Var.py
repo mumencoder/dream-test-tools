@@ -31,6 +31,8 @@ class VarDeclareAction(object):
         var_declare = env.attr.builder.initialize_node( AST.ObjectVarDefine() )
         env.attr.var_declare = var_declare
         var_declare.name = self.generate_var_name( env )
+        if var_declare.name is None:
+            return None
         var_declare.var_path = self.generate_var_path( env )
 
         if var_object is None:
@@ -58,6 +60,17 @@ def RandomVarName(env, builder):
             name = vn
     return name
 
+class RandomStdlibVarName(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, env):
+        choices = env.attr.builder.stdlib.vars[ env.attr.current_object.resolved_path ]
+        if len(choices) == 0:
+            return None
+        choice = random.choice( list(choices.keys()) )
+        return choice
+     
 class VarDefinitionAction(object):
     def __init__(self):
         self.config = ColliderConfig()
