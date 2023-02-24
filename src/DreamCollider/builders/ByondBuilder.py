@@ -110,3 +110,10 @@ class ByondBuilderExperimental(ByondBuilder):
         action.generate_proc_param = self.create_proc_param
         action.config.set('finalize_proc', 0.20)
         self.eligible_actions.append( action )
+
+        ### ProcStatementAction
+        action = Proc.ProcStatementAction()
+        action.choose_proc = lambda env: Proc.RandomUndefinedProc(env, self)
+        action.generate_proc_stmt = self.create_proc_stmt
+        action.config.set('finalize_proc', 0.10)
+        self.eligible_actions.append( action )

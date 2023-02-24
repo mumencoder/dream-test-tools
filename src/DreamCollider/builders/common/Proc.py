@@ -101,7 +101,9 @@ class ProcStatementAction(object):
 
     def __call__(self, env):
         current_proc = self.choose_proc(env)
+        env = env.branch()
         env.attr.current_proc = current_proc
+        env.attr.proc_max_depth = random.randint(0,4)
         proc_stmt = self.generate_proc_stmt(env)
         current_proc.add_stmt( proc_stmt )
         if self.config.prob('finalize_proc'):

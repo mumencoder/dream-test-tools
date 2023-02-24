@@ -60,6 +60,8 @@ def RandomVarName(env, builder):
             name = vn
     return name
 
+def RandomVarMod(env, builder):
+    return []
 class RandomStdlibVarName(object):
     def __init__(self):
         pass

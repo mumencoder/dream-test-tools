@@ -62,7 +62,7 @@ class AST(object):
             subtree = ["expr"]
             def __init__(self):
                 self.name = None        # str
-                self.var_type = None    # AST.VarPath
+                self.var_type = None    # List[str]
                 self.expr = None        # AST.Expr
 
         class Return(object):
@@ -86,10 +86,11 @@ class AST(object):
                 self.label = None       # str
 
         class Label(object):
-            attrs = ["name"]
+            attrs = ["name", "has_colon"]
             subtree = ["body"]
             def __init__(self):
                 self.name = None        # str
+                self.has_colon = None   # bool
                 self.body = None        # List[AST.Stmt]
 
         class Del(object):
@@ -117,6 +118,23 @@ class AST(object):
                 self.truebody = None    # List[AST.Stmt]
                 self.falsebody = None   # List[AST.Stmt]
 
+        class Switch(object):
+            subtree = ["switch_expr", "cases"]
+            def __init__(self):
+                self.switch_expr = None # AST.Expr
+                self.cases = None       # List[AST.Stmt.SwitchCase]
+
+            class IfCase(object):
+                subtree = ["condition", "body"]
+                def __init__(self):
+                    self.condition = None   # AST.Expr
+                    self.body = None        # List[AST.Stmt]
+
+            class ElseCase(object):
+                subtree = ["body"]
+                def __init__(self):
+                    self.body = None        # List[AST.Stmt]
+
         class For(object):
             subtree = ["expr1", "expr2", "expr3", "body"]
             def __init__(self):
@@ -143,23 +161,6 @@ class AST(object):
             def __init__(self):
                 self.condition = None   # AST.Expr
                 self.body = None        # List[AST.Stmt]
-
-        class Switch(object):
-            subtree = ["switch_expr", "cases"]
-            def __init__(self):
-                self.switch_expr = None # AST.Expr
-                self.cases = None       # List[AST.Stmt.SwitchCase]
-
-            class IfCase(object):
-                subtree = ["condition", "body"]
-                def __init__(self):
-                    self.condition = None   # AST.Expr
-                    self.body = None        # List[AST.Stmt]
-
-            class ElseCase(object):
-                subtree = ["body"]
-                def __init__(self):
-                    self.body = None        # List[AST.Stmt]
 
         class Try(object):
             subtree = ["try_body", "catch_param", "catch_body"]

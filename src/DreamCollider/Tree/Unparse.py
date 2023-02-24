@@ -151,7 +151,8 @@ class Unparse(object):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("var"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 if self.var_type is not None:
-                    yield from Unparse.subshape( self.var_type )
+                    for segment in self.var_type:
+                        yield from [_Text(segment, "path"), _Fuzz(), _Symbol("/"), _Fuzz()]
                 yield from [_Text(self.name, "name")]
                 if self.expr is not None:
                     yield from [_Whitespace(1), _Symbol("="), _Whitespace(1) ]
@@ -169,7 +170,7 @@ class Unparse(object):
                 yield _EndLine()
 
         class Break(object):
-            def symbols_used(self):
+            def tokens_used():
                 return ["break", "label"]
 
             def shape(self):
@@ -178,7 +179,7 @@ class Unparse(object):
                 yield _EndLine()
 
         class Continue(object):
-            def symbols_used(self):
+            def tokens_used():
                 return ["continue", "label"]
 
             def shape(self):
@@ -187,7 +188,7 @@ class Unparse(object):
                 yield _EndLine()
 
         class Goto(object):
-            def symbols_used(self):
+            def tokens_used():
                 return ["goto", "label"]
 
             def shape(self):
@@ -196,12 +197,12 @@ class Unparse(object):
                 yield _EndLine()
 
         class Label(object):
-            def symbols_used(self):
+            def tokens_used():
                 return [":", "label"]
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Text(self.label, "label"), _Fuzz()]
+                yield from [_Text(self.name, "label"), _Fuzz()]
                 if self.has_colon:
                     yield from [_Symbol(":"), _Fuzz()]
                 yield _BeginBlock()
@@ -221,7 +222,7 @@ class Unparse(object):
                 yield _EndLine()
 
         class Set(object):
-            def symbols_used(self):
+            def tokens_used():
                 return ["set", "attr", "="]
 
             def shape(self):
@@ -236,7 +237,7 @@ class Unparse(object):
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword["spawn"], _Fuzz(), _BeginParen(), _Whitespace() ]
+                yield from [_Keyword("spawn"), _Fuzz(), _BeginParen(), _Whitespace() ]
                 yield from Unparse.subshape( self.delay )
                 yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.body:
@@ -250,26 +251,26 @@ class Unparse(object):
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword["if"], _Fuzz(), _BeginParen(), _Whitespace() ]
+                yield from [_Keyword("if"), _Fuzz(), _BeginParen(), _Whitespace() ]
                 yield from Unparse.subshape( self.condition )
                 yield from [_EndParen(), _Whitespace(), _BeginBlock()]
                 for stmt in self.truebody:
                     yield from Unparse.subshape( stmt )
                 yield _EndBlock()
                 if self.falsebody is not None:
-                    yield from [_Keyword["else"], _Whitespace(), _BeginBlock() ]
+                    yield from [_Keyword("else"), _Whitespace(), _BeginBlock() ]
                     for stmt in self.falsebody:
                         yield from Unparse.subshape( stmt )
                     yield _EndBlock()
                 yield _EndLine()
 
         class For(object):
-            def symbols_used(self):
+            def tokens_used():
                 return ["for", ";"]
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword["for"], _Fuzz(), _BeginParen(), _Whitespace() ]
+                yield from [_Keyword("for"), _Fuzz(), _BeginParen(), _Whitespace() ]
                 if self.expr1 is not None:
                     yield from Unparse.subshape( self.expr1 )
                     yield from [_Symbol(";"), _Whitespace()]
@@ -320,7 +321,7 @@ class Unparse(object):
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
-                yield from [_Keyword["do"], _Fuzz(), _BeginBlock()]
+                yield from [_Keyword("do"), _Fuzz(), _BeginBlock()]
                 for stmt in self.body:
                     yield from Unparse.subshape( stmt )
                 yield from [_EndBlock(), _Fuzz()]
@@ -389,7 +390,7 @@ class Unparse(object):
             class Catch(object):
                 def shape(self):
                     yield from [_Line()]
-                    yield from Unparse( self.expr )
+                    yield from Unparse.subshape( self.expr )
 
         class Throw(object):
             def tokens_used():
@@ -398,7 +399,7 @@ class Unparse(object):
             def shape(self):
                 yield from [_BeginLine(), _Line()]
                 yield from [_Keyword("throw"), _Whitespace(1) ]
-                yield from Unparse( self.expr )
+                yield from Unparse.subshape( self.expr )
                 yield _EndLine()
 
     class Expr(object):
