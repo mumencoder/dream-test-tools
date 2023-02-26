@@ -122,3 +122,41 @@ class Compare(object):
 
         result["output"] = output
         return result
+    
+def compare_paths(env):
+    collider_paths = set()
+    for node in env.attr.ast.builder.toplevel.tree.iter_nodes():
+        if node.is_stdlib:
+            continue
+        if len(node.path) == 0:
+            continue 
+        collider_paths.add( node.path )
+
+    byond_paths = set()
+    for node in DMShared.Byond.Compilation.iter_objtree(env.attr.benv):
+        byond_paths.add( node["path"] )
+
+    path_mismatch = False
+    for path in collider_paths:
+        if path not in byond_paths:
+            path_mismatch = True
+    for path in byond_paths:
+        if path not in collider_paths:
+            path_mismatch = True
+
+    collider_pathlines = collections.defaultdict(list)
+    known_mismatch = None
+    for node, line in DreamCollider.Shape.node_lines(env.attr.ast.ast_tokens):
+        if type(node) is DreamCollider.AST.ObjectBlock:
+            collider_pathlines[line].append( node.resolved_path )
+    for node in DMShared.Byond.Compilation.iter_objtree(env.attr.benv):
+        if node["path"] not in collider_pathlines[ node["line"] ]:
+            known_mismatch = (node["line"], node["path"])
+
+    env.attr.ast.collider_paths = collider_paths
+    env.attr.ast.byond_paths = byond_paths
+    env.attr.ast.collider_byond_paths_difference = collider_paths.difference( byond_paths )
+    env.attr.results.path_mismatch = path_mismatch
+    env.attr.results.known_mismatch = known_mismatch 
+    env.attr.results.collider_pathlines_text = DMShared.Display.sparse_to_full(
+         [{"line":k, "value":v} for k,v in sorted( zip(collider_pathlines.keys(), collider_pathlines.values()), key=lambda e: e[0] )] )

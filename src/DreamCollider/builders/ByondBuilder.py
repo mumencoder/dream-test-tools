@@ -10,6 +10,9 @@ class ByondBuilder(
         Stmt.RandomStmt,
         Expr.RandomExprGenerator,
         DefaultConfig.DefaultConfig):
+    
+    def get_action_phases(self):
+        return ["phase1"]
 
     def actions_phase1(self, env):
         action = Object.RandomStackWalkObjectDeclareAction( self.toplevel, "phase1_obj" ) 
@@ -37,6 +40,9 @@ class ByondBuilder(
         config.set_choice("fuzzer.block_type", oneline=2, indent=11, nice_bracket=11)
 
 class ByondBuilderExperimental(ByondBuilder):
+    def get_action_phases(self):
+        return ["phase1", "phase2"]
+
     def actions_phase1(self, env):
         ByondBuilder.actions_phase1(self, env)
         ### ToplevelDeclareAction for stdlib

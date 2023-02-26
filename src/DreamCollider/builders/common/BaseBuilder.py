@@ -35,11 +35,13 @@ class BaseBuilder(object):
     def build_all(self, env):
         env.attr.builder = self
         action_count = 0
-        while len( self.eligible_actions ) != 0:
-            self.next_action(env)
-            if action_count > 10000:
-                raise Exception("too many attempts")
-            action_count += 1
+        for phase in self.get_action_phases():
+            getattr(self, f'actions_{phase}')(env)
+            while len( self.eligible_actions ) != 0:
+                self.next_action(env)
+                if action_count > 10000:
+                    raise Exception("too many attempts")
+                action_count += 1
 
     def next_action(self, env):
         action = random.choice(self.eligible_actions)

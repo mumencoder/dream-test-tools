@@ -4,9 +4,9 @@ def get_nav_bar():
     return html.Div([
         dcc.Link('Home', href='/'),
         html.Hr(),
-        dcc.Link("Compile OD", href="compileOD"),
+        dcc.Link("Compile OD", href="/compileOD"),
         html.Br(),
-        dcc.Link("Install Byond", href="install_byond"),
+        dcc.Link("Install Byond", href="/install_byond"),
         html.Hr(),
         dcc.Link('Random Test - Byond', href='/random1'),
         html.Br(),
@@ -81,11 +81,11 @@ def render_test(env):
     oenv = env.attr.oenv
     result = env.attr.result   
     content = html.Div([ 
-        html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
-        None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
-        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
-        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
-        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
+#        html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
+#        None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
+#        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
+#        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
+#        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
         html.Pre( str(benv.attr.compilation.objtree_text) ),
         html.Hr(),
         dbc.Row( [dbc.Col( html.Pre( str(env.attr.ast.text) ), width=6 ), dbc.Col( html.Pre( str(env.attr.results.collider_pathlines_text)), width=6 )] ),

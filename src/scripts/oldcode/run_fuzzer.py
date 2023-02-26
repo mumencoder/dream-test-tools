@@ -1,32 +1,3 @@
-
-from common import *
-
-async def run_test(env):
-    ctenv = env.merge( baseenv.attr.envs.byond )
-
-    await DMTR.Runners.byond_codetree(ctenv)
-    await DMTR.Runners.opendream_ast(ctenv)
-    await DMTR.Runners.clopen_ast(ctenv)
-    #await DMTR.Runners.run_meta(ctenv)
-
-    return ctenv
-
-async def print_main():
-    builder = generate_test()
-    print("====================================")
-    builder.print( sys.stdout )
-    print("====================================")
-    print( builder.unparse() )
-
-async def print_many_main():
-    for i in range(0, 10000):
-        if i % 1000 == 0:
-            print(i)
-        builder = generate_test()
-        if random.random() < 0.001:
-            print("====================================")
-            print( builder.unparse() )
-
 def generate_n_tests(env, n):
     generated_test_count = 0
     c = 0
@@ -123,5 +94,3 @@ async def generate_batch(output_dir, path, n, *args):
         pass
     exist_test_count = len(list(DMTR.Persist.iter_existing_tests(env)))
     print( f"found {exist_test_count} existing tests" )
-
-asyncio.run( globals()[sys.argv[1]]( *sys.argv[2:] ) )

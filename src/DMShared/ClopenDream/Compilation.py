@@ -105,6 +105,32 @@ class Compilation:
 
         Metadata.save_test(tenv)
 
+    def collider_errors_info( model ):
+        info = {"lines":[]}
+        for lineno, errid in model["errors"]:
+            info["lines"].append( {"lineno":lineno, "text":f"{lineno}:{errid}"} )
+        info["width"] = 20
+        return info
+
+    # TODO: this may not work for macro expansion
+    def clparse_tree(text):
+        for line in text.split('\n'):
+            ss = line.split("|||")
+            if len(ss) != 3:
+                continue
+            ff = ss[2].split(":")
+            if len(ff) >= 2:
+                yield {"file":ff[0].strip(), "lineno":int(ff[1]), "text":line }
+                
+    def clparser_tree_info( text ):
+        info = {"lines": sorted(list(Display.clparse_tree(text)), key=lambda line: line["lineno"]) }
+        info["lines"] = [ line for line in info["lines"] if line["file"] == 'test.dm' and line["lineno"] != 0 ]
+        info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
+        for i in range(0, len(info["lines"])-1):
+            if info["lines"][i+1]["lineno"] == 0:
+                info["lines"][i+1]["lineno"] = info["lines"][i]["lineno"]
+        return info
+        
     async def run_meta(tenv):
         lexer = ClopenDream.DMLexer()
         get_file(tenv, 'dm_file')

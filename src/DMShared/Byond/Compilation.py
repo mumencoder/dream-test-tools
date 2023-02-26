@@ -203,3 +203,66 @@ class Compilation(object):
             yield node
             if "subobjs" in node:
                 nodes_left += list(node["subobjs"])
+
+    def parse_error(text):
+        for line in text.split('\n'):
+            if line == "":
+                continue
+            ss = line.split(':')
+            if len(ss) < 3:
+                continue
+            if ss[2] in ['error', 'warning']:
+                yield {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}        
+
+    def byond_errors_info( text ):
+        info = {"lines": sorted(list(Display.byond_errors(text)), key=lambda line: line["lineno"]) }
+        info["lines"] = [ line for line in info["lines"] if line["file"] == 'test.dm' ]
+        info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
+        return info
+    
+    @staticmethod
+    def error_category(err):
+        msg = err["msg"]
+        if 'undefined var' in msg:
+            return "UNDEF_VAR"
+        if 'missing condition' in msg:
+            return "MISSING_CONDITION"
+        if 'illegal' in msg and '**' in msg:
+            return "ILLEGAL_POWER"
+        if 'expected a constant expression' in msg:
+            return "EXPECTED_CONSTEXPR"
+        if 'undefined type path' in msg:
+            return "UNDEF_TYPEPATH"
+        if "expected ':'" in msg:
+            return "EXPECTED_COLON"
+        if "expected as(...)" in msg:
+            return "EXPECTED_AS"
+        if "unexpected 'in' expression" in msg:
+            return "UNEXPECTED_IN"
+        if "missing left-hand argument to to" in msg:
+            return "MISSING_LEFT_ARG_TO"
+        if "missing left-hand argument to in" in msg:
+            return "MISSING_LEFT_ARG_IN"
+        if "missing left-hand argument to =" in msg:
+            return "MISSING_LEFT_ARG_ASSIGN"
+        if "invalid proc name: reserved word" in msg:
+            return "PROC_RESERVED_WORD"
+        if "invalid variable name: reserved word" in msg:
+            return "VAR_RESERVED_WORD"
+        if "missing while statement" in msg:
+            return "MISSING_WHILE"
+        if "previous definition" in msg:
+            return "DUPLICATE_DEF"
+        if "duplicate definition" in msg:
+            return "DUPLICATE_DEF"
+        if "attempted division by zero" in msg:
+            return "ZERO_DIVIDE"
+        if "var: expected end of statement" in msg:
+            return "EXPECTED_STMT_END"
+        if "definition out of place" in msg:
+            return "BAD_DEFINE"
+        if "/: missing comma ',' or right-paren ')'" in msg:
+            return "SLASH_MISSING_SOMETHING"
+        if "var: missing comma ',' or right-paren ')'" in msg:
+            return "VAR_MISSING_SOMETHING"
+        return 'UNKNOWN'

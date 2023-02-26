@@ -94,3 +94,44 @@ class Compilation(object):
                 del tenv.attr.test.metadata.paths.opendream_warnings
 
         Metadata.save_test(tenv)
+
+    def parse_errors(text):
+        for line in text.split('\n'):
+            if not line.startswith("Error"):
+                continue
+            ss = line.split(" ")
+            if len(ss) < 4:
+                continue
+            # TODO: this probably will not work for filename with spaces
+            ff = ss[3].split(":")
+            if len(ff) >= 2:
+                yield {"file":ff[0].strip(), "lineno":int(ff[1]), "msg":" ".join(ss[3:]), "text":line }
+
+    def opendream_errors_info( text ):
+        info = {"lines": sorted(list(Display.opendream_errors(text)), key=lambda line: line["lineno"]) }
+        info["lines"] = [ line for line in info["lines"] if line["file"] == 'test.dm' ]
+        info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
+        return info
+    
+    @staticmethod
+    def error_category(err):
+        msg = err["msg"]
+        if 'Unknown identifier' in msg:
+            return "UNDEF_VAR"
+        if 'Invalid path' in msg:
+            return 'UNDEF_TYPEPATH'
+        if 'const operation' in msg and 'is invalid' in msg:
+            return "EXPECTED_CONSTEXPR"
+        if 'Unknown global' in msg:
+            return "UNDEF_VAR"
+        if 'Invalid initial value' in msg:
+            return "INVALID_INIT"
+        if 'proc' in msg and 'is already defined in global scope' in msg:
+            return "DUPLICATE_GLOBAL_PROC"
+        if 'Type' in msg and 'already has a proc named' in msg:
+            return "DUPLICATE_OBJ_PROC"
+        if 'Duplicate definition of static var' in msg:
+            return "DUPLICATE_STATIC_VAR"
+        if 'Duplicate definition of var' in msg:
+            return "DUPLICATE_DEF"
+        return 'UNKNOWN'

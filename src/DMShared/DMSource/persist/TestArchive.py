@@ -8,7 +8,7 @@ class TestArchive:
                 raise Exception("expected bool for clear_on_load") 
             if os.path.exists( data["path"] ) and data["clear_on_load"]:
                 shutil.rmtree( data["path"] )
-        env.attr.tests.path = Shared.Path( data["path"] )
+        env.attr.tests.root_dir = Shared.Path( data["path"] )
 
     def try_init_test_instance(env):
         env.attr.test.metadata.name = Shared.Random.generate_string(24)
