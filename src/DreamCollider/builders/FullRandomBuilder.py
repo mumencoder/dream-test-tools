@@ -8,8 +8,7 @@ class FullRandomBuilder(
         BaseBuilder.BaseBuilder,
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
-        Expr.RandomExprGenerator,
-        DefaultConfig.DefaultConfig):
+        Expr.RandomExprGenerator):
 
     def actions_phase1(self, env):
         pass

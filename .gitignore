@@ -1,4 +1,4 @@
-**/src/scripts/server_config.yaml
+**/server_config.yaml
 **/output/*
 **/.vs/*
 **/.vagrant/*

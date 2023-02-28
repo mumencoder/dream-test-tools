@@ -18,6 +18,15 @@ class BaseBuilder(object):
 
         self.initialize_config()
 
+    def initialize_config(self):
+        self.config = ColliderConfig()
+        
+        for name in dir(self):
+            if name.startswith('config_'):
+                config_fn = getattr(self, name)
+                if hasattr(config_fn, '__call__'):
+                    config_fn(self.config)
+                    
     def initialize_toplevel(self):
         self.toplevel = self.initialize_node( AST.Toplevel.new() )
         self.toplevel.stdlib = self.stdlib

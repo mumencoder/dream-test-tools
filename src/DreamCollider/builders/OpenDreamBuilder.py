@@ -8,9 +8,11 @@ class OpenDreamBuilder(
         BaseBuilder.BaseBuilder,
         Proc.SimpleProcCreator,
         Stmt.RandomStmt,
-        Expr.RandomExprGenerator,
-        DefaultConfig.DefaultConfig):
+        Expr.RandomExprGenerator):
 
+    def get_action_phases(self):
+        return ["phase1"]
+    
     def actions_phase1(self, env):
         opg = Object.ObjectPathGenerator(self)
         opg.config.set("obj.path.extend_path_prob", 0.5)

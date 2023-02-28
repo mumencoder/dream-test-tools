@@ -1,13 +1,6 @@
 
 import os, sys, asyncio, json, io, time, re, pathlib, yaml, collections, random, shutil, gzip, threading
-
 import requests 
-
-import dash
-from dash import html, dcc
-import dash_bootstrap_components as dbc
-
-import fastapi
 import redis
 
 import mumenrepo as Shared
@@ -18,6 +11,25 @@ def print_env(env, title):
     for prop in env.unique_properties():
         print(prop, type(env.get_attr(prop)))
 
+class Counter(object):
+    def __init__(self):
+        self.c = 0
+        self.visible_states = [2 ** x for x in range(0,11)]
+        self.visible = False
+
+    def inc(self, n=1):
+        self.c += n
+        self.update_state()
+        
+    def update_state(self):
+        if self.c in self.visible_states or self.c % self.visible_states[-1] == 0:
+            self.visible = True
+        else:
+            self.visible = False
+
+    def state(self):
+        return self.visible
+    
 ### config
 def load_config(env):
     if os.path.exists('server_config.yaml'):
@@ -36,7 +48,6 @@ def setup_base(env):
 
 ### ast generation
 def generate_ast(env):
-    env.attr.expr.depth = 3
     env.attr.ast.builder.build_all( env )
 
     env.attr.ast.fuzzer = DreamCollider.Fuzzer(env.attr.ast.builder.config)

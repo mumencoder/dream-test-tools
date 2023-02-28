@@ -11,7 +11,7 @@ class SimpleVarExprCreator(object):
 
 class RandomExprGenerator(object):
     def create_var_expr(self, env):
-        expr = self.expression( env, env.attr.expr.depth, "rval" )
+        expr = self.expression( env, self.config.get('expr.depth'), "rval" )
         return expr
 
     def create_call_expression(self, env, depth):
@@ -54,6 +54,7 @@ class RandomExprGenerator(object):
 
     def config_expr(self, config):
         config.set("expr.param.is_named", 0.1)
+        config.set("expr.depth", 3)
 
     def initialize_expression(self, env, expr, depth):
             if type(expr) is AST.Expr.Property:
