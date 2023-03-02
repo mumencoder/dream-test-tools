@@ -5,14 +5,15 @@ from .dmast import *
 from .Shape import *
 
 class Unparser(object):
-    def __init__(self):
+    def __init__(self, env):
+        self.env = env
         self.s = io.StringIO()
 
     def raw_write(self, s):
         self.s.write(s)
 
-    def unparse(self, tokens):
-        for token in Shape.strip_nonprintable( tokens ):
+    def unparse(self):
+        for token in Shape.strip_nonprintable( self.env.attr.collider.ast_tokens ):
             self.write_token( token )
         return self.s.getvalue()
 

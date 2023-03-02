@@ -11,10 +11,10 @@ class RandomStackWalkObjectDeclareAction(object):
 
     def __call__(self, env):
         parent_block = self.current_parent()
-        new_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
+        new_block = env.attr.collider.builder.initialize_node( AST.ObjectBlock() )
         new_block.path = self.generate_object_path(env)[0]
 
-        env.attr.builder.tags.add(new_block, *self.object_tags)
+        env.attr.collider.builder.tags.add(new_block, *self.object_tags)
         self.current_blocks.add( new_block )
         self.declare_block_stack.append( new_block )
         pops = random.choice( [0,0,0,1,1,1,2,2,3] )
@@ -41,7 +41,7 @@ class RandomObjectDeclareAction(object):
         prev_block = None
         first_block = None
         for path in paths:
-            current_block = env.attr.builder.initialize_node( AST.ObjectBlock() )
+            current_block = env.attr.collider.builder.initialize_node( AST.ObjectBlock() )
             current_block.path = path
             if first_block is None:
                 first_block = current_block

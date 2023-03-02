@@ -19,7 +19,7 @@ class RandomStdlibProcName(object):
         pass
 
     def __call__(self, env):
-        choices = env.attr.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
+        choices = env.attr.collider.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
         return list(choices.keys())
 
 def RandomUndefinedProc(env, builder):
@@ -52,13 +52,13 @@ class ProcDeclareAction(object):
         if is_override:
             proc_object = None
         else:
-            proc_object = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
+            proc_object = env.attr.collider.builder.initialize_node( AST.ObjectBlock.new() )
             if self.config.prob('verb_prob'):
                 proc_object.path = AST.ObjectPath.new(segments=tuple(["verb"]))
             else:
                 proc_object.path = AST.ObjectPath.new(segments=tuple(["proc"]))
 
-        proc_declare = env.attr.builder.initialize_node( AST.ProcDefine.new() )
+        proc_declare = env.attr.collider.builder.initialize_node( AST.ProcDefine.new() )
         choices = self.generate_proc_name(env)
         if len(choices) == 0:
             return None
@@ -70,7 +70,7 @@ class ProcDeclareAction(object):
             current_object.add_leaf( proc_object )
             proc_object.add_leaf( proc_declare )
         self.current_count += 1
-        env.attr.builder.undefined_procs.add( proc_declare )
+        env.attr.collider.builder.undefined_procs.add( proc_declare )
         return True
 
 class ProcParameterAction(object):
@@ -80,7 +80,7 @@ class ProcParameterAction(object):
         self.generate_proc_param = None
 
     def finished(self, env):
-        return len(env.attr.builder.undefined_procs) == 0
+        return len(env.attr.collider.builder.undefined_procs) == 0
     
     def __call__(self, env):
         current_proc = self.choose_proc(env)
@@ -88,7 +88,7 @@ class ProcParameterAction(object):
         proc_param = self.generate_proc_param(env)
         current_proc.add_param( proc_param )
         if self.config.prob('finalize_proc'):
-            env.attr.builder.undefined_procs.remove( current_proc )
+            env.attr.collider.builder.undefined_procs.remove( current_proc )
 
 class ProcStatementAction(object):
     def __init__(self):
@@ -97,7 +97,7 @@ class ProcStatementAction(object):
         self.generate_proc_stmt = None
 
     def finished(self, env):
-        return len(env.attr.builder.undefined_procs) == 0
+        return len(env.attr.collider.builder.undefined_procs) == 0
 
     def __call__(self, env):
         current_proc = self.choose_proc(env)
@@ -107,7 +107,7 @@ class ProcStatementAction(object):
         proc_stmt = self.generate_proc_stmt(env)
         current_proc.add_stmt( proc_stmt )
         if self.config.prob('finalize_proc'):
-            env.attr.builder.undefined_procs.remove( current_proc )
+            env.attr.collider.builder.undefined_procs.remove( current_proc )
 
 class SimpleProcCreator(object):
     def config_proc_param(self, config):

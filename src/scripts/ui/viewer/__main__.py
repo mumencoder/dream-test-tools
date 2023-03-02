@@ -88,12 +88,12 @@ def render_test(env):
     content = html.Div([ 
 #        html.Pre( "Match: " + str(not env.attr.results.path_mismatch) ),
 #        None if env.attr.results.known_mismatch is not None else html.Pre( f"Known mismatch: {env.attr.results.known_mismatch}"),
-#        None if len(env.attr.ast.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.ast.collider_byond_paths_difference)}" ), 
-#        html.Pre( f"Collider paths: {env.attr.ast.collider_paths}" ), 
-#        html.Pre( f"Byond paths: {str(env.attr.ast.byond_paths)}" ),
+#        None if len(env.attr.collider.collider_byond_paths_difference) == 0 else html.Pre( f"Difference: {str(env.attr.collider.collider_byond_paths_difference)}" ), 
+#        html.Pre( f"Collider paths: {env.attr.collider.collider_paths}" ), 
+#        html.Pre( f"Byond paths: {str(env.attr.collider.byond_paths)}" ),
         html.Pre( str(benv.attr.compilation.objtree_text) ),
         html.Hr(),
-        dbc.Row( [dbc.Col( html.Pre( str(env.attr.ast.text) ), width=6 ), dbc.Col( html.Pre( str(env.attr.results.collider_pathlines_text)), width=6 )] ),
+        dbc.Row( [dbc.Col( html.Pre( str(env.attr.collider.text) ), width=6 ), dbc.Col( html.Pre( str(env.attr.results.collider_pathlines_text)), width=6 )] ),
         html.Hr(),
         html.Pre( str(benv.attr.compilation.stdout) ),
         html.Pre( str(benv.attr.compilation.returncode) ),
@@ -192,41 +192,13 @@ layout = dbc.Container([
 pending_tasks = []
 tasks = set()
 
-def new_task(fn, *args, **kwargs):
-    pending_tasks.append( (fn, args, kwargs) )
-
-def async_thread_launch():
-    asyncio.run( async_thread_main() )
-
-async def async_thread_main():
-    global pending_tasks, tasks
-   
-    while True:
-        for fn, args, kwargs in pending_tasks:
-            tasks.add( asyncio.create_task( fn(*args, **kwargs) ) )
-        pending_tasks = []
-
-        try:
-            for co in asyncio.as_completed(tasks, timeout=0.1):
-                await co
-        except TimeoutError:
-            pass
-        
-        remaining_tasks = set()
-        for task in tasks:
-            if not task.done():
-                remaining_tasks.add( task )
-            else:
-                pass
-        tasks = remaining_tasks
-
 async def main():
     setup_base(genv)
     load_config(genv)
 
-    DMShared.Byond.load(benv, genv.attr.config["defines"]["byond_main"])
+    DMShared.Byond.load(benv, genv.attr.config["resources"]["byond_main"])
 
-    DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["defines"]["opendream_current"])
+    DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["resources"]["opendream_current"])
     DMShared.OpenDream.Install.load_install_from_repo(oenv)
 
     async_thread = threading.Thread(target=async_thread_launch)

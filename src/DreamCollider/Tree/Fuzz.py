@@ -2,9 +2,10 @@
 from ..common import *
 from .Shape import *
 class Fuzzer(object):
-    def __init__(self, config):
+    def __init__(self, env):
+        self.env = env
+        self.config = env.attr.collider.builder.config
         self.block_mode = [ {"type":"toplevel", 'indent':''} ]
-        self.config = config
 
     def fuzz_shape(self, shape):
         return self.fuzz_stream( shape )

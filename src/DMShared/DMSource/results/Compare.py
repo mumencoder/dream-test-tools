@@ -125,7 +125,7 @@ class Compare(object):
     
 def compare_paths(env):
     collider_paths = set()
-    for node in env.attr.ast.builder.toplevel.tree.iter_nodes():
+    for node in env.attr.collider.builder.toplevel.tree.iter_nodes():
         if node.is_stdlib:
             continue
         if len(node.path) == 0:
@@ -153,9 +153,9 @@ def compare_paths(env):
         if node["path"] not in collider_pathlines[ node["line"] ]:
             known_mismatch = (node["line"], node["path"])
 
-    env.attr.ast.collider_paths = collider_paths
-    env.attr.ast.byond_paths = byond_paths
-    env.attr.ast.collider_byond_paths_difference = collider_paths.difference( byond_paths )
+    env.attr.collider.collider_paths = collider_paths
+    env.attr.collider.byond_paths = byond_paths
+    env.attr.collider.collider_byond_paths_difference = collider_paths.difference( byond_paths )
     env.attr.results.path_mismatch = path_mismatch
     env.attr.results.known_mismatch = known_mismatch 
     env.attr.results.collider_pathlines_text = DMShared.Display.sparse_to_full(

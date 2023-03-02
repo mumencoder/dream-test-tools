@@ -25,10 +25,10 @@ class VarDeclareAction(object):
         if is_override:
             var_object = None
         else:
-            var_object = env.attr.builder.initialize_node( AST.ObjectBlock.new() )
+            var_object = env.attr.collider.builder.initialize_node( AST.ObjectBlock.new() )
             var_object.path = AST.ObjectPath.new(segments=tuple(["var"]))
 
-        var_declare = env.attr.builder.initialize_node( AST.ObjectVarDefine() )
+        var_declare = env.attr.collider.builder.initialize_node( AST.ObjectVarDefine() )
         env.attr.var_declare = var_declare
         var_declare.name = self.generate_var_name( env )
         if var_declare.name is None:
@@ -40,7 +40,7 @@ class VarDeclareAction(object):
         else:
             current_object.add_leaf( var_object )
             var_object.add_leaf( var_declare )
-        env.attr.builder.undefined_vars.add( var_declare )
+        env.attr.collider.builder.undefined_vars.add( var_declare )
         del env.attr.var_declare
         del env.attr.current_object
         self.current_count += 1
@@ -67,7 +67,7 @@ class RandomStdlibVarName(object):
         pass
 
     def __call__(self, env):
-        choices = env.attr.builder.stdlib.vars[ env.attr.current_object.resolved_path ]
+        choices = env.attr.collider.builder.stdlib.vars[ env.attr.current_object.resolved_path ]
         if len(choices) == 0:
             return None
         choice = random.choice( list(choices.keys()) )
@@ -80,7 +80,7 @@ class VarDefinitionAction(object):
         self.generate_define = None
 
     def finished(self, env):
-        return len(env.attr.builder.undefined_vars) == 0
+        return len(env.attr.collider.builder.undefined_vars) == 0
 
     def __call__(self, env):
         tries = 0
@@ -96,7 +96,7 @@ class VarDefinitionAction(object):
         else:
             expr = self.generate_define(env)
             current_var.set_expression( expr )
-        env.attr.builder.undefined_vars.remove( current_var )
+        env.attr.collider.builder.undefined_vars.remove( current_var )
         return True
     
 def RandomUndefinedVar(env, builder):
