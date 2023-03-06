@@ -180,8 +180,6 @@ def render_results(tenv):
 
     return result
 
-load_config(genv)
-
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 layout = dbc.Container([
@@ -189,23 +187,6 @@ layout = dbc.Container([
     html.Div([], id='page-content')
 ], fluid=True)
 
-pending_tasks = []
-tasks = set()
-
-async def main():
-    setup_base(genv)
-    load_config(genv)
-
-    DMShared.Byond.load(benv, genv.attr.config["resources"]["byond_main"])
-
-    DMShared.OpenDream.Install.load_repo(oenv, genv.attr.config["resources"]["opendream_current"])
-    DMShared.OpenDream.Install.load_install_from_repo(oenv)
-
-    async_thread = threading.Thread(target=async_thread_launch)
-    async_thread.start()
-
+if __name__ == '__main__':
     app.layout = layout
     app.run_server(debug=True)
-
-if __name__ == '__main__':
-    asyncio.run( main() )

@@ -1,6 +1,35 @@
 
 from .imports import *
 
+### tasks
+def new_task(fn, *args, **kwargs):
+    pending_tasks.append( (fn, args, kwargs) )
+
+def async_thread_launch():
+    asyncio.run( async_thread_main() )
+
+async def async_thread_main():
+    global pending_tasks, tasks
+   
+    while True:
+        for fn, args, kwargs in pending_tasks:
+            tasks.add( asyncio.create_task( fn(*args, **kwargs) ) )
+        pending_tasks = []
+
+        try:
+            for co in asyncio.as_completed(tasks, timeout=0.1):
+                await co
+        except TimeoutError:
+            pass
+        
+        remaining_tasks = set()
+        for task in tasks:
+            if not task.done():
+                remaining_tasks.add( task )
+            else:
+                pass
+        tasks = remaining_tasks
+        
 ### ast generation
 def builder_opendream(env):
     env.attr.collider.builder = DreamCollider.OpenDreamBuilder( )
@@ -42,29 +71,27 @@ async def install_opendream(oenv):
     await DMShared.OpenDream.Builder.build(oenv)
 
 # compilation
-async def byond_compilation(env, benv):
-    cenv = benv.branch()
-    cenv.attr.compilation.root_dir = env.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
+async def byond_compilation(config_env, cenv):
+    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
-        f.write( env.attr.collider.text )
+        f.write( cenv.attr.compilation.text )
     await DMShared.Byond.Compilation.managed_compile(cenv)
     await DMShared.Byond.Compilation.managed_objtree(cenv)
 
-    renv = env.branch()
-    DMShared.Byond.Compilation.load_objtree(cenv, renv)
+    renv = cenv.branch()
     DMShared.Byond.Compilation.load_compile(cenv, renv)
+    DMShared.Byond.Compilation.load_objtree(cenv, renv)
     return renv
 
-async def opendream_compilation(env, oenv):
-    cenv = oenv.branch()
-    cenv.attr.compilation.root_dir = env.attr.dirs.tmp / 'random_ast' / Shared.Random.generate_string(24)
+async def opendream_compilation(config_env, cenv):
+    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
-        f.write( env.attr.collider.text )
+        f.write( cenv.attr.compilation.text )
     await DMShared.OpenDream.Compilation.managed_compile(cenv)
 
-    renv = env.branch()
+    renv = cenv.branch()
     DMShared.OpenDream.Compilation.load_compile(cenv, renv)
     return renv
 
