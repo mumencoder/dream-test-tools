@@ -24,55 +24,30 @@ class Compilation(object):
         penv.attr.shell.env = proc_env
         penv.attr.shell.command = Compilation.create_dreammaker_command( penv, penv.attr.compilation.args )
         await Shared.Process.shell(penv)
-        env.attr.compilation.returncode = penv.attr.process.instance.returncode
 
     async def managed_compile(env):
-        env = env.branch()
-        env.attr.process.stdout = open(env.attr.compilation.root_dir / 'byond.compile.stdout.txt', "w")
-        try:
-            await Compilation.invoke_compiler(env)
-        finally:
-            env.attr.process.stdout.close()
-
-        with open(env.attr.compilation.root_dir / 'byond.compile.returncode.txt', "w") as f:
-            f.write( str(env.attr.compilation.returncode) )
-
-        return env
-
-    def load_compile(senv, denv):
-        with open( senv.attr.compilation.root_dir / 'byond.compile.stdout.txt', "r" ) as f:
-            denv.attr.compilation.stdout = f.read()
-        with open( senv.attr.compilation.root_dir / 'byond.compile.returncode.txt', "r" ) as f:
-            denv.attr.compilation.returncode = int(f.read())
+        menv = env.branch()
+        await Compilation.invoke_compiler(menv)
+        env.attr.compile.stdout = menv.attr.process.stdout
+        env.attr.compile.returncode = menv.attr.process.instance.returncode
 
     async def managed_codetree(env):
-        env = env.branch()
-        env.attr.compilation.args = ["code_tree"]
-        env.attr.process.stdout = open(env.attr.compilation.root_dir / 'byond.codetree.stdout.txt', "w")
-        try:
-            await Compilation.invoke_compiler(env)
-        finally:
-            env.attr.process.stdout.close()
-
-        return env
+        menv = env.branch()
+        menv.attr.compilation.args = ["code_tree"]
+        await Compilation.invoke_compiler(env)
+        env.attr.codetree.stdout = menv.attr.process.stdout
+        env.attr.codetree.returncode = menv.attr.process.instance.returncode
 
     async def managed_objtree(env):
-        env = env.branch()
-        env.attr.compilation.args = ["obj_tree"]
-        env.attr.process.stdout = open(env.attr.compilation.root_dir / 'byond.objtree.stdout.txt', "w")
-        try:
-            await Compilation.invoke_compiler(env)
-        finally:
-            env.attr.process.stdout.close()
-
-        return env
+        menv = env.branch()
+        menv.attr.compilation.args = ["obj_tree"]
+        await Compilation.invoke_compiler(menv)
+        env.attr.objtree.stdout = menv.attr.process.stdout
+        env.attr.objtree.returncode = menv.attr.process.instance.returncode
 
     def load_objtree(senv, denv):
-        with open( senv.attr.compilation.root_dir / 'byond.objtree.stdout.txt', "r" ) as f:
-            denv.attr.compilation.objtree_text = f.read()
-        
         lines = []
-        for line in denv.attr.compilation.objtree_text.split('\n'):
+        for line in denv.attr.compilation.objtree_stdout.split('\n'):
             if line.startswith("loading"):
                 continue
             if ':error:' in line:
@@ -204,25 +179,45 @@ class Compilation(object):
             if "subobjs" in node:
                 nodes_left += list(node["subobjs"])
 
-    def parse_error(text):
-        for line in text.split('\n'):
-            if line == "":
-                continue
-            ss = line.split(':')
-            if len(ss) < 3:
-                continue
-            if ss[2] in ['error', 'warning']:
-                yield {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}        
+    def parse_compile_stdout(env):
+        lines = env.attr.compile.stdout_text.split('\n')
+        line_i = 0
+        def next_line():
+            nonlocal line_i
+            if line_i >= len(lines):
+                return None
+            line = lines[line_i]
+            line_i += 1
+            return line
+        
+        result = {"errors":[]}
 
-    def byond_errors_info( text ):
-        info = {"lines": sorted(list(Display.byond_errors(text)), key=lambda line: line["lineno"]) }
-        info["lines"] = [ line for line in info["lines"] if line["file"] == 'test.dm' ]
-        info["width"] = max( [len(line["text"]) for line in info["lines"] ]) + 8
-        return info
+        state = "header"
+        while line := next_line():
+            if line.startswith("DM compiler version") and state == "header":
+                continue
+            elif line.startswith("loading") and state == "header":
+                state = "errors"
+                continue
+            elif "error" in line and "warning" in line and state == "errors":
+                state = "footer"
+            elif "Total time" in line and state == "footer":
+                state = "end"
+            elif state == "errors":
+                err = Compilation.parse_error(line)
+                result["errors"].append(err)
+            else:
+                raise Exception("cannot parse line --- ", state, line)
+        env.attr.compile.stdout_parsed = result
+
+    def parse_error(line):
+        ss = line.split(':')
+        result = {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}   
+        result["category"] = Compilation.error_category(result["msg"])     
+        return result
     
     @staticmethod
-    def error_category(err):
-        msg = err["msg"]
+    def error_category(msg):
         if 'undefined var' in msg:
             return "UNDEF_VAR"
         if 'missing condition' in msg:
@@ -265,4 +260,14 @@ class Compilation(object):
             return "SLASH_MISSING_SOMETHING"
         if "var: missing comma ',' or right-paren ')'" in msg:
             return "VAR_MISSING_SOMETHING"
+        if "inconsistent indentation or missing" in msg:
+            return "BAD_INDENT_OR_MISSING"
+        if "inconsistent indentation" in msg:
+            return "BAD_INDENT"
+        if "try without catch" in msg:
+            return "TRY_NO_CATCH"
+        if ",: expected }" in msg:
+            return "COMMA_EXPECTED_CURLY"
+        if "not a prototype" in msg:
+            return "NOT_PROTOTYPE"
         return 'UNKNOWN'

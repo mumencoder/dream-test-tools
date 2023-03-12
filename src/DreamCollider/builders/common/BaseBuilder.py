@@ -42,6 +42,7 @@ class BaseBuilder(object):
         return node
 
     def build_all(self, env):
+        env = env.branch()
         action_count = 0
         for phase in self.get_action_phases():
             getattr(self, f'actions_{phase}')(env)

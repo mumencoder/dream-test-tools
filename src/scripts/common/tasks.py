@@ -1,5 +1,6 @@
 
 from .imports import *
+from .env import *
 
 ### tasks
 def new_task(fn, *args, **kwargs):
@@ -75,25 +76,87 @@ async def byond_compilation(config_env, cenv):
     cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
-        f.write( cenv.attr.compilation.text )
+        f.write( cenv.attr.compilation.dm_file )
     await DMShared.Byond.Compilation.managed_compile(cenv)
-    await DMShared.Byond.Compilation.managed_objtree(cenv)
 
-    renv = cenv.branch()
-    DMShared.Byond.Compilation.load_compile(cenv, renv)
-    DMShared.Byond.Compilation.load_objtree(cenv, renv)
-    return renv
+# compilation
+async def byond_objtree(config_env, cenv):
+    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'byond_compilation' / Shared.Random.generate_string(24)
+    cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
+    with open( cenv.attr.compilation.dm_file_path, "w") as f:
+        f.write( cenv.attr.compilation.dm_file )
+    await DMShared.Byond.Compilation.managed_objtree(cenv)
 
 async def opendream_compilation(config_env, cenv):
     cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
-        f.write( cenv.attr.compilation.text )
+        f.write( cenv.attr.compilation.dm_file )
     await DMShared.OpenDream.Compilation.managed_compile(cenv)
 
     renv = cenv.branch()
     DMShared.OpenDream.Compilation.load_compile(cenv, renv)
     return renv
+
+async def dmsource_all_tasks(verbose=False):
+    root_env = Shared.Environment()
+    root_env_t = EnvTracker(root_env, "root_env")
+
+    setup_base(root_env)
+    if verbose:
+        root_env_t.print("1")
+
+    config_env = root_env.branch()
+    config_env_t = EnvTracker(config_env, "config_env")
+
+    load_config(config_env, open_config())
+    if verbose:
+        config_env_t.print("2")
+
+    root_env.attr.tmp_dir = config_env.attr.tmp_dir.value
+
+    collider_env = root_env.branch()
+    collider_env_t = EnvTracker(collider_env, "collider_env")
+    builder_experimental(collider_env)
+    if verbose:
+        collider_env_t.print("1")
+    generate_ast(collider_env)
+    if verbose:
+        collider_env_t.print("2")
+    tokenize_ast(collider_env)
+    if verbose:
+        collider_env_t.print("3")
+    unparse_ast(collider_env)
+    if verbose:
+        collider_env_t.print("4")
+    compute_ngrams(collider_env)
+    if verbose:
+        collider_env_t.print("5")
+
+    benv = root_env.branch()
+    benv_t = EnvTracker(benv, "benv")
+    for prop in list(config_env.filter_properties(".byond_main.*")):
+        config_env.rebase(".byond_main", ".install", prop, new_env=benv, copy=True)
+    if verbose:
+        benv_t.print("1")
+
+    cenv = benv.branch()
+    cenv_t = EnvTracker(cenv, "cenv")
+    cenv.attr.compilation.dm_file = collider_env.attr.collider.text
+    DMShared.pipe_stdout(cenv)
+    await byond_compilation(root_env, cenv)
+    cenv.attr.compile.stdout_text = cenv.attr.compile.stdout.getvalue()
+    DMShared.pipe_stdout(cenv)
+    await byond_objtree(root_env, cenv)
+    cenv.attr.objtree.stdout_text = cenv.attr.objtree.stdout.getvalue()
+    if verbose:
+        cenv_t.print("1")
+    
+    DMShared.Byond.Compilation.parse_compile_stdout( cenv )
+
+    DMShared.pickle_env(cenv, ['.compilation.dm_file', '.compile.stdout_text', '.objtree.stdout_text'])
+
+    return 
 
 def marshall_test(env):
     test = {}
