@@ -78,6 +78,8 @@ async def byond_compilation(config_env, cenv):
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
     await DMShared.Byond.Compilation.managed_compile(cenv)
+    if os.path.exists( cenv.attr.compilation.root_dir ):
+        shutil.rmtree( cenv.attr.compilation.root_dir )
 
 # compilation
 async def byond_objtree(config_env, cenv):
@@ -86,6 +88,8 @@ async def byond_objtree(config_env, cenv):
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
     await DMShared.Byond.Compilation.managed_objtree(cenv)
+    if os.path.exists( cenv.attr.compilation.root_dir ):
+        shutil.rmtree( cenv.attr.compilation.root_dir )
 
 async def opendream_compilation(config_env, cenv):
     cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
@@ -93,12 +97,10 @@ async def opendream_compilation(config_env, cenv):
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
     await DMShared.OpenDream.Compilation.managed_compile(cenv)
+    if os.path.exists( cenv.attr.compilation.root_dir ):
+        shutil.rmtree( cenv.attr.compilation.root_dir )
 
-    renv = cenv.branch()
-    DMShared.OpenDream.Compilation.load_compile(cenv, renv)
-    return renv
-
-async def dmsource_all_tasks(verbose=False):
+def base_env(verbose=False):
     root_env = Shared.Environment()
     root_env_t = EnvTracker(root_env, "root_env")
 
@@ -107,14 +109,19 @@ async def dmsource_all_tasks(verbose=False):
         root_env_t.print("1")
 
     config_env = root_env.branch()
+    config_env.attr.config = open_config()
     config_env_t = EnvTracker(config_env, "config_env")
 
-    load_config(config_env, open_config())
+    load_config(config_env)
     if verbose:
         config_env_t.print("2")
+    load_paths(root_env, config_env)
 
-    root_env.attr.tmp_dir = config_env.attr.tmp_dir.value
+    root_env.attr.config = config_env
 
+    return root_env
+
+def generate_dmsource(root_env, verbose=False):
     collider_env = root_env.branch()
     collider_env_t = EnvTracker(collider_env, "collider_env")
     builder_experimental(collider_env)
@@ -133,13 +140,18 @@ async def dmsource_all_tasks(verbose=False):
     if verbose:
         collider_env_t.print("5")
 
+    return collider_env
+
+def load_byond_install(root_env, verbose=False):
     benv = root_env.branch()
     benv_t = EnvTracker(benv, "benv")
-    for prop in list(config_env.filter_properties(".byond_main.*")):
-        config_env.rebase(".byond_main", ".install", prop, new_env=benv, copy=True)
+    for prop in list(root_env.attr.config.filter_properties(".byond_main.*")):
+        root_env.attr.config.rebase(".byond_main", ".install", prop, new_env=benv, copy=True)
     if verbose:
         benv_t.print("1")
+    return benv
 
+async def compile_with_byond(root_env, collider_env, benv, verbose=False):
     cenv = benv.branch()
     cenv_t = EnvTracker(cenv, "cenv")
     cenv.attr.compilation.dm_file = collider_env.attr.collider.text
@@ -151,12 +163,24 @@ async def dmsource_all_tasks(verbose=False):
     cenv.attr.objtree.stdout_text = cenv.attr.objtree.stdout.getvalue()
     if verbose:
         cenv_t.print("1")
-    
+    return cenv
+
+async def dmsource_all_tasks(root_env, verbose=False):
+    collider_env = generate_dmsource(root_env, verbose)
+    benv = load_byond_install(root_env, verbose)
+    cenv = compile_with_byond(root_env, collider_env, benv, verbose)
+
     DMShared.Byond.Compilation.parse_compile_stdout( cenv )
 
-    DMShared.pickle_env(cenv, ['.compilation.dm_file', '.compile.stdout_text', '.objtree.stdout_text'])
+    renv = root_env.branch()
+    renv.attr.benv = cenv
+    return renv
 
-    return 
+def save_test(env):
+    return DMShared.pickle_env(env, ['.compilation.dm_file', '.compile.stdout_text', '.objtree.stdout_text', '.compile.stdout_parsed'])
+
+def load_test(env, data):
+    return DMShared.unpickle_env(env, data)
 
 def marshall_test(env):
     test = {}

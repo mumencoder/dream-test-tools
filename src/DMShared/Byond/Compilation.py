@@ -212,12 +212,61 @@ class Compilation(object):
 
     def parse_error(line):
         ss = line.split(':')
-        result = {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}   
+        try:
+            result = {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}   
+        except:
+            print(line)
+            return None
         result["category"] = Compilation.error_category(result["msg"])     
         return result
     
     @staticmethod
+    def all_error_categories():
+        return [
+            'UNDEF_VAR',
+            'MISSING_CONDITION',
+            'ILLEGAL_POWER',
+            'EXPECTED_CONSTEXPR',
+            'UNDEF_TYPEPATH',
+            'EXPECTED_COLON',
+            'EXPECTED_AS',
+            'UNEXPECTED_IN',
+            'MISSING_LEFT_ARG_TO',
+            'MISSING_LEFT_ARG_IN',
+            'MISSING_LEFT_ARG_ASSIGN',
+            'PROC_RESERVED_WORD',
+            'VAR_RESERVED_WORD',
+            'MISSING_WHILE',
+            'PREVIOUS_DEF',
+            'DUPLICATE_DEF',
+            'ZERO_DIVIDE',
+            "EXPECTED_STMT_END",
+            "BAD_DEFINE"
+            "SLASH_MISSING_SOMETHING"
+            "VAR_MISSING_SOMETHING"
+            "BAD_INDENT_OR_MISSING"
+            "BAD_INDENT"
+            "TRY_NO_CATCH"
+            "COMMA_EXPECTED_CURLY"
+            "NOT_PROTOTYPE"
+        ]
+
+    @staticmethod
     def error_category(msg):
+        if 'location of top-most unmatched \{' in msg:
+            return "LOC_UNMATCHED_RCURLY"
+        if 'missing expression' in msg:
+            return "MISSING_EXPRESSION"
+        if 'expected expression' in msg:
+            return "EXPECTED_EXPRESSION"
+        if 'expected \}' in msg:
+            return "EXPECTED_LCURLY"
+        if 'Bad input type:' in msg:
+            return "BAD_INPUT_TYPE"
+        if 'bad argument definition' in msg:
+            return "BAD_ARGUMENT_DEFN"
+        if 'missing comma \',\' or right-paren' in msg:
+            return "MISSING_COMMA_OR_RPAREN"
         if 'undefined var' in msg:
             return "UNDEF_VAR"
         if 'missing condition' in msg:
@@ -247,7 +296,7 @@ class Compilation(object):
         if "missing while statement" in msg:
             return "MISSING_WHILE"
         if "previous definition" in msg:
-            return "DUPLICATE_DEF"
+            return "PREVIOUS_DEF"
         if "duplicate definition" in msg:
             return "DUPLICATE_DEF"
         if "attempted division by zero" in msg:

@@ -9,9 +9,10 @@ def open_config():
         raise Exception("cannot read config")
     return config
 
-def load_config(env, config):
+def load_config(env):
     warnings = []
     errors = []
+    config = env.attr.config
 
     def assign_value(resource, prefix, type_define):
         env_prefix = env.attr
@@ -44,6 +45,11 @@ def load_config(env, config):
         type_define = config['types'][resource_type]
         assign_value(resource, prefix, type_define)
     return {"warnings":warnings, "errors":errors}
+
+def load_paths(env, config_env):
+    for resource_name, resource in config_env.attr.config['resources'].items():
+        if resource['type'] == "path":
+            env.set_attr(f'.{resource_name}', config_env.get_attr(f'.{resource_name}.value') )
 
 def setup_base(env):
     env.attr.shell.env = os.environ
