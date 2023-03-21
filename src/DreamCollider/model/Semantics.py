@@ -389,7 +389,7 @@ class Semantics(object):
             if not expr.is_const(self) and self.initialization_mode() == "const":
                 self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
             for usage in usages:
-                self.block.add_dependency( self, usage )
+                self.block.root.add_dependency( self, usage )
                 if self.block.check_usage_cycle( self, usage ) is True:
                     self.errors.append( GeneralError('USAGE_CYCLE') )
     class ProcDefine:
