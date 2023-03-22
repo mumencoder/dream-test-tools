@@ -73,7 +73,7 @@ async def install_opendream(oenv):
 
 # compilation
 async def byond_compilation(config_env, cenv):
-    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'byond_compilation' / Shared.Random.generate_string(24)
+    cenv.attr.compilation.root_dir = config_env.attr.ram_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
@@ -83,7 +83,7 @@ async def byond_compilation(config_env, cenv):
 
 # compilation
 async def byond_objtree(config_env, cenv):
-    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'byond_compilation' / Shared.Random.generate_string(24)
+    cenv.attr.compilation.root_dir = config_env.attr.ram_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
@@ -92,7 +92,7 @@ async def byond_objtree(config_env, cenv):
         shutil.rmtree( cenv.attr.compilation.root_dir )
 
 async def opendream_compilation(config_env, cenv):
-    cenv.attr.compilation.root_dir = config_env.attr.tmp_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
+    cenv.attr.compilation.root_dir = config_env.attr.ram_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
@@ -168,7 +168,7 @@ async def compile_with_byond(root_env, collider_env, benv, verbose=False):
 async def dmsource_all_tasks(root_env, verbose=False):
     collider_env = generate_dmsource(root_env, verbose)
     benv = load_byond_install(root_env, verbose)
-    cenv = compile_with_byond(root_env, collider_env, benv, verbose)
+    cenv = await compile_with_byond(root_env, collider_env, benv, verbose)
 
     DMShared.Byond.Compilation.parse_compile_stdout( cenv )
 
