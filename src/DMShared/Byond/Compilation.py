@@ -199,12 +199,25 @@ class Compilation(object):
             elif line.startswith("loading") and state == "header":
                 state = "errors"
                 continue
-            elif "error" in line and "warning" in line and state == "errors":
+            elif line.startswith("saving ") and state == "errors":
+                state = "footer"
+            elif "error" in line and "warning" in line and state == "errors" or state == "footer":
                 state = "footer"
             elif "Total time" in line and state == "footer":
                 state = "end"
+            elif line in ["error: invalid variable", 'Segmentation fault']:
+                # TODO: do something with these
+                pass
+            elif line.startswith("Suppressing further errors after 100"):
+                pass
             elif state == "errors":
                 err = Compilation.parse_error(line)
+                if err is None:
+                    print("===")
+                    print(lines)
+                    print("----")
+                    print(line)
+                    raise Exception("parse error")
                 result["errors"].append(err)
             else:
                 raise Exception("cannot parse line --- ", state, line)
@@ -214,8 +227,9 @@ class Compilation(object):
         ss = line.split(':')
         try:
             result = {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}   
+            if result["type"] not in ["error", "warning"]:
+                result["msg"] = ss[2]
         except:
-            print(line)
             return None
         result["category"] = Compilation.error_category(result["msg"])     
         return result
@@ -253,70 +267,254 @@ class Compilation(object):
 
     @staticmethod
     def error_category(msg):
-        if 'location of top-most unmatched \{' in msg:
-            return "LOC_UNMATCHED_RCURLY"
+        if 'may not be set at compile-time' in msg:
+            return "VAR_NO_SET_COMPILETIME"
+        if 'value changed' in msg:
+            return "VALUE_CHANGED"
+        if 'use of' in msg and 'precedes its definition' in msg:
+            return "USE_PRECEDES_DEF"
+        if 'procedure override precedes definition' in msg:
+            return "PROC_OVERRIDE_PRECEDES_DEF"
+        if 'bad or misplaced statement' in msg:
+            return "BAD_OR_MISPLACED_STMT"
+        if 'invalid parent type' in msg:
+            return "INVALID_PARENT_TYPE"
+        if 'expected "if" or "else"' in msg:
+            return "EXPECTED_IF_OR_ELSE"
+        if 'file-derived types are not supported' in msg:
+            return "NO_FILE_SUBTYPE"
+        if 'list-derived types are not supported' in msg:
+            return "NO_LIST_SUBTYPE"
+        if 'positive number expected' in msg:
+            return "POSITIVE_NUM_EXPECTED"
+        if 'empty switch statement' in msg:
+            return "EMPTY_SWITCH_STMT"
+        if 'empty argument not allowed' in msg:
+            return "EMPTY_ARGUMENT"
+        if 'unexpected symbol' in msg:
+            return "UNEXPECTED_SYMBOL"
+        if 'extra args' in msg:
+            return "EXTRA_ARGS"
+        if 'bad link' in msg:
+            return "BAD_LINK"
+        if 'bad embedded expression' in msg:
+            return "BAD_EMBEDDED_EXPR" 
+        if 'compile failed (possible infinite cross-reference loop)' in msg:
+            return "POSSIBLE_INF_REF_LOOP"
+        if 'Bad input type' in msg:
+            return "BAD_INPUT_TYPE"
+        if 'list started here' in msg:
+            return 'LIST_START_HERE'
+        if 'variable defined but not used' in msg:
+            return "VAR_DEFN_NOT_USED"
+        if 'empty type name' in msg:
+            return 'EMPTY_TYPE_NAME'
+        if "empty 'else' clause" in msg:
+            return "EMPTY_ELSE_CLAUSE"
+        if 'unused label' in msg:
+            return 'UNUSED_LABEL'
+        if 'label must be associated with a loop' in msg:
+            return 'LABEL_NOLOOP'
+        if 'it is recommended that you use an object filter or' in msg:
+            return 'RECOMMEND_OBJECT_FILTER'
+        if 'statement has no effect' in msg:
+            return 'STATEMENT_NO_EFFECT'
+        if 'operation has no effect here' in msg:
+            return "OP_NO_EFFECT"
+        if 'assignment in condition' in msg:
+            return 'ASSIGN_IN_COND'
+        if 'location of top-most unmatched {' in msg:
+            return "LOC_UNMATCHED_LCURLY"
+        if 'unbalanced }' in msg:
+            return "UNBALANCED_RCURLY"
+        if 'unbalanced )' in msg:
+            return "UNBALANCED_RPAREN"
         if 'missing expression' in msg:
             return "MISSING_EXPRESSION"
         if 'expected expression' in msg:
             return "EXPECTED_EXPRESSION"
-        if 'expected \}' in msg:
-            return "EXPECTED_LCURLY"
+        if 'expected }' in msg:
+            return "EXPECTED_RCURLY"
+        if 'expected )' in msg:
+            return "EXPECTED_RPAREN"
+        if 'expected ]' in msg:
+            return "EXPECTED_RBRACKET"
+        if 'expected assignment' in msg:
+            return "EXPECTED_ASSIGNMENT"
         if 'Bad input type:' in msg:
             return "BAD_INPUT_TYPE"
+        if 'assignment of procedural properties takes place at compile-time' in msg:
+            return "PROC_PROP_COMPILE_TIME"
+        if 'No such node' in msg:
+            return "NODE_NONEXIST"
         if 'bad argument definition' in msg:
             return "BAD_ARGUMENT_DEFN"
+        if 'bad assignment' in msg:
+            return "BAD_ASSIGN"
         if 'missing comma \',\' or right-paren' in msg:
             return "MISSING_COMMA_OR_RPAREN"
         if 'undefined var' in msg:
             return "UNDEF_VAR"
+        if 'undefined proc' in msg:
+            return "UNDEF_PROC"
+        if 'undefined type path' in msg:
+            return "UNDEF_TYPEPATH"
+        if 'undefined argument type' in msg:
+            return "UNDEF_ARG_TYPE"
+        if 'undefined type' in msg:
+            return "UNDEF_TYPE"
+        if 'implicit type may only be used in an assignment' in msg:
+            return "MISUSE_IMPLICIT_TYPE"
         if 'missing condition' in msg:
             return "MISSING_CONDITION"
         if 'illegal' in msg and '**' in msg:
             return "ILLEGAL_POWER"
         if 'expected a constant expression' in msg:
             return "EXPECTED_CONSTEXPR"
-        if 'undefined type path' in msg:
-            return "UNDEF_TYPEPATH"
+        if 'cannot change constant value' in msg:
+            return "CANNOT_CHANGE_CONST"
         if "expected ':'" in msg:
             return "EXPECTED_COLON"
         if "expected as(...)" in msg:
             return "EXPECTED_AS"
         if "unexpected 'in' expression" in msg:
             return "UNEXPECTED_IN"
-        if "missing left-hand argument to to" in msg:
-            return "MISSING_LEFT_ARG_TO"
-        if "missing left-hand argument to in" in msg:
-            return "MISSING_LEFT_ARG_IN"
-        if "missing left-hand argument to =" in msg:
-            return "MISSING_LEFT_ARG_ASSIGN"
+        if "missing left-hand argument to" in msg:
+            return "MISSING_LEFT_ARG"
         if "invalid proc name: reserved word" in msg:
             return "PROC_RESERVED_WORD"
         if "invalid variable name: reserved word" in msg:
             return "VAR_RESERVED_WORD"
+        if "invalid variable" in msg:
+            return "INVALID_VARIABLE"
+        if "invalid proc definition" in msg:
+            return "INVALID_PROC_DEF"
+        if "end of file reached inside of comment" in msg:
+            return "EOF_INSIDE_COMMENT"
+        if "beginning of comment" in msg:
+            return "BEGIN_COMMENT"
+        if "variable declaration not allowed here" in msg:
+            return "VAR_DECL_NOT_ALLOWED"
+        if "instruction not allowed here" in msg:
+            return "INSTRUCTION_NOT_ALLOWED"
+        if "operator not allowed here" in msg:
+            return "OPERATOR_NOT_ALLOWED"
+        if "bad instruction" in msg:
+            return "BAD_INSTRUCTION"
+        if "bad variable" in msg:
+            return "BAD_VAR"
+        if "bad area" in msg:
+            return "BAD_AREA"
+        if "bad text" in msg:
+            return "BAD_TEXT"
+        if "bad catch" in msg:
+            return "BAD_CATCH"
+        if "bad number" in msg:
+            return "BAD_NUMBER"
+        if "bad proc" in msg:
+            return "BAD_PROC"
+        if "bad file" in msg:
+            return "BAD_FILE"
+        if "bad cursor" in msg:
+            return "BAD_CURSOR"
+        if "bad constant" in msg:
+            return "BAD_CONSTANT"
+        if "bad size" in msg:
+            return "BAD_SIZE"
+        if "bad turf" in msg:
+            return "BAD_TURF"
+        if "invalid script" in msg:
+            return "INVALID_SCRIPT"
+        if "expected TOPDOWN_MAP" in msg:
+            return "EXPECTED_MAP_FLAG"
+        if "not an integer" in msg:
+            return "NOT_INTEGER"
+        if "cannot assign a proc!" in msg:
+            return "PROC_NOASSIGN"
+        if "expected var or proc name after . operator" in msg:
+            return "EXPECTED_VAR_OR_PROC_AFTER_DOT_OPERATOR"
+        if "expected src on left-hand side" in msg:
+            return "EXPECTED_SRC_ON_LHS"
+        if "expected var or proc name after .? operator" in msg:
+            return "EXPECTED_VAR_OR_PROC_AFTER_DOTQUESTION_OPERATOR"
+        if "expected var or proc name after ?. operator" in msg:
+            return "EXPECTED_VAR_OR_PROC_AFTER_QUESTIONDOT_OPERATOR"
+        if "This appears like the old syntax for new()" in msg:
+            return "OLD_NEW_SYNTAX"
+        if "re-initialization of global var" in msg:
+            return "GLOBAL_REINIT"
+        if "out of bounds" in msg:
+            return "OUT_OF_BOUNDS"
+        if "expected 1 or 0" in msg:
+            return "EXPECTED_VALUE"
+        if "expected 0, 1, or 2" in msg:
+            return "EXPECTED_VALUE"
+        if "expected matrix or null" in msg:
+            return "EXPECTED_VALUE"
+        if "expected filter, list, or null" in msg:
+            return "EXPECTED_VALUE"
+        if "expected object or null" in msg:
+            return "EXPECTED_VALUE"
+        if "expected color, list, or null" in msg:
+            return "EXPECTED_VALUE"
+        if "expected 0-7" in msg:
+            return "EXPECTED_VALUE"
+        if "expected list" in msg:
+            return "EXPECTED_LIST"
+        if "expected newlist" in msg:
+            return "EXPECTED_NEWLIST"
+        if "implicit source" in msg:
+            return "IMPLICIT_SOURCE"
+        if "expected 0-3" in msg:
+            return "EXPECTED_VALUE"
+        if "input type" in msg and "must be atomic" in msg:
+            return "INPUT_TYPE_NOT_ATOMIC"
+        if "arglist() or named arguments cannot be used" in msg:
+            return "CANNOT_USE_ARGLIST"
+        if "proc definition not allowed inside another proc" in msg:
+            return "PROC_IN_PROC"
+        if "definition is here" in msg:
+            return "DEFN_HERE"
+        if "unknown variable type" in msg:
+            return "UNKNOWN_VARIABLE_TYPE"
+        if "too many vars in project" in msg:
+            return "TOO_MANY_VARS"
+        if "invalid expression" in msg:
+            return "INVALID_EXPRESSION"
+        if "invalid gender" in msg:
+            return "INVALID_GENDER"
         if "missing while statement" in msg:
             return "MISSING_WHILE"
+        if "continue failed" in msg:
+            return "CONTINUE_FAILED"
+        if "value not allowed here" in msg:
+            return "VALUE_NOT_ALLOWED"
+        if "expected range is" in msg:
+            return "EXPECTED_RANGE"
         if "previous definition" in msg:
             return "PREVIOUS_DEF"
         if "duplicate definition" in msg:
             return "DUPLICATE_DEF"
         if "attempted division by zero" in msg:
             return "ZERO_DIVIDE"
-        if "var: expected end of statement" in msg:
+        if "expected end of statement" in msg:
             return "EXPECTED_STMT_END"
         if "definition out of place" in msg:
             return "BAD_DEFINE"
-        if "/: missing comma ',' or right-paren ')'" in msg:
-            return "SLASH_MISSING_SOMETHING"
-        if "var: missing comma ',' or right-paren ')'" in msg:
-            return "VAR_MISSING_SOMETHING"
         if "inconsistent indentation or missing" in msg:
             return "BAD_INDENT_OR_MISSING"
         if "inconsistent indentation" in msg:
             return "BAD_INDENT"
+        if "'else' clause without preceding 'if' statement" in msg:
+            return "ELSE_WITHOUT_IF"
+        if "unterminated text" in msg:
+            return "UNTERMINATED_TEXT"
         if "try without catch" in msg:
             return "TRY_NO_CATCH"
-        if ",: expected }" in msg:
-            return "COMMA_EXPECTED_CURLY"
+        if "catch without try" in msg:
+            return "CATCH_NO_TRY"
         if "not a prototype" in msg:
             return "NOT_PROTOTYPE"
+        if "icon width or height cannot exceed 256" in msg:
+            return "ICON_BAD_DIM"
         return 'UNKNOWN'
