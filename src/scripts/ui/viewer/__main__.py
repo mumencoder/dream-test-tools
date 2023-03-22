@@ -32,16 +32,18 @@ def render(*content):
 def render_home():
     return []
 
-#    return DMShared.pickle_env(env, ['.compilation.dm_file', '.compile.stdout_text', '.objtree.stdout_text', '.compile.stdout_parsed'])
-
 def render_any_from_category(category):
     root_env = base_env()
-    test_dir = random.choice( test_ids_by_error_category[category] )
+
+    result = requests.get(f'http://127.0.0.1:8000/random_test/{category}').json()
+    if result is None:
+        return []
+    test_id = json.loads( result )
+
     tenv = root_env.branch()
-    with open( tenv.attr.churn_dir / test_dir / 'byond_compile.pickle', "rb") as f:
+    with open( tenv.attr.churn_dir / test_id / 'byond_compile.pickle', "rb") as f:
         load_test(tenv, f.read())
     pp = pprint.PrettyPrinter(indent=2)
-    print( pp.pformat(tenv.attr.compile.stdout_parsed) )
     return html.Div([
         html.Pre(tenv.attr.compilation.dm_file),
         html.Hr(),
@@ -54,7 +56,6 @@ def render_any_from_category(category):
 
 def render_churn():
     error_counts = json.loads( requests.get('http://127.0.0.1:8000/error_counts').json() )
-    print(error_counts)
 
     rows = []
     for error_category, error_ct in error_counts.items():

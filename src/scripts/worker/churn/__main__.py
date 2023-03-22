@@ -14,7 +14,7 @@ def trim_tests(env):
             if test_id not in keeps:
                 shutil.rmtree( env.attr.churn_dir / test_id )
 
-async def main():
+async def churn():
     root_env = base_env()
     while True:
         renv = await dmsource_all_tasks(root_env)
@@ -26,4 +26,18 @@ async def main():
         if random.random() < (1/10000.0):
             trim_tests(root_env)
 
-asyncio.run( main() )
+async def recompute():
+    root_env = base_env()
+    for test_id in os.listdir( root_env.attr.churn_dir ):
+        tenv = root_env.branch()
+        try:
+            with open( root_env.attr.churn_dir / test_id / 'byond_compile.pickle', 'rb') as f:
+                load_test(tenv, f.read() )
+        except:
+            continue
+        DMShared.Byond.Compilation.parse_compile_stdout( tenv )
+        with open( root_env.attr.churn_dir / test_id / 'byond_compile.pickle', 'wb') as f:
+            f.write( save_test(tenv) )
+
+
+asyncio.run( globals()[sys.argv[1]]() )

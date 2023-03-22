@@ -38,8 +38,14 @@ async def ast_gen(request : fastapi.Request):
     env.attr.pile.data = data
     DMShared.PileArchive.Pile.save(env)
 
+@app.get("/random_test/{category}")
+def get_random_test(category : str, request : fastapi.Request):
+    if len( test_ids_by_error_category[category] ) == 0:
+        return None
+    return json.dumps( random.choice( test_ids_by_error_category[category] ) )
+
 @app.get("/error_counts")
-async def get_error_counts(request : fastapi.Request):
+def get_error_counts(request : fastapi.Request):
     return json.dumps(error_counts)
 
 def update_cache():
@@ -68,12 +74,14 @@ def update_cache():
     test_ids_by_error_category = new_test_ids_by_error_category
     print(f"done! {time.time() - t} sec")
 
+ticker = None
+running = True
 error_counts = collections.defaultdict(int)
 test_ids_by_error_category = collections.defaultdict(list)
 
 def server_tick():
     cache_update = None
-    while True:
+    while running:
         if cache_update is None or time.time() - cache_update > 1800.0:
             update_cache()
             cache_update = time.time()
@@ -81,5 +89,12 @@ def server_tick():
 
 @app.on_event("startup")
 async def on_startup():
+    global ticker
     ticker = threading.Thread(target=server_tick)
     ticker.start()
+
+@app.on_event("shutdown")
+async def on_startup():
+    global running, ticker
+    running = False
+    ticker.join()
