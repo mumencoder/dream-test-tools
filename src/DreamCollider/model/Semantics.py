@@ -389,8 +389,12 @@ class Semantics(object):
             if not expr.is_const(self) and self.initialization_mode() == "const":
                 self.errors.append( ConstError(self, expr, 'EXPECTED_CONSTEXPR') )
             for usage in usages:
-                self.block.root.add_dependency( self, usage )
-                if self.block.root.check_usage_cycle( self, usage ) is True:
+                if type(self.block) is AST.Toplevel:
+                    tl = self.block
+                else:
+                    tl = self.block.root
+                tl.add_dependency( self, usage )
+                if tl.check_usage_cycle( self, usage ) is True:
                     self.errors.append( GeneralError('USAGE_CYCLE') )
     class ProcDefine:
         def init_semantics(self):

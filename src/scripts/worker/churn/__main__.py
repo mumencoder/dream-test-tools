@@ -32,13 +32,13 @@ async def recompute():
             f.write( save_test(tenv) )
 
 async def churn_for_unknowns():
-    q = mp.Queue()
-
     churn_ct = 0
     churn_start_time = time.time()
 
-    async def worker_loop():
-        nonlocal churn_ct
+    manager = mp.Manager()
+    queue = manager.Queue()
+    
+    async def worker_loop(queue):
         root_env = base_env()
         while True:
             renv = await dmsource_all_tasks(root_env)
@@ -49,19 +49,31 @@ async def churn_for_unknowns():
                         f.write( save_test(renv.attr.benv) )
                     print("unknown generated")
                     break
-            churn_ct += 1
+            queue.put(1)
 
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
-    asyncio.create_task(worker_loop())
+    async def worker_task(queue):
+        asyncio.create_task(worker_loop(queue))
+        asyncio.create_task(worker_loop(queue))
+        while True:
+            await asyncio.sleep(1.0)
+
+    def worker_process(queue):
+        asyncio.run( worker_task(queue) )
+
+    nproc = int(sys.argv[2])
+    processes = []
+    for i in range(0, nproc):
+        processes.append( mp.Process(target=worker_process, args=(queue,)) )
+    for proc in processes:
+        proc.start()
+
+    last_print = time.time()
     while True:
-        print(f"churned {churn_ct} tests, {churn_ct / (time.time()-churn_start_time)} sec")
-        await asyncio.sleep(120.0)
+        if time.time() - last_print > 120.0:
+            print(f"churned {churn_ct} tests, {churn_ct / (time.time()-churn_start_time)} sec")
+            last_print = time.time()
+        queue.get()
+        churn_ct += 1
 
 async def churn():
     root_env = base_env()
