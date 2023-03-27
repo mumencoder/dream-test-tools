@@ -205,7 +205,7 @@ class Compilation(object):
                 state = "footer"
             elif "Total time" in line and state == "footer":
                 state = "end"
-            elif line in ["error: invalid variable", 'Segmentation fault']:
+            elif line in ["error: invalid variable", 'Segmentation fault', 'free(): invalid pointer', 'Aborted', 'error: compiler passed out (please report this bug)']:
                 # TODO: do something with these
                 pass
             elif line.startswith("Suppressing further errors after 100"):
@@ -228,7 +228,7 @@ class Compilation(object):
         try:
             result = {"file":ss[0], "lineno":int(ss[1]), "type":ss[2], "msg":":".join(ss[3:]), "text":line}   
             if result["type"] not in ["error", "warning"]:
-                result["msg"] = ss[2]
+                result["msg"] = ":".join(ss[2:])
         except:
             return None
         result["category"] = Compilation.error_category(result["msg"])     
@@ -267,6 +267,8 @@ class Compilation(object):
 
     @staticmethod
     def error_category(msg):
+        if 'invalid view dimensions' in msg:
+            return "INVALID_VIEW_DIM"
         if 'may not be set at compile-time' in msg:
             return "VAR_NO_SET_COMPILETIME"
         if 'value changed' in msg:
@@ -281,6 +283,8 @@ class Compilation(object):
             return "INVALID_PARENT_TYPE"
         if 'expected "if" or "else"' in msg:
             return "EXPECTED_IF_OR_ELSE"
+        if "expected 1 argument to 'in'" in msg:
+            return "EXPECTED_IN_1ARG"
         if 'file-derived types are not supported' in msg:
             return "NO_FILE_SUBTYPE"
         if 'list-derived types are not supported' in msg:
@@ -369,6 +373,8 @@ class Compilation(object):
             return "MISSING_CONDITION"
         if 'illegal' in msg and '**' in msg:
             return "ILLEGAL_POWER"
+        if 'illegal parent type' in msg:
+            return "ILLEGAL_PARENT_TYPE"
         if 'expected a constant expression' in msg:
             return "EXPECTED_CONSTEXPR"
         if 'cannot change constant value' in msg:
@@ -417,12 +423,18 @@ class Compilation(object):
             return "BAD_FILE"
         if "bad cursor" in msg:
             return "BAD_CURSOR"
+        if "bad mob" in msg:
+            return "BAD_MOB"
         if "bad constant" in msg:
             return "BAD_CONSTANT"
         if "bad size" in msg:
             return "BAD_SIZE"
         if "bad turf" in msg:
             return "BAD_TURF"
+        if "bad if block" in msg:
+            return "BAD_IF_BLOCK"
+        if "error at 'end of file': variable not defined" in msg:
+            return "EOF_ERROR_VAR_NOT_DEFINED"
         if "invalid script" in msg:
             return "INVALID_SCRIPT"
         if "expected TOPDOWN_MAP" in msg:
@@ -431,6 +443,8 @@ class Compilation(object):
             return "NOT_INTEGER"
         if "cannot assign a proc!" in msg:
             return "PROC_NOASSIGN"
+        if "expected proc definition" in msg:
+            return "EXPECTED_PROC_DEFN"
         if "expected var or proc name after . operator" in msg:
             return "EXPECTED_VAR_OR_PROC_AFTER_DOT_OPERATOR"
         if "expected src on left-hand side" in msg:
@@ -459,6 +473,8 @@ class Compilation(object):
             return "EXPECTED_VALUE"
         if "expected 0-7" in msg:
             return "EXPECTED_VALUE"
+        if "Expected null, num, or text" in msg:
+            return "EXPECTED_VALUE"
         if "expected list" in msg:
             return "EXPECTED_LIST"
         if "expected newlist" in msg:
@@ -471,6 +487,8 @@ class Compilation(object):
             return "INPUT_TYPE_NOT_ATOMIC"
         if "arglist() or named arguments cannot be used" in msg:
             return "CANNOT_USE_ARGLIST"
+        if "list doubly initialized" in msg:
+            return "LIST_DOUBLE_INIT"
         if "proc definition not allowed inside another proc" in msg:
             return "PROC_IN_PROC"
         if "definition is here" in msg:
@@ -485,8 +503,12 @@ class Compilation(object):
             return "INVALID_GENDER"
         if "missing while statement" in msg:
             return "MISSING_WHILE"
+        if "missing =" in msg:
+            return "MISSING_EQUALS"
         if "continue failed" in msg:
             return "CONTINUE_FAILED"
+        if "break failed" in msg:
+            return "BREAK_FAILED"
         if "value not allowed here" in msg:
             return "VALUE_NOT_ALLOWED"
         if "expected range is" in msg:
