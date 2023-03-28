@@ -194,10 +194,11 @@ class AST(object):
                 self.name = None        # str
 
         class Integer(object):
-            attrs = ["n"]
+            attrs = ["n", "is_hex"]
             traits = ["rval", "terminal", "numeric"]
             def __init__(self):
                 self.n = None           # int
+                self.is_hex = False     # bool
 
         class Float(object):
             attrs = ["n"]

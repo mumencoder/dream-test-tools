@@ -423,7 +423,12 @@ class Unparse(object):
                 return ["int"]
 
             def shape(self):
-                yield from [_Fuzz(), _Line(), _Text(str(self.n), "int"), _Fuzz()]
+                yield from [_Fuzz(), _Line()]
+                if self.is_hex:
+                    yield _Text( str(hex( self.n )), "int")
+                else:
+                    yield _Text( str(self.n), "int")
+                yield _Fuzz()                
 
         class Float(object):
             def tokens_used():

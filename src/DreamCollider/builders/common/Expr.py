@@ -90,14 +90,20 @@ class RandomExprGenerator(object):
                 expr.add_expr( self.expression(env, new_depth, arity) )
         elif type(expr) is AST.Expr.Integer:
             if random.random() < 0.05:
-                expr.n = 0
+                expr.n = 0                
             else:
                 expr.n = random.randint(-100,100)
+            if random.random() < 0.10:
+                expr.is_hex = True
         elif type(expr) is AST.Expr.Float:
             # 3.4e38 largest
             # 1.4e-45 smallest
             if random.random() < 0.05:
                 expr.n = 1 - 2*random.random()
+            elif random.random() < 0.01:
+                expr.n = "1#INF"
+            elif random.random() < 0.01:
+                expr.n = "-1#IND"
             else:
                 expr.n = 100 - 200*random.random()
         elif type(expr) is AST.Expr.String:
