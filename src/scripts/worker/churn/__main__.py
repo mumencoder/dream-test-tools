@@ -37,11 +37,12 @@ async def churn_for_unknowns():
 
     manager = mp.Manager()
     queue = manager.Queue()
+    root_env = base_env()
     
     async def worker_loop(queue):
-        root_env = base_env()
+        tenv = root_env.branch()
         while True:
-            renv = await dmsource_all_tasks(root_env)
+            renv = await dmsource_all_tasks(tenv)
             for error in renv.attr.benv.attr.compile.stdout_parsed["errors"]:
                 if error["category"] == "UNKNOWN":
                     test_id = Shared.Random.generate_string(24)
@@ -49,7 +50,7 @@ async def churn_for_unknowns():
                         f.write( save_test(renv.attr.benv) )
                     print("unknown generated")
                     break
-            queue.put(1)
+            queue.put(renv.attr.collider_env.attr.collider.build_stats)
 
     async def worker_task(queue):
         asyncio.create_task(worker_loop(queue))
@@ -72,7 +73,9 @@ async def churn_for_unknowns():
         if time.time() - last_print > 120.0:
             print(f"churned {churn_ct} tests, {churn_ct / (time.time()-churn_start_time)} sec")
             last_print = time.time()
-        queue.get()
+            root_env.attr.collider.build_checker.print_stat_freq()
+        build_stats = queue.get()
+        root_env.attr.collider.build_checker.add_check_result( build_stats )
         churn_ct += 1
 
 async def churn():

@@ -30,7 +30,7 @@ async def async_thread_main():
             else:
                 pass
         tasks = remaining_tasks
-        
+
 ### ast generation
 def builder_opendream(env):
     env.attr.collider.builder = DreamCollider.OpenDreamBuilder( )
@@ -43,6 +43,7 @@ def builder_experimental(env):
 
 def generate_ast(env):
     env.attr.collider.builder.build_all( env )
+    env.attr.collider.build_stats = env.attr.collider.build_checker.check( env )
 
 def tokenize_ast(env):
     env.attr.collider.fuzzer = DreamCollider.Fuzzer(env)
@@ -119,6 +120,9 @@ def base_env(verbose=False):
 
     root_env.attr.config = config_env
 
+    root_env.attr.collider.build_checker = DreamCollider.ASTChecker()
+    root_env.attr.collider.build_checker.load_all()
+
     return root_env
 
 def generate_dmsource(root_env, verbose=False):
@@ -174,6 +178,7 @@ async def dmsource_all_tasks(root_env, verbose=False):
 
     renv = root_env.branch()
     renv.attr.benv = cenv
+    renv.attr.collider_env = collider_env
     return renv
 
 def save_test(env):
