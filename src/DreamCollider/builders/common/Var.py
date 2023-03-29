@@ -46,22 +46,18 @@ class VarDeclareAction(object):
         self.current_count += 1
         return True
 
-def EmptyVarPath(env, builder):
-    return []
-
 def RandomVarName(env, builder):
-    name = None
-    while name is None:
-        letters = random.randint(2,3)
-        vn = ""
-        for i in range(0, letters):
-            vn += random.choice(string.ascii_lowercase)
-        if vn not in ["as", "to", "in"]:
-            name = vn
-    return name
+    return random.choice( ["a", "b", "c", "d"] )
 
 def RandomVarMod(env, builder):
-    return []
+    match builder.config.choose_option('var.path_gen_type'):
+        case 'static':
+            return ['static']
+        case 'const':
+            return ['const']
+        case 'type':
+            return random.choice( list(builder.toplevel.tree.root.nodes_by_path.keys()) )
+            
 class RandomStdlibVarName(object):
     def __init__(self):
         pass

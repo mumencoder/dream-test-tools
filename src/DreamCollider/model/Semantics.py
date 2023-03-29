@@ -25,9 +25,13 @@ class Semantics(object):
                 if name in self.leaves:
                     return self.leaves[name]
                 node = Semantics.ObjectTree.Node()
-                node.root = self.root
+                if self.root is None:
+                    node.root = self
+                else:
+                    node.root = self.root
                 node.trunk = self
                 node.path = self.path + tuple([name])
+                node.root.nodes_by_path[node.path] = node
                 self.leaves[name] = node
                 return node
 
@@ -60,15 +64,10 @@ class Semantics(object):
 
         def __init__(self):
             self.root = Semantics.ObjectTree.Node()
-            self.nodes_by_path = {}
+            self.root.nodes_by_path = collections.defaultdict(list)
 
         def iter_nodes(self):
             yield from self.root.iter_nodes()
-
-        def add_node(self, trunk, name):
-            node = trunk.add_node( name )
-            self.nodes_by_path[node.path]( name )
-            return node
 
         def add_path(self, path):
             current_node = self.root

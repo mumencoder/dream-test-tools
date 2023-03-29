@@ -32,8 +32,9 @@ class AST(object):
         attrs = ["is_override"]
         subtree = ["name", "expression"]
         def __init__(self):
-            self.name = None               # str  
+            self.name = None               # str
             self.expression = None         # AST.Expr
+            
     class ProcDefine(object):
         attrs = []
         subtree = ["name", "params", "body"]

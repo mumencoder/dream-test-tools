@@ -146,7 +146,7 @@ class Unparse(object):
                 
         class VarDefine(object):
             def tokens_used():
-                return ["/", "=", "name", "var"]
+                return ["/", "=", "name", "var", "path"]
 
             def shape(self):
                 yield from [_BeginLine(), _Line()]
