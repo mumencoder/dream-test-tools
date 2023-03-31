@@ -2,9 +2,12 @@
 from ...common import *
 from ...model import *
 
-class VarDeclareAction(object):
+from .Config import *
+from .Build import *
+    
+class VarDeclareAction(Configurable):
     def __init__(self):
-        self.config = ColliderConfig()
+        super().__init__()
         self.choose_object = None
         self.generate_var_path = None
         self.generate_var_name = None
@@ -46,32 +49,9 @@ class VarDeclareAction(object):
         self.current_count += 1
         return True
 
-def RandomVarName(env, builder):
-    return random.choice( ["a", "b", "c", "d"] )
-
-def RandomVarMod(env, builder):
-    match builder.config.choose_option('var.path_gen_type'):
-        case 'static':
-            return ['static']
-        case 'const':
-            return ['const']
-        case 'type':
-            return random.choice( list(builder.toplevel.tree.root.nodes_by_path.keys()) )
-            
-class RandomStdlibVarName(object):
+class VarDefinitionAction(Configurable):
     def __init__(self):
-        pass
-
-    def __call__(self, env):
-        choices = env.attr.collider.builder.stdlib.vars[ env.attr.current_object.resolved_path ]
-        if len(choices) == 0:
-            return None
-        choice = random.choice( list(choices.keys()) )
-        return choice
-     
-class VarDefinitionAction(object):
-    def __init__(self):
-        self.config = ColliderConfig()
+        super().__init__()
         self.choose_var = None
         self.generate_define = None
 
@@ -95,8 +75,31 @@ class VarDefinitionAction(object):
         env.attr.collider.builder.undefined_vars.remove( current_var )
         return True
     
-def RandomUndefinedVar(env, builder):
-    if len(builder.undefined_vars) == 0:
-        return None
-    else:
-        return random.choice( list(builder.undefined_vars) )
+class RandomVarName(Configurable):
+    def __call__(self, env):
+        return random.choice( ["a", "b", "c", "d"] )
+
+class RandomVarMod(Configurable):
+    def __call__(self, env):
+        match self.config.choose_option('var.path_gen_type'):
+            case 'static':
+                return ['static']
+            case 'const':
+                return ['const']
+            case 'type':
+                return random.choice( list(env.attr.builder.toplevel.tree.root.nodes_by_path.keys()) )
+            
+class RandomStdlibVarName(Configurable):
+    def __call__(self, env):
+        choices = env.attr.collider.builder.stdlib.vars[ env.attr.current_object.resolved_path ]
+        if len(choices) == 0:
+            return None
+        choice = random.choice( list(choices.keys()) )
+        return choice
+
+class RandomUndefinedVar(Configurable):
+    def __call__(self, env):
+        if len(env.attr.builder.undefined_vars) == 0:
+            return None
+        else:
+            return random.choice( list(env.attr.builder.undefined_vars) )

@@ -4,14 +4,11 @@
 from .common import *
 from ..model import *
 
-class FullRandomBuilder(
-        BaseBuilder.BaseBuilder,
-        Proc.SimpleProcCreator,
-        Stmt.RandomStmt,
-        Expr.RandomExprGenerator):
+from .BaseBuilder import BaseBuilder
 
-    def actions_phase1(self, env):
+class FullRandomBuilder(BaseBuilder):
+    def actions_phase1(self):
         pass
 
-    def actions_phase2(self, env):
+    def actions_phase2(self):
         pass

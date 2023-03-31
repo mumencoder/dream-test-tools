@@ -2,36 +2,14 @@
 from ...common import *
 from ...model import *
 
-class RandomProcName(object):
-    def __call__(self, env):
-        name = None
-        while name is None:
-            letters = random.randint(2,3)
-            vn = ""
-            for i in range(0, letters):
-                vn += random.choice(string.ascii_lowercase)
-            if vn not in ["as", "to", "in", "do", "if"]:
-                name = vn
-        return name
+from .Config import *
+from .Build import *
 
-class RandomStdlibProcName(object):
+   
+### Actions
+class ProcDeclareAction(Configurable):
     def __init__(self):
-        pass
-
-    def __call__(self, env):
-        choices = env.attr.collider.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
-        return list(choices.keys())
-
-def RandomUndefinedProc(env, builder):
-    if len(builder.undefined_procs) == 0:
-        return None
-    else:
-        return random.choice( list(builder.undefined_procs) )
-    
-class ProcDeclareAction(object):
-    def __init__(self, builder):
         self.config = ColliderConfig()
-        self.builder = builder
         self.choose_object = None
         self.generate_proc_name = None
     
@@ -73,7 +51,7 @@ class ProcDeclareAction(object):
         env.attr.collider.builder.undefined_procs.add( proc_declare )
         return True
 
-class ProcParameterAction(object):
+class ProcParameterAction(Configurable):
     def __init__(self):
         self.config = ColliderConfig()
         self.choose_proc = None
@@ -90,7 +68,7 @@ class ProcParameterAction(object):
         if self.config.prob('finalize_proc'):
             env.attr.collider.builder.undefined_procs.remove( current_proc )
 
-class ProcStatementAction(object):
+class ProcStatementAction(Configurable):
     def __init__(self):
         self.config = ColliderConfig()
         self.choose_proc = None
@@ -109,22 +87,52 @@ class ProcStatementAction(object):
         if self.config.prob('finalize_proc'):
             env.attr.collider.builder.undefined_procs.remove( current_proc )
 
-class SimpleProcCreator(object):
-    def config_proc_param(self, config):
-        config.set('proc.arg.has_path_prob', 0.1)
-        config.set('proc.arg.has_default_prob', 0.1)
-        config.set('proc.arg.has_astype_prob', 0.1)
+# Generators
 
-    def create_proc_param(self, env):
-        arg = self.initialize_node( AST.ProcArgument() )
-        arg.name = self.randomString(1, 3)
+class BasicProcName(Configurable):
+    def __call__(self, env):
+        return random.choice( ['a', 'b', 'c', 'd'] )
+    
+class RandomProcName(Configurable):
+    def __call__(self, env):
+        name = None
+        while name is None:
+            letters = random.randint(2,3)
+            vn = ""
+            for i in range(0, letters):
+                vn += random.choice(string.ascii_lowercase)
+            if vn not in ["as", "to", "in", "do", "if"]:
+                name = vn
+        return name
+
+class RandomStdlibProcName(Configurable):
+    def __init__(self):
+        pass
+
+    def __call__(self, env):
+        choices = env.attr.collider.builder.stdlib.procs[ env.attr.current_object.resolved_path ]
+        return list(choices.keys())
+
+class RandomUndefinedProc(Configurable):
+    def __call__(self, env):
+        builder = env.attr.builder
+        if len(builder.undefined_procs) == 0:
+            return None
+        else:
+            return random.choice( list(builder.undefined_procs) )
+
+class RandomProcParam(Configurable):
+    def __call__(self, env):
+        builder = env.attr.builder
+        arg = builder.initialize_node( AST.ProcArgument() )
+        arg.name = self.generate_string(1, 3)
 
         if self.config.prob('proc.arg.has_path_prob'):
             arg.path_type = AST.Expr.Path.new(segments=['static'])
         if self.config.prob('proc.arg.has_default_prob'):
-            arg.default = self.expression(env, depth=3, arity="rval")
+            arg.default = self.generate_expression(env)
         if self.config.prob('proc.arg.has_astype_prob'):
             for i in range(0,random.randint(1,3)):
                 arg.possible_values = AST.Expr.AsType()
-                arg.possible_values.flags.append( self.randomDMValueType() )
+                arg.possible_values.flags.append( self.generate_dm_valuetype(env) )
         return arg

@@ -2,19 +2,21 @@
 from ...common import *
 from ...model import *
 
-class RandomStackWalkObjectDeclareAction(object):
-    def __init__(self, start_block, object_tags):
+from .Config import *
+from .Build import *
+
+## Actions
+class RandomStackWalkObjectDeclareAction(Configurable):
+    def __init__(self, start_block):
         self.current_blocks = set()
         self.declare_block_stack = [start_block]
         self.generate_object_path = None
-        self.object_tags = object_tags
 
     def __call__(self, env):
         parent_block = self.current_parent()
         new_block = env.attr.collider.builder.initialize_node( AST.ObjectBlock() )
         new_block.path = self.generate_object_path(env)[0]
 
-        env.attr.collider.builder.tags.add(new_block, *self.object_tags)
         self.current_blocks.add( new_block )
         self.declare_block_stack.append( new_block )
         pops = random.choice( [0,0,0,1,1,1,2,2,3] )
@@ -28,7 +30,7 @@ class RandomStackWalkObjectDeclareAction(object):
     def current_parent(self):
         return self.declare_block_stack[-1]
 
-class RandomObjectDeclareAction(object):
+class RandomObjectDeclareAction(Configurable):
     def __init__(self):
         self.choose_object_block = None
         self.generate_object_path = None
@@ -56,32 +58,29 @@ class ToplevelDeclareAction(RandomObjectDeclareAction):
     def __init__(self, toplevel):
         self.choose_object_block = lambda env: toplevel
 
-def AnyObjectBlock(env, builder):
-    return builder.toplevel.object_blocks
+## Generators
 
-def AnyStdlibObjectBlock(env, builder):
-    return builder.toplevel.stdlib_object_blocks
+class AnyObjectBlock(Configurable):
+    def __call__(self, env):
+        return safe_choice( env.attr.builder.toplevel.object_blocks )
 
-class ObjectPathChooser(object):
+class AnyStdlibObjectBlock(Configurable):
+    def __call__(self, env):
+        return safe_choice( env.attr.builder.toplevel.stdlib_object_blocks )
+
+class ObjectPathChooser(Configurable):
     def __init__(self, path_choices):
         self.path_choices = list(path_choices)
 
     def __call__(self, env):
         return [ AST.ObjectPath.new(segments=tuple([segment])) for segment in random.choice( self.path_choices ) ]
 
-class ObjectPathGenerator(object):
-    def new_config():
-        config = ColliderConfig()
-
-        config.declare_param("obj.path.prefix_type")
-        config.declare_param("obj.path.extend_path_prob")
-        config.declare_param("obj.path.extend_type")
-
-        return config
-
-    def __init__(self, builder):
-        self.builder = builder
-        self.config = ObjectPathGenerator.new_config()
+class ObjectPathGenerator(Configurable):
+    def __init__(self):
+        super().__init__()
+        self.config.declare_param("obj.path.prefix_type")
+        self.config.declare_param("obj.path.extend_path_prob")
+        self.config.declare_param("obj.path.extend_type")
 
     def __call__(self, env):
         extend_chance = self.config.prob( "obj.path.extend_path_prob" )

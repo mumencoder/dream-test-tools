@@ -1,43 +1,20 @@
 
 from ...common import *
 from ...model import *
-from .Errors import *
 
-class SimpleVarExprCreator(object):
-    def create_var_expr(self, env):
-        expr = self.initialize_node( AST.Expr.Integer() )
+from .Config import *
+from .Build import *
+
+class SimpleVarExprCreator(Configurable):
+    def __call__(self, env):
+        expr = env.attr.builder.initialize_node( AST.Expr.Integer() )
         expr.n = random.randint(-100,100)
         return expr
 
-class RandomExprGenerator(object):
-    def create_var_expr(self, env):
+class FullVarExprCreator(Configurable):
+    def __call__(self, env):
         expr = self.expression( env, self.config.get('expr.depth'), "rval" )
         return expr
-
-    def create_call_expression(self, env, depth):
-        expr = None
-        while expr is None:
-            node_cls = random.choice( AST.trait_index["callable"] )
-            expr = node_cls()
-            expr = self.initialize_node( node_cls() )
-            expr = self.initialize_expression( env, expr, depth )
-            if expr is None and depth > 1:
-                depth -= 1
-        return expr
-
-    def randomString(self, lo, hi):
-        letters = random.randint(lo,hi)
-        vn = ""
-        for i in range(0, letters):
-            vn += random.choice(string.ascii_lowercase)
-        return vn
-
-    def randomDMValueType(self):
-        return random.choice( [
-            "anything", "null", "text",
-            "obj", "mob", "turf", "num", "message", "area", 
-            "color", "file", "commandtext", "sound", "icon"
-        ] )
 
     def expression(self, env, depth=None, arity=None):
         if depth < 1:
@@ -46,16 +23,23 @@ class RandomExprGenerator(object):
         while expr is None:
             expr = None
             node_cls = random.choice( AST.trait_index[arity] )
-            expr = self.initialize_node( node_cls() )
+            expr = env.attr.builder.initialize_node( node_cls() )
             expr = self.initialize_expression( env, expr, depth )
             if expr is None and depth > 1:
                 depth -= 1
         return expr
-
-    def config_expr(self, config):
-        config.set("expr.param.is_named", 0.1)
-        config.set("expr.depth", 3)
-
+    
+    def create_call_expression(self, env, depth):
+        expr = None
+        while expr is None:
+            node_cls = random.choice( AST.trait_index["callable"] )
+            expr = node_cls()
+            expr = env.attr.builder.initialize_node( node_cls() )
+            expr = self.initialize_expression( env, expr, depth )
+            if expr is None and depth > 1:
+                depth -= 1
+        return expr
+    
     def initialize_expression(self, env, expr, depth):
         if type(expr) is AST.Expr.Property:
             expr.name = random.choice( ['pa', 'pb', 'pc'] )
@@ -107,12 +91,12 @@ class RandomExprGenerator(object):
             else:
                 expr.n = 100 - 200*random.random()
         elif type(expr) is AST.Expr.String:
-            expr.s = self.randomString(0, 3)
+            expr.s = self.generate_string(0, 3)
         elif type(expr) is AST.Expr.FormatString:
             for i in range( 0, random.randint(1, 3) ):
-                expr.strings.append( self.randomString(0, 3) )
+                expr.strings.append( self.generate_string(0, 3) )
                 expr.exprs.append( self.expression(env, depth-1, "rval") )
-            expr.strings.append( self.randomString(0, 3) )
+            expr.strings.append( self.generate_string(0, 3) )
         elif type(expr) is AST.Expr.GlobalIdentifier:
             expr.name = random.choice( ['ga', 'gb', 'gc'] )
         elif type(expr) is AST.Expr.Identifier:
@@ -124,30 +108,30 @@ class RandomExprGenerator(object):
             for i in range( 0, random.randint(1,3) ):
                 param = AST.Expr.Call.Param()
                 if random.random() < self.config.prob('expr.param.is_named'):
-                    param.name = self.randomString(0, 3)
+                    param.name = self.generate_string(0, 3)
                 param.value = self.expression(env, depth-1, "rval")
                 expr.args.append( param )
         elif type(expr) is AST.Expr.Input:
             for i in range( 0, random.randint(1,3) ):
                 param = AST.Expr.Call.Param()
                 if random.random() < self.config.prob('expr.param.is_named'):
-                    param.name = self.randomString(0, 3)
+                    param.name = self.generate_string(0, 3)
                 param.value = self.expression(env, depth-1, "rval")
                 expr.args.append( param )
-            expr.as_type = self.randomDMValueType()
+            expr.as_type = self.generate_dm_valuetype(env)
             expr.in_list = self.expression(env, depth-1, "rval")
         elif type(expr) is AST.Expr.New:
             for i in range( 0, random.randint(1,3) ):
                 param = AST.Expr.Call.Param()
                 if random.random() < self.config.prob('expr.param.is_named'):
-                    param.name = self.randomString(0, 3)
+                    param.name = self.generate_string(0, 3)
                 param.value = self.expression(env, depth-1, "rval")
                 expr.args.append( param )
         elif type(expr) is AST.Expr.ModifiedType:
             expr.path = self.expression(env, 1, "path")
             for i in range( 0, random.randint(1,3) ):
                 mod = AST.Expr.ModifiedType.Mod()
-                mod.var = self.randomString(0, 3)
+                mod.var = self.generate_string(0, 3)
                 mod.val = self.expression(env, depth-1, "rval")
                 expr.mods.append( mod )
         elif type(expr) is AST.Expr.Pick:
@@ -157,8 +141,23 @@ class RandomExprGenerator(object):
                 entry.val = self.expression(env, depth-1, "rval")
                 expr.options.append( entry )
         elif type(expr) is AST.Expr.AsType:
-            expr.value = self.randomDMValueType()
+            expr.value = self.generate_dm_valuetype()
         else:
             raise Exception("cannot initialize", type(expr))
         return expr
 
+class RandomTextString(Configurable):
+    def __call__(self, lo, hi):
+        letters = random.randint(lo, hi)
+        vn = ""
+        for i in range(0, letters):
+            vn += random.choice(string.ascii_lowercase)
+        return vn
+
+class RandomDMValue(Configurable):
+    def __call__(self, env):
+        return random.choice( [
+            "anything", "null", "text",
+            "obj", "mob", "turf", "num", "message", "area", 
+            "color", "file", "commandtext", "sound", "icon"
+        ] )

@@ -1,17 +1,18 @@
 
-from ...common import *
-from ...model import *
+from .common import *
+from ..common import *
+from ..model import *
 
 class BaseBuilder(object):
     stdlib = Stdlib.initialize()
 
     def __init__(self):
-        self.config = ColliderConfig()
+        self.config = Config.ColliderConfig()
         self.node_info = {}
         self.undefined_vars = set()
         self.undefined_procs = set()
         self.eligible_actions = []
-        self.tags = Tags()
+        self.tags = Build.Tags()
         self.action_fails = collections.defaultdict(int)
 
         self.initialize_toplevel()
@@ -19,7 +20,7 @@ class BaseBuilder(object):
         self.initialize_config()
 
     def initialize_config(self):
-        self.config = ColliderConfig()
+        self.config = Config.ColliderConfig()
         
         for name in dir(self):
             if name.startswith('config_'):
@@ -43,13 +44,14 @@ class BaseBuilder(object):
 
     def build_all(self, env):
         env = env.branch()
+        env.attr.builder = self
         action_count = 0
         for phase in self.get_action_phases():
-            getattr(self, f'actions_{phase}')(env)
+            getattr(self, f'actions_{phase}')()
             while len( self.eligible_actions ) != 0:
                 self.next_action(env)
                 if action_count > 10000:
-                    raise Exception("too many attempts")
+                    raise Errors.RetryError()
                 action_count += 1
 
     def next_action(self, env):

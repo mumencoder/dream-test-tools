@@ -59,7 +59,10 @@ async def churn_for_unknowns():
             await asyncio.sleep(1.0)
 
     def worker_process(queue):
-        asyncio.run( worker_task(queue) )
+        try:
+            asyncio.run( worker_task(queue) )
+        except KeyboardInterrupt:
+            pass
 
     nproc = int(sys.argv[2])
     processes = []
@@ -90,4 +93,7 @@ async def churn():
         if random.random() < (1/10000.0):
             trim_tests(root_env)
 
-asyncio.run( globals()[sys.argv[1]]() )
+try:
+    asyncio.run( globals()[sys.argv[1]]() )
+except KeyboardInterrupt:
+    pass
