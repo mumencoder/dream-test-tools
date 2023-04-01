@@ -192,6 +192,8 @@ class Compilation(object):
         
         result = {"errors":[]}
 
+        unterminated_texts = []
+
         state = "header"
         while line := next_line():
             if line.startswith("DM compiler version") and state == "header":
@@ -218,7 +220,13 @@ class Compilation(object):
                     print("----")
                     print(line)
                     raise Exception("parse error")
-                result["errors"].append(err)
+                if err["category"] == "UNTERMINATED_TEXT":
+                    unterminated_texts.append( err["lineno"] )
+                if err["category"] == "UNKNOWN":
+                    if err["lineno"] in unterminated_texts:
+                        continue
+                else:
+                    result["errors"].append(err)
             else:
                 raise Exception("cannot parse line --- ", state, line)
         env.attr.compile.stdout_parsed = result
@@ -267,6 +275,10 @@ class Compilation(object):
 
     @staticmethod
     def error_category(msg):
+        if 'unknown directive' in msg:
+            return "UNKNOWN_DIRECTIVE"
+        if 'constant initializer required' in msg:
+            return "CONST_INIT_REQUIRED"
         if 'invalid view dimensions' in msg:
             return "INVALID_VIEW_DIM"
         if 'may not be set at compile-time' in msg:
@@ -405,6 +417,8 @@ class Compilation(object):
             return "INSTRUCTION_NOT_ALLOWED"
         if "operator not allowed here" in msg:
             return "OPERATOR_NOT_ALLOWED"
+        if "statement not allowed here" in msg:
+            return "STMT_NOT_ALLOWED"
         if "bad instruction" in msg:
             return "BAD_INSTRUCTION"
         if "bad variable" in msg:
@@ -433,6 +447,8 @@ class Compilation(object):
             return "BAD_TURF"
         if "bad if block" in msg:
             return "BAD_IF_BLOCK"
+        if "bad for block" in msg:
+            return "BAD_FOR_BLOCK"
         if "error at 'end of file': variable not defined" in msg:
             return "EOF_ERROR_VAR_NOT_DEFINED"
         if "invalid script" in msg:
@@ -457,6 +473,8 @@ class Compilation(object):
             return "OLD_NEW_SYNTAX"
         if "re-initialization of global var" in msg:
             return "GLOBAL_REINIT"
+        if "use call() to call a proc by reference" in msg:
+            return "USE_CALL_PROC_REF"
         if "out of bounds" in msg:
             return "OUT_OF_BOUNDS"
         if "expected 1 or 0" in msg:
