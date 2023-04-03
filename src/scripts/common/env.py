@@ -28,6 +28,8 @@ def load_config(env):
                             v = Shared.Path(v)
                         case "int":
                             v = int(v)
+                        case "str":
+                            v = str(v)
                         case _:
                             warnings.append( {"type":"resource:unknown_define_type", "resource":resource_name, "key":k})     
                             continue
@@ -50,11 +52,6 @@ def load_paths(env, config_env):
     for resource_name, resource in config_env.attr.config['resources'].items():
         if resource['type'] == "path":
             env.set_attr(f'.{resource_name}', config_env.get_attr(f'.{resource_name}.value') )
-
-def setup_base(env):
-    env.attr.shell.env = os.environ
-    env.attr.process.stdout = sys.stdout
-
 class EnvTracker(object):
     def __init__(self, env, title, update_existing=True):
         self.env = env
@@ -83,3 +80,30 @@ class EnvTracker(object):
             if not self.env.attr_exists(seen):
                 print(f"{prop} - removed")
         self.update()
+
+def base_env(verbose=False):
+    root_env = Shared.Environment()
+    root_env_t = EnvTracker(root_env, "root_env")
+
+    root_env.attr.shell.env = os.environ
+    root_env.attr.process.stdout = sys.stdout
+    if verbose:
+        root_env_t.print("1")
+
+    config_env = root_env.branch()
+    config_env.attr.config = open_config()
+    config_env_t = EnvTracker(config_env, "config_env")
+
+    load_config(config_env)
+    if verbose:
+        config_env_t.print("2")
+    load_paths(root_env, config_env)
+
+    root_env.attr.config = config_env
+
+    root_env.attr.collider.build_checker = DreamCollider.ASTChecker()
+    root_env.attr.collider.build_checker.load_all()
+
+    return root_env
+
+import DreamCollider

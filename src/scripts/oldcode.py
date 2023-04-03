@@ -1,4 +1,16 @@
 
+def marshall_test(env):
+    test = {}
+    test["ast"] = DreamCollider.AST.marshall( env.attr.collider.ast )
+    test["tokens"] = DreamCollider.Shape.marshall( env.attr.collider.ast_tokens )
+    test["ngrams"] = env.attr.collider.ngram_info
+    return test
+
+def unmarshall_test(env):
+    env.attr.collider.ast = DreamCollider.AST.unmarshall( env.attr.collider.data["ast"] )
+    env.attr.collider.ast_tokens = list(DreamCollider.Shape.unmarshall( env.attr.collider.data["tokens"], env.attr.collider.ast))
+    env.attr.collider.ngram_info = env.attr.collider.data["ngrams"]
+    
 def render_summary(tenv):
     result = ""
     if not tenv.attr_exists('.test.metadata.paths.dm_file'):

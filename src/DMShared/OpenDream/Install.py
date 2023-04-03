@@ -6,8 +6,8 @@ from . import Builder
 class Install(object):
     @staticmethod
     def load_repo(env, data):
-        env.attr.git.repo.url = data["url"]
-        env.attr.git.repo.dir = Shared.Path( data["path"] )
+        env.attr.git.repo.url = data.url
+        env.attr.git.repo.dir = Shared.Path( data.path )
 
     async def init_repo(env):
         await Shared.Git.Repo.clone(env)
