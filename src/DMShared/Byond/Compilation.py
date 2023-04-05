@@ -24,26 +24,27 @@ class Compilation(object):
         penv.attr.shell.env = proc_env
         penv.attr.shell.command = Compilation.create_dreammaker_command( penv, penv.attr.compilation.args )
         await Shared.Process.shell(penv)
+        return penv
 
     async def managed_compile(env):
         menv = env.branch()
-        await Compilation.invoke_compiler(menv)
-        env.attr.compile.stdout = menv.attr.process.stdout
-        env.attr.compile.returncode = menv.attr.process.instance.returncode
+        penv = await Compilation.invoke_compiler(menv)
+        env.attr.compile.stdout = penv.attr.process.stdout
+        env.attr.compile.returncode = penv.attr.process.instance.returncode
 
     async def managed_codetree(env):
         menv = env.branch()
         menv.attr.compilation.args = ["code_tree"]
-        await Compilation.invoke_compiler(env)
-        env.attr.codetree.stdout = menv.attr.process.stdout
-        env.attr.codetree.returncode = menv.attr.process.instance.returncode
+        penv = await Compilation.invoke_compiler(menv)
+        env.attr.codetree.stdout = penv.attr.process.stdout
+        env.attr.codetree.returncode = penv.attr.process.instance.returncode
 
     async def managed_objtree(env):
         menv = env.branch()
         menv.attr.compilation.args = ["obj_tree"]
-        await Compilation.invoke_compiler(menv)
-        env.attr.objtree.stdout = menv.attr.process.stdout
-        env.attr.objtree.returncode = menv.attr.process.instance.returncode
+        penv = await Compilation.invoke_compiler(menv)
+        env.attr.objtree.stdout = penv.attr.process.stdout
+        env.attr.objtree.returncode = penv.attr.process.instance.returncode
 
     def load_objtree(senv, denv):
         lines = []

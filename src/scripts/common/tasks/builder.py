@@ -14,6 +14,7 @@ async def builder_byond_experimental(env):
 def generate_ast(env):
     env.attr.collider.builder.build_all( env )
     env.attr.collider.build_stats = env.attr.collider.build_checker.check( env )
+    env.attr.collider.ast = env.attr.collider.builder.toplevel
 
 def tokenize_ast(env):
     env.attr.collider.fuzzer = DreamCollider.Fuzzer(env)
@@ -21,7 +22,8 @@ def tokenize_ast(env):
 
 def unparse_tokens(env):
     env.attr.collider.unparser = DreamCollider.Unparser(env)
-    env.attr.collider.text = env.attr.collider.unparser.unparse()   
+    env.attr.collider.text = env.attr.collider.unparser.unparse()
+    env.attr.collider.compile_predict = True
 
 def compute_ngrams(env):
     env.attr.collider.ngram_info = DreamCollider.NGram.compute_info( env.attr.collider.ast_tokens )

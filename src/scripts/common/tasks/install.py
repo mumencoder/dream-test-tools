@@ -17,13 +17,8 @@ async def install_opendream(oenv):
     await DMShared.OpenDream.Install.init_repo(oenv)
     await DMShared.OpenDream.Builder.build(oenv)
 
-def load_byond_install(root_env, verbose=False):
-    benv = root_env.branch()
-    benv_t = EnvTracker(benv, "benv")
-    for prop in list(root_env.attr.config.filter_properties(".byond_main.*")):
-        root_env.attr.config.rebase(".byond_main", ".install", prop, new_env=benv, copy=True)
-    if verbose:
-        benv_t.print("1")
-    return benv
+def load_byond_install(env, install_id):
+    for prop in list(env.attr.config.filter_properties(f".{install_id}.*")):
+        env.attr.config.rebase(f".{install_id}", ".install", prop, new_env=env, copy=True)
 
 import DMShared, DreamCollider

@@ -25,16 +25,3 @@ def pipe_stdout(env):
     env.attr.process.stdout = io.StringIO()
     env.attr.process.stderr = env.attr.process.stdout
     env.attr.process.piped = True      
-
-def pickle_env(env, names):
-    d = []
-    for name in names:
-        if not env.attr_exists(name):
-            raise Exception("missing env name", name)
-        d.append( (name, env.get_attr(name)) )
-    return pickle.dumps(d)
-
-def unpickle_env(env, p):
-    d = pickle.loads(p)
-    for name, value in d:
-        env.set_attr(name, value)
