@@ -37,13 +37,19 @@ def save_test(tenv):
         
     return pickle.dumps(data)
 
-def load_test(tenv):
+def load_test(tenv, p):
     marshall_fns = []
-    marshall_fns.append( (".collider.ast", lambda env, v: DreamCollider.AST.unmarshall(v) ) )
-    marshall_fns.append( ('.collider.ast_tokens', lambda env, v: list( DreamCollider.Shape.unmarshall(v, env.attr.collider.ast) ) ) )
+    #marshall_fns.append( (".collider.ast", lambda env, v: DreamCollider.AST.unmarshall(v) ) )
+    #marshall_fns.append( ('.collider.ast_tokens', lambda env, v: list( DreamCollider.Shape.unmarshall(v, env.attr.collider.ast) ) ) )
 
     d = pickle.loads(p)
-    for name, value in d:
+    for name, value in d.items():
         tenv.set_attr(name, value)
+
+    for attr, marshall_fn in marshall_fns:
+        if tenv.attr_exists(attr):
+            tenv.set_attr(attr, marshall_fn(tenv, tenv.get_attr(attr)) )
+
+    return tenv
 
 import DreamCollider

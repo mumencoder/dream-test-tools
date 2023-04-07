@@ -5,6 +5,7 @@ import fastapi.security.api_key as apiseckey
 from common import *
 
 app = fastapi.FastAPI()
+root_env = base_env()
 
 api_key_header = apiseckey.APIKeyHeader(name="x-auth-key", auto_error=False)
 api_key_query = apiseckey.APIKeyQuery(name="auth", auto_error=False)
@@ -26,18 +27,29 @@ def check_api_key(
 async def home(request : fastapi.Request, api_key = fastapi.Security(check_api_key)):
     pass
 
-@app.post("/ast_gen")
-async def ast_gen(request : fastapi.Request):
+@app.get("/churn/list")
+async def churn_list(request : fastapi.Request):
+    return [ resource_name for resource_name, resource in root_env.attr.config_file['resources'].items() if resource['type'] == 'churn' ]
+
+@app.get("/churn/view/{name}")
+async def churn_view(name : str, request : fastapi.Request):
     env = root_env.branch()
-    env.attr.pile.id = Shared.Random.generate_string(24)
+    out_env = Shared.Environment()
+    load_churn_info(env.attr.config.prefix(f".{name}"), out_env)
+    return env_tod( out_env, {} )
 
-    data = json.loads( gzip.decompress( await request.body() ) )
-    for test in data["tests"]:
-        test["id"] = Shared.Random.generate_string(24)
+@app.get("/churn/view_test/{name}/{filter}/{test_id}")
+async def churn_view_test(name : str, filter : str, test_id : str, request : fastapi.Request):
+    env = root_env.branch()
+    config = env.attr.config.prefix(f".{name}")
+    load_churn_info(config, env)
 
-    env.attr.pile.data = data
-    DMShared.PileArchive.Pile.save(env)
+    if not os.path.exists( config.result_dir / filter / test_id ):
+        return None
 
+    with open( config.result_dir / filter / test_id, "rb" ) as f:
+        return fastapi.Response(f.read())
+    
 @app.get("/random_test/{category}")
 def get_random_test(category : str, request : fastapi.Request):
     if len( test_ids_by_error_category[category] ) == 0:
@@ -51,7 +63,6 @@ def get_error_counts(request : fastapi.Request):
 def update_cache():
     print("building cache...")
     t = time.time()
-    root_env = base_env()
 
     new_error_counts = collections.defaultdict(int)
     new_test_ids_by_error_category = collections.defaultdict(list)
@@ -83,7 +94,7 @@ def server_tick():
     cache_update = None
     while running:
         if cache_update is None or time.time() - cache_update > 1800.0:
-            update_cache()
+            #update_cache()
             cache_update = time.time()
         time.sleep(1.0)
 

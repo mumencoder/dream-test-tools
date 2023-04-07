@@ -1,18 +1,9 @@
 
 from .imports import *
 
-def open_config():
-    if os.path.exists('server_config.yaml'):
-        with open('server_config.yaml', "r") as f:
-            config = yaml.load( f, yaml.Loader )
-    else:
-        raise Exception("cannot read config")
-    return config
-
-def load_config(env):
+def load_config(env, config):
     warnings = []
     errors = []
-    config = env.attr.config
 
     def assign_value(resource, prefix, type_define):
         env_prefix = env.attr
@@ -48,10 +39,10 @@ def load_config(env):
         assign_value(resource, prefix, type_define)
     return {"warnings":warnings, "errors":errors}
 
-def load_paths(env, config_env):
-    for resource_name, resource in config_env.attr.config['resources'].items():
+def load_paths(env):
+    for resource_name, resource in env.attr.config_file['resources'].items():
         if resource['type'] == "path":
-            env.set_attr(f'.{resource_name}', config_env.get_attr(f'.{resource_name}.value') )
+            env.set_attr(f'.{resource_name}', env.attr.config.get_attr(f'.{resource_name}.value') )
 class EnvTracker(object):
     def __init__(self, env, title, update_existing=True):
         self.env = env
@@ -81,25 +72,38 @@ class EnvTracker(object):
                 print(f"{prop} - removed")
         self.update()
 
-def base_env(verbose=False):
+def env_tod(env, d, props=None):
+    if props is None:
+        props = env.unique_properties()
+    for prop in props:
+        d[prop] = env.get_attr(prop)
+    return d
+
+def env_fromd(env, d):
+    for k, v in d.items():
+        env.set_attr(k, v)
+    return env
+
+def base_env():
     root_env = Shared.Environment()
-    root_env_t = EnvTracker(root_env, "root_env")
 
     root_env.attr.shell.env = os.environ
     root_env.attr.process.stdout = sys.stdout
-    if verbose:
-        root_env_t.print("1")
 
-    config_env = root_env.branch()
-    config_env.attr.config = open_config()
-    config_env_t = EnvTracker(config_env, "config_env")
+    config_env = Shared.Environment()
 
-    load_config(config_env)
-    if verbose:
-        config_env_t.print("2")
-    load_paths(root_env, config_env)
+    if os.path.exists('server_config.yaml'):
+        with open('server_config.yaml', "r") as f:
+            config_file = yaml.load( f, yaml.Loader )
+    else:
+        raise Exception("cannot read config")
+
+    load_config(config_env, config_file)
 
     root_env.attr.config = config_env
+    root_env.attr.config_file = config_file
+
+    load_paths(root_env)
 
     root_env.attr.collider.build_checker = DreamCollider.ASTChecker()
     root_env.attr.collider.build_checker.load_all()

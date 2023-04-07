@@ -16,25 +16,17 @@ def trim_tests(env, n):
 
 async def clear():
     root_env = base_env()
-    
-    root_env.attr.verbose = False
-    root_env.attr.churn.config = root_env.attr.config.prefix(f".{sys.argv[2]}")
-    root_env.attr.churn.config.result_dir.ensure_clean_dir()
 
-def parse_csv(l):
-    return [ s.strip() for s in l.split(',') if s.strip() != "," ]
+    load_churn(root_env, sys.argv[2])    
+
+    root_env.attr.churn.config.result_dir.ensure_clean_dir()
 
 async def churn():
     manager = mp.Manager()
     queue = manager.Queue()
     root_env = base_env()
-    
-    root_env.attr.verbose = False
-    root_env.attr.churn.config = root_env.attr.config.prefix(f".{sys.argv[2]}")
-    root_env.attr.churn.builders = { s:globals()[f'builder_{s}'] for s in parse_csv(root_env.attr.churn.config.builder) }
-    root_env.attr.churn.testers = { s: globals()[f'tester_{s}'] for s in parse_csv(root_env.attr.churn.config.tester) }
-    root_env.attr.churn.filters = { s: globals()[f'filter_{s}'] for s in parse_csv(root_env.attr.churn.config.filter) }
 
+    load_churn(root_env, sys.arg[2])    
     load_byond_install(root_env, "byond_main")
 
     async def worker_loop(queue):
@@ -56,7 +48,6 @@ async def churn():
                 if os.path.exists( tenv.attr.churn.config.result_dir / filter_name ):
                     if len( os.listdir( tenv.attr.churn.config.result_dir / filter_name ) ) > 100:
                         filters_finished.add( filter_name )
-
                 if filter_name in filters_finished:
                     continue
                 if await filter_fn(tenv):
@@ -75,7 +66,6 @@ async def churn():
                if not t.done():
                    continue
             break
-
 
     def worker_process(queue):
         try:
