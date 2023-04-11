@@ -2,6 +2,7 @@
 from ..common import *
 
 from . import Download
+from . import Compilation
 
 class Install(object):
     @staticmethod
@@ -14,6 +15,16 @@ class Install(object):
             await Shared.Process.shell(penv)
             if os.path.exists( env.attr.install.save_path ):
                 os.remove( env.attr.install.save_path )
+
+    @staticmethod
+    async def available(env):
+        menv = env.branch()
+        menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
+        menv.attr.process.stdout = io.StringIO()
+        menv.attr.process.stderr = menv.attr.process.stdout
+        menv.attr.process.piped = True        
+        await Compilation.invoke_compiler( menv )
+        return menv.attr.process.instance.returncode == 1
 
 async def install(env):
     env = env.branch()

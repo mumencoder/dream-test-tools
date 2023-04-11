@@ -31,7 +31,7 @@ class Compilation(object):
         penv.attr.shell.dir = penv.attr.compilation.dm_file_path.parent
         exe_paths = Compilation.get_exe_path(penv)
         if len(exe_paths) != 1:
-            raise Exception("missing/ambiguous path", env.attr.build.dir, exe_paths)
+            raise Exception("missing/ambiguous path", penv.attr.build.dir, exe_paths)
 
         penv.attr.shell.env = os.environ
         penv.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(penv.attr.compilation.args)} {penv.attr.compilation.dm_file_path.name}"
