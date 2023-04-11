@@ -31,6 +31,24 @@ async def home(request : fastapi.Request, api_key = fastapi.Security(check_api_k
 async def churn_list(request : fastapi.Request):
     return [ resource_name for resource_name, resource in root_env.attr.config_file['resources'].items() if resource['type'] == 'churn' ]
 
+@app.get("/installs/list")
+async def installs(reqest : fastapi.Request):
+    env = root_env.branch()
+    def is_install_type(rtype):
+        return rtype in ["byond_install", "opendream_repo"]
+    
+    resources = {}
+    for resource_name, resource in root_env.attr.config_file['resources'].items():
+        if not is_install_type(resource['type']):
+            continue
+
+        result = {}
+        result["state"] = await globals()[f"status_{resource['type']}"](env, resource_name)
+        result["resource"] = resource
+        resources[resource_name] = result
+
+    return resources
+
 @app.get("/churn/view/{name}")
 async def churn_view(name : str, request : fastapi.Request):
     env = root_env.branch()

@@ -17,5 +17,5 @@ async def filter_compile_mispredict(env):
         return True
     return False
 
-async def filter_byond_opendream_match(env):
-    pass
+async def filter_byond_opendream_compile_rt_mismatch(env):
+    return False

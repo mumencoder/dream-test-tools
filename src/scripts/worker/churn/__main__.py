@@ -26,8 +26,12 @@ async def churn():
     queue = manager.Queue()
     root_env = base_env()
 
-    load_churn(root_env, sys.arg[2])    
-    load_byond_install(root_env, "byond_main")
+    load_churn(root_env, sys.argv[2])    
+
+    root_env.attr.benv = root_env.branch()
+    root_env.attr.oenv = root_env.branch()
+    load_byond_install(root_env.attr.benv, "byond_main")
+    load_opendream_install(root_env.attr.oenv, "opendream_current")
 
     async def worker_loop(queue):
         filters_finished = set()
@@ -60,12 +64,13 @@ async def churn():
         tasks = []
         tasks.append( asyncio.create_task(worker_loop(queue)) )
         tasks.append( asyncio.create_task(worker_loop(queue)) )
-        while True:
+        running = True
+        while running:
             await asyncio.sleep(1.0)
+            running = False
             for t in tasks:
                if not t.done():
-                   continue
-            break
+                   running = True
 
     def worker_process(queue):
         try:
@@ -80,15 +85,16 @@ async def churn():
         proc.start()
 
     last_print = time.time()
-    while True:
+    running = True
+    while running:
         await asyncio.sleep(1.0)
         if time.time() - last_print > 120.0:
             print("churning...", time.time() )
             last_print = time.time()
+        running = False
         for p in processes:
             if p.is_alive():
-                continue
-        return
+                running = True
 try:
     asyncio.run( globals()[sys.argv[1]]() )
 except KeyboardInterrupt:

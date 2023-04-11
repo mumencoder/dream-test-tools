@@ -22,7 +22,8 @@ def get_nav_bar():
     return html.Div([
         dcc.Link('Home', href='/'),
         html.Hr(),
-        dcc.Link("Churn Results", href="/churn"),
+        dcc.Link("Churn Results", href="/churn"), html.Br(),
+        dcc.Link("Manage Installs", href="/installs"),
         html.Hr(),
     ])
 
@@ -36,6 +37,8 @@ def display_page(url):
         content = render_home()
     elif url == "/churn":
         content = render_churn()
+    elif url == "/installs":
+        content = render_installs()
     elif m := match_url(path, 'churn', 'view', '@name'):
         content = render_churn_view(m)
     elif m := match_url(path, 'churn', 'view_test', '@name', '@filter', '@test_id'):
@@ -44,12 +47,65 @@ def display_page(url):
         content = html.Div(['Not a page how did you get here shoo'])
     return render(content)
 
+@dash.callback(dash.Output('hidden-div', 'children'), [dash.Input({'role':'action-btn', 'action':dash.ALL, 'resource':dash.ALL}, 'n_clicks')] )
+def action_button(btn):
+    for input in dash.callback_context.inputs_list[0]:
+        if input['property'] != "n_clicks" or 'value' not in input:
+            continue
+        if input['value'] == 1:
+            requests.get( f"http://127.0.0.1:8000/action/{input['id']['action']}/{input['id']['resource']}")    
+    raise dash.exceptions.PreventUpdate
+
 def render(*content):
     return html.Div( [get_nav_bar(), *content] )
 
 def render_home():
     return []
 
+def render_churn():
+    churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
+
+    result_links = []
+    for churn_result in churn_results:
+        result_links += [ dcc.Link(churn_result, href=f"/churn/view/{churn_result}"), html.Br() ]
+
+    return html.Div( result_links )
+
+def render_installs():
+    resources = requests.get('http://127.0.0.1:8000/installs/list').json()
+    contents = []
+    for resource_name, resource in resources.items():
+        actions = []
+        contents.append( html.H3(resource_name) )
+        contents += [f"Resource: {resource}", html.Br()]
+        if resource['resource']['type'] == "opendream_repo":
+            if resource["state"] == "missing":
+                actions.append( html.Button('Clone', id={'role':'action-btn', 'action':'clone', 'resource':resource_name} ) )
+        contents += actions
+
+    return html.Div(contents)
+
+def render_churn_view(m):
+    churn_results = requests.get(f"http://127.0.0.1:8000/churn/view/{m['name']}").json()
+    env = env_fromd( Shared.Environment(), churn_results )
+
+    contents = []
+    for filter_name in env.attr.churn.filters:
+        contents += [ html.Div(html.H2(filter_name)), html.Br() ]
+        if filter_name not in env.attr.churn.filter_test_ids:
+            return None
+        for test_id in env.attr.churn.filter_test_ids[filter_name]:
+            contents += [ dcc.Link(test_id, href=f"/churn/view_test/{m['name']}/{filter_name}/{test_id}"), html.Br() ]
+    return html.Div(contents)
+
+def render_churn_view_test(m):
+    env = load_test( Shared.Environment(), requests.get(f"http://127.0.0.1:8000/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
+    contents = [html.Pre(env.attr.compilation.dm_file)]
+    contents += [html.Hr(), html.H4("Compile returncode"), str(env.attr.byond.compile.returncode)]
+    contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
+    return html.Div(contents)
+
+#### inactive
 def render_any_from_category(category):
     root_env = base_env()
 
@@ -79,39 +135,14 @@ def render_error_categories():
 #        rows.append( html.Tr( [html.Td(error_category), html.Td(error_ct), html.Td(dcc.Link("*", href=f"/view_random/{error_category}"))] ) )
 
 #    table = html.Table( [html.Tr([html.Th("Category"), html.Th("Count"), html.Th("View Random") ])] + rows, className="table")
-
-def render_churn():
-    churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
-
-    result_links = []
-    for churn_result in churn_results:
-        result_links += [ dcc.Link(churn_result, href=f"/churn/view/{churn_result}"), html.Br() ]
-
-    return html.Div( result_links )
-
-def render_churn_view(m):
-    churn_results = requests.get(f"http://127.0.0.1:8000/churn/view/{m['name']}").json()
-    env = env_fromd( Shared.Environment(), churn_results )
-
-    contents = []
-    for filter_name in env.attr.churn.filters:
-        contents += [ html.Div(html.H2(filter_name)), html.Br() ]
-        for test_id in env.attr.churn.filter_test_ids[filter_name]:
-            contents += [ dcc.Link(test_id, href=f"/churn/view_test/{m['name']}/{filter_name}/{test_id}"), html.Br() ]
-    return html.Div(contents)
-
-def render_churn_view_test(m):
-    env = load_test( Shared.Environment(), requests.get(f"http://127.0.0.1:8000/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
-    contents = [html.Pre(env.attr.compilation.dm_file)]
-    contents += [html.Hr(), html.H4("Compile returncode"), str(env.attr.byond.compile.returncode)]
-    contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
-    return html.Div(contents)
+################
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 layout = dbc.Container([
     dcc.Location(id='url', refresh=False),
-    html.Div([], id='page-content')
+    html.Div([], id='page-content'),
+    html.Div([], id='hidden-div')
 ], fluid=True)
 
 if __name__ == '__main__':
