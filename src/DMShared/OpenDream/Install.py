@@ -9,10 +9,6 @@ class Install(object):
         env.attr.git.repo.url = data.url
         env.attr.git.repo.dir = data.path
 
-    async def init_repo(env):
-        await Shared.Git.Repo.clone(env)
-        await Shared.Git.Repo.init_all_submodules(env)
-
     def load_install_from_repo(env):
         env.attr.install.dir = env.attr.git.repo.dir
 

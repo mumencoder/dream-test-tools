@@ -27,12 +27,36 @@ def check_api_key(
 async def home(request : fastapi.Request, api_key = fastapi.Security(check_api_key)):
     pass
 
-@app.get("/churn/list")
-async def churn_list(request : fastapi.Request):
-    return [ resource_name for resource_name, resource in root_env.attr.config_file['resources'].items() if resource['type'] == 'churn' ]
+@app.get("/action/{action_name}/{resource_name}")
+async def action(action_name : str, resource_name : str, request : fastapi.Request):
+    env = root_env.branch()
+    rtype = root_env.attr.config_file['resources'][resource_name]['type']
+    if rtype == 'opendream_repo':
+        install_id = resource_name
+        load_opendream_install(env, install_id)
+    if action_name == 'clone':
+        await Shared.Git.Repo.clone(env)
+    if action_name == 'pull':
+        await Shared.Git.Repo.pull(env)
+    if action_name == 'build':
+        env = env.branch()
+        await DMShared.OpenDream.Builder.build(env)
+        if env.attr.restore_env.attr.process.instance.returncode != 0:
+            return
+        if env.attr.compiler_env.attr.process.instance.returncode != 0:
+            return
+        if env.attr.server_env.attr.process.instance.returncode != 0:
+            return
+        status = await Shared.Git.Repo.status(env)
+        metadata = maybe_from_pickle( get_file(env.attr.metadata_dir / 'resources' / install_id), default_value={} )
+        metadata['last_build_commit'] = status['branch.oid']
+        put_file( env.attr.metadata_dir / 'resources' / install_id, pickle.dumps(metadata) )
+    if action_name == 'submodule_init':
+        await Shared.Git.Repo.init_all_submodules(env)
+        
 
 @app.get("/installs/list")
-async def installs(reqest : fastapi.Request):
+async def installs(request : fastapi.Request):
     env = root_env.branch()
     def is_install_type(rtype):
         return rtype in ["byond_install", "opendream_repo"]
@@ -48,6 +72,10 @@ async def installs(reqest : fastapi.Request):
         resources[resource_name] = result
 
     return resources
+
+@app.get("/churn/list")
+async def churn_list(request : fastapi.Request):
+    return [ resource_name for resource_name, resource in root_env.attr.config_file['resources'].items() if resource['type'] == 'churn' ]
 
 @app.get("/churn/view/{name}")
 async def churn_view(name : str, request : fastapi.Request):

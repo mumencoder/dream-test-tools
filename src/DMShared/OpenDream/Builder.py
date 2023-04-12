@@ -48,6 +48,10 @@ class Builder(object):
         else:
             await Shared.Dotnet.Project.build( senv )
 
+        env.attr.restore_env = crenv
+        env.attr.compiler_env = cbenv
+        env.attr.server_env = senv
+
     @staticmethod
     def build_ready(env):
         if len( Compilation.get_exe_path(env) ) != 1:

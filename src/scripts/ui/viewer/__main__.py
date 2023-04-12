@@ -81,6 +81,12 @@ def render_installs():
         if resource['resource']['type'] == "opendream_repo":
             if resource["state"] == "missing":
                 actions.append( html.Button('Clone', id={'role':'action-btn', 'action':'clone', 'resource':resource_name} ) )
+            if resource["state"] == "behind_upstream":
+                actions.append( html.Button('Pull', id={'role':'action-btn', 'action':'pull', 'resource':resource_name} ) )
+            if resource['state'] == "submodule_missing":
+                actions.append( html.Button('Init Submodules', id={'role':'action-btn', 'action':'submodule_init', 'resource':resource_name} ) )
+            if resource['state'] in ["ready", "nobuild", "oldbuild"]:
+                actions.append( html.Button('Build', id={'role':'action-btn', 'action':'build', 'resource':resource_name} ) )
         contents += actions
 
     return html.Div(contents)

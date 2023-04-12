@@ -1,21 +1,7 @@
 
 from ..imports import *
 from ..env import *
-
-async def install_byond(benv):
-    benv.attr.process.stdout = io.StringIO()
-    benv.attr.process.stderr = benv.attr.process.stdout
-    benv.attr.process.piped = True
-
-    await DMShared.Byond.install(benv)
-
-async def install_opendream(oenv):
-    oenv.attr.process.stdout = io.StringIO()
-    oenv.attr.process.stderr = oenv.attr.process.stdout
-    oenv.attr.process.piped = True
-
-    await DMShared.OpenDream.Install.init_repo(oenv)
-    await DMShared.OpenDream.Builder.build(oenv)
+from ..misc import *
 
 async def status_byond_install(env, install_id):
     env = env.branch()
@@ -28,11 +14,27 @@ async def status_byond_install(env, install_id):
 async def status_opendream_repo(env, install_id):
     env = env.branch()
     load_opendream_install(env, install_id)
-    state = "missing"
-    if not Shared.Git.Repo.exists(env):
-        return state
-    state = "exists"
-    return state
+    status = await Shared.Git.Repo.status(env)
+
+    if status is None:
+        return "missing"
+    
+    if int(status['branch.ab'][0]) == 0 and int(status['branch.ab'][1]) == -1:
+        return "behind_upstream"
+
+    sstatus = await Shared.Git.Repo.submodule_status(env)
+    for name, state in sstatus.items():
+        if state == 'missing':
+            return "submodule_missing"
+
+    metadata = maybe_from_pickle( get_file(env.attr.metadata_dir / 'resources' / install_id), default_value={} )
+    if 'last_build_commit' not in metadata:
+        return "nobuild"
+
+    if metadata['last_build_commit'] != status['branch.oid']:
+        return "oldbuild"
+    
+    return "ready"
 
 def load_byond_install(env, install_id):
     for prop in list(env.attr.config.filter_properties(f".{install_id}.*")):
