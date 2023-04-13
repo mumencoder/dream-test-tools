@@ -7,7 +7,9 @@ from common import *
 app = fastapi.FastAPI()
 root_env = base_env()
 
-work_queue = rq.Queue(connection=redis.Redis())
+redis_conn = redis.Redis()
+work_queue = rq.Queue(connection=redis_conn)
+job_index = {}
 
 api_key_header = apiseckey.APIKeyHeader(name="x-auth-key", auto_error=False)
 api_key_query = apiseckey.APIKeyQuery(name="auth", auto_error=False)
@@ -42,7 +44,13 @@ async def action(action_name : str, resource_name : str, request : fastapi.Reque
     if action_name == 'clear_churn':
         env.attr.churn.config.result_dir.ensure_clean_dir()
     if action_name == "start_churn":
-        job = work_queue.enqueue(churn_run, resource_name)
+        job_uuid = (resource_name, "churn")
+        jstat = job_status(job_index, job_uuid)
+        if jstat not in ["finished", "failed"]:
+            return
+        job = rq.job.Job.create(churn_run, [resource_name], timeout='48h', connection=redis_conn)
+        work_queue.enqueue_job(job)
+        job_index[(resource_name, "churn")] = job
     if action_name == 'clone':
         await Shared.Git.Repo.clone(env)
     if action_name == 'pull':
@@ -83,7 +91,23 @@ async def installs(request : fastapi.Request):
 
 @app.get("/churn/list")
 async def churn_list(request : fastapi.Request):
-    return [ resource_name for resource_name, resource in root_env.attr.config_file['resources'].items() if resource['type'] == 'churn' ]
+    churn_infos = {}
+    for resource_name, resource in root_env.attr.config_file['resources'].items():
+        if resource['type'] != 'churn':
+            continue
+        result = {}
+
+        job_uuid = (resource_name, "churn")
+        job = job_index.get(job_uuid, None)
+        if job is not None:
+            result["output"] = job.result
+            if job.exc_info is not None:
+                result["exc"] = str(job.exc_info)
+        jstat = job_status(job_index, job_uuid)
+        result["status"] = jstat
+
+        churn_infos[resource_name] = result
+    return churn_infos
 
 @app.get("/churn/view/{name}")
 async def churn_view(name : str, request : fastapi.Request):

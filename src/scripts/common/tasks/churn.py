@@ -40,10 +40,12 @@ def churn_trim_tests(env, n):
                 shutil.rmtree( env.attr.churn.config.result_dir / test_id )
 
 async def churn_run(churn_id):
+    sys.stdout = io.StringIO()
+    sys.stderr = sys.stdout
+
     env = base_env()
     load_churn(env, churn_id)
 
-    print( list(env.unique_properties() ))
     if hasattr(env.attr.churn.config, 'benv'):
         env.attr.benv = env.branch()
         load_byond_install(env.attr.benv, env.attr.churn.config.benv )
@@ -56,7 +58,7 @@ async def churn_run(churn_id):
         tenv = env.branch()
 
         if len(tenv.attr.churn.filters) == len(filters_finished):
-            return
+            break
         
         for builder in tenv.attr.churn.builders.values():
             await builder(tenv)
@@ -76,3 +78,5 @@ async def churn_run(churn_id):
                 test_id = Shared.Random.generate_string(24)
                 with open( tenv.attr.churn.config.result_dir / filter_name / test_id, "wb" ) as f:
                     f.write( data )
+
+    return sys.stdout.getvalue()

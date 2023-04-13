@@ -3,7 +3,9 @@ from ..common import *
 
 class Compilation(object):
     @staticmethod
-    def convert_args(args):
+    def convert_args(env):
+        if not env.attr_exists('.compilation.args'):
+            args = []
         s = ""
         for arg in args:
             if type(arg) is dict and arg["type"] == "flags":
@@ -24,9 +26,6 @@ class Compilation(object):
     @staticmethod
     async def invoke_compiler(env):
         penv = env.branch()
-        if not penv.attr_exists('.compilation.args'):
-            penv.attr.compilation.args = []
-
         penv.attr.build.dir = penv.attr.install.dir / 'DMCompiler'
         penv.attr.shell.dir = penv.attr.compilation.dm_file_path.parent
         exe_paths = Compilation.get_exe_path(penv)
@@ -34,28 +33,14 @@ class Compilation(object):
             raise Exception("missing/ambiguous path", penv.attr.build.dir, exe_paths)
 
         penv.attr.shell.env = os.environ
-        penv.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(penv.attr.compilation.args)} {penv.attr.compilation.dm_file_path.name}"
+        penv.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(env)} {penv.attr.compilation.dm_file_path.name}"
         await Shared.Process.shell(penv)
-        env.attr.compilation.returncode = penv.attr.process.instance.returncode
 
     async def managed_compile(env):
-        env = env.branch()
-        env.attr.process.stdout = open(env.attr.compilation.root_dir / 'opendream.compile.stdout.txt', "w")
-        try:
-            await Compilation.invoke_compiler(env)
-        finally:
-            env.attr.process.stdout.close()
-
-        with open(env.attr.compilation.root_dir / 'opendream.compile.returncode.txt', "w") as f:
-            f.write( str(env.attr.compilation.returncode) )
-
-        return env
-
-    def load_compile(senv, denv):
-        with open( senv.attr.compilation.root_dir / 'opendream.compile.stdout.txt', "r" ) as f:
-            denv.attr.compilation.stdout = f.read()
-        with open( senv.attr.compilation.root_dir / 'opendream.compile.returncode.txt', "r" ) as f:
-            denv.attr.compilation.returncode = int(f.read())
+        menv = env.branch()
+        await Compilation.invoke_compiler(menv)
+        env.attr.compile.stdout = menv.attr.process.stdout
+        env.attr.compile.returncode = menv.attr.process.instance.returncode
 
     async def opendream_ast(tenv):
         env = tenv.branch()

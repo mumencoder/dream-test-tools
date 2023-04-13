@@ -86,13 +86,20 @@ def render_churn():
     churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
 
     contents = []
-    for churn_result in churn_results:
+    for name, result in churn_results.items():
         contents += [ 
-            html.H3(churn_result), 
-            dcc.Link("View Results", href=f"/churn/view/{churn_result}"), 
-            html.Br(),
-            html.Button('Clear', id={'role':'action-btn', 'action':'clear_churn', 'resource':churn_result} ),
-            html.Button('Start', id={'role':'action-btn', 'action':'start_churn', 'resource':churn_result} ),
+            html.H3(name), 
+            dcc.Link("View Results", href=f"/churn/view/{name}"), html.Br(),
+            f"Job status: {result['status']}", html.Br(),
+        ]
+        if "output" in result:
+            contents += [ f"Results:", html.Br(), html.Pre(result["output"]), html.Br() ]
+        if "exc" in result:
+            contents += [ f"Exception:", html.Br(), html.Pre(result["exc"]), html.Br() ]
+        contents += [
+            html.Button('Clear', id={'role':'action-btn', 'action':'clear_churn', 'resource':name} ),
+            html.Button('Start', id={'role':'action-btn', 'action':'start_churn', 'resource':name} ),
+            html.Hr(),
         ]
 
     return html.Div( contents )
