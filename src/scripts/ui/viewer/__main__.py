@@ -62,15 +62,6 @@ def render(*content):
 def render_home():
     return []
 
-def render_churn():
-    churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
-
-    result_links = []
-    for churn_result in churn_results:
-        result_links += [ dcc.Link(churn_result, href=f"/churn/view/{churn_result}"), html.Br() ]
-
-    return html.Div( result_links )
-
 def render_installs():
     resources = requests.get('http://127.0.0.1:8000/installs/list').json()
     contents = []
@@ -91,6 +82,21 @@ def render_installs():
 
     return html.Div(contents)
 
+def render_churn():
+    churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
+
+    contents = []
+    for churn_result in churn_results:
+        contents += [ 
+            html.H3(churn_result), 
+            dcc.Link("View Results", href=f"/churn/view/{churn_result}"), 
+            html.Br(),
+            html.Button('Clear', id={'role':'action-btn', 'action':'clear_churn', 'resource':churn_result} ),
+            html.Button('Start', id={'role':'action-btn', 'action':'start_churn', 'resource':churn_result} ),
+        ]
+
+    return html.Div( contents )
+
 def render_churn_view(m):
     churn_results = requests.get(f"http://127.0.0.1:8000/churn/view/{m['name']}").json()
     env = env_fromd( Shared.Environment(), churn_results )
@@ -106,7 +112,7 @@ def render_churn_view(m):
 
 def render_churn_view_test(m):
     env = load_test( Shared.Environment(), requests.get(f"http://127.0.0.1:8000/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
-    contents = [html.Pre(env.attr.compilation.dm_file)]
+    contents = [html.Pre(env.attr.collider.text)]
     contents += [html.Hr(), html.H4("Compile returncode"), str(env.attr.byond.compile.returncode)]
     contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
     return html.Div(contents)
@@ -125,7 +131,7 @@ def render_any_from_category(category):
         load_test(tenv, f.read())
     pp = pprint.PrettyPrinter(indent=2)
     return html.Div([
-        html.Pre(tenv.attr.compilation.dm_file),
+        html.Pre(tenv.attr.collider.text),
         html.Hr(),
         html.Pre(tenv.attr.compile.stdout_text),
         html.Hr(),

@@ -3,7 +3,7 @@ from ..imports import *
 
 def save_test(tenv):
     required_attrs = [
-        '.compilation.dm_file',
+        '.collider.text',
         '.collider.compile_predict',
         '.collider.ast',
         '.collider.ast_tokens',

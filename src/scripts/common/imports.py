@@ -29,6 +29,6 @@ import pickle
 
 import requests 
 
-import redis
+import redis, rq
 
 import mumenrepo as Shared

@@ -7,6 +7,8 @@ from common import *
 app = fastapi.FastAPI()
 root_env = base_env()
 
+work_queue = rq.Queue(connection=redis.Redis())
+
 api_key_header = apiseckey.APIKeyHeader(name="x-auth-key", auto_error=False)
 api_key_query = apiseckey.APIKeyQuery(name="auth", auto_error=False)
 
@@ -34,6 +36,13 @@ async def action(action_name : str, resource_name : str, request : fastapi.Reque
     if rtype == 'opendream_repo':
         install_id = resource_name
         load_opendream_install(env, install_id)
+    if rtype == 'churn':
+        churn_id = resource_name
+        load_churn(env, churn_id)
+    if action_name == 'clear_churn':
+        env.attr.churn.config.result_dir.ensure_clean_dir()
+    if action_name == "start_churn":
+        job = work_queue.enqueue(churn_run, resource_name)
     if action_name == 'clone':
         await Shared.Git.Repo.clone(env)
     if action_name == 'pull':
@@ -53,7 +62,6 @@ async def action(action_name : str, resource_name : str, request : fastapi.Reque
         put_file( env.attr.metadata_dir / 'resources' / install_id, pickle.dumps(metadata) )
     if action_name == 'submodule_init':
         await Shared.Git.Repo.init_all_submodules(env)
-        
 
 @app.get("/installs/list")
 async def installs(request : fastapi.Request):

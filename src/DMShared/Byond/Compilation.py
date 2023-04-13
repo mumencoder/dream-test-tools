@@ -3,7 +3,11 @@ from ..common import *
 
 class Compilation(object):
     @staticmethod
-    def create_dreammaker_command(penv, args=[]):
+    def create_dreammaker_command(penv):
+        if not penv.attr_exists('.compilation.args'):
+            args = []
+        else:
+            args = penv.attr.compilation.args
         preargs = ""
         postargs = ""
         for arg in args:
@@ -19,9 +23,6 @@ class Compilation(object):
 
     @staticmethod
     async def invoke_compiler(env):
-        if not env.attr_exists('.compilation.args'):
-            env.attr.compilation.args = []
-
         proc_env = os.environ
         proc_env.update( {'LD_LIBRARY_PATH':f"{env.attr.install.dir}/byond/bin"} )
         env.attr.shell.env = proc_env
@@ -29,7 +30,7 @@ class Compilation(object):
 
     async def managed_compile(env):
         menv = env.branch()
-        menv.attr.shell.command = Compilation.create_dreammaker_command( env, env.attr.compilation.args )
+        menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)
         env.attr.compile.stdout = menv.attr.process.stdout
         env.attr.compile.returncode = menv.attr.process.instance.returncode
@@ -37,7 +38,7 @@ class Compilation(object):
     async def managed_codetree(env):
         menv = env.branch()
         menv.attr.compilation.args = ["code_tree"]
-        menv.attr.shell.command = Compilation.create_dreammaker_command( env, env.attr.compilation.args )
+        menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)
         env.attr.codetree.stdout = menv.attr.process.stdout
         env.attr.codetree.returncode = menv.attr.process.instance.returncode
@@ -45,7 +46,7 @@ class Compilation(object):
     async def managed_objtree(env):
         menv = env.branch()
         menv.attr.compilation.args = ["obj_tree"]
-        menv.attr.shell.command = Compilation.create_dreammaker_command( env, env.attr.compilation.args )
+        menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)
         env.attr.objtree.stdout = menv.attr.process.stdout
         env.attr.objtree.returncode = menv.attr.process.instance.returncode

@@ -1,26 +1,6 @@
 
 from common import *
 
-def count_existing(env):
-    return len(os.listdir( env.attr.churn.config.result_dir ))
-
-def trim_tests(env, n):
-    test_ids = os.listdir( env.attr.churn.config.result_dir )
-    count = len(test_ids)
-    print(f"trimming {count} tests")
-    if count > 100000:
-        keeps = test_ids[0:100000]
-        for test_id in test_ids:
-            if test_id not in keeps:
-                shutil.rmtree( env.attr.churn.config.result_dir / test_id )
-
-async def clear():
-    root_env = base_env()
-
-    load_churn(root_env, sys.argv[2])    
-
-    root_env.attr.churn.config.result_dir.ensure_clean_dir()
-
 async def churn():
     manager = mp.Manager()
     queue = manager.Queue()
