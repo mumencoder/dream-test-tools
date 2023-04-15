@@ -5,6 +5,11 @@ import dash_bootstrap_components as dbc
 
 from common import *
 
+api_server_host = "api-server"
+
+def api_request(req):
+    return requests.get( f"http://{api_server_host}:8000" + req )
+
 def match_url(path, *args):
     cpath = 0
     matches = {}
@@ -53,7 +58,7 @@ def action_button(btn):
         if input['property'] != "n_clicks" or 'value' not in input:
             continue
         if input['value'] == 1:
-            requests.get( f"http://127.0.0.1:8000/action/{input['id']['action']}/{input['id']['resource']}")    
+            api_request( f"/action/{input['id']['action']}/{input['id']['resource']}" )    
     raise dash.exceptions.PreventUpdate
 
 def render(*content):
@@ -63,7 +68,7 @@ def render_home():
     return []
 
 def render_installs():
-    resources = requests.get('http://127.0.0.1:8000/installs/list').json()
+    resources = api_request('/installs/list').json()
     contents = []
     for resource_name, resource in resources.items():
         actions = []
@@ -83,7 +88,7 @@ def render_installs():
     return html.Div(contents)
 
 def render_churn():
-    churn_results = requests.get('http://127.0.0.1:8000/churn/list').json()
+    churn_results = api_request('/churn/list').json()
 
     contents = []
     for name, result in churn_results.items():
@@ -105,7 +110,7 @@ def render_churn():
     return html.Div( contents )
 
 def render_churn_view(m):
-    churn_results = requests.get(f"http://127.0.0.1:8000/churn/view/{m['name']}").json()
+    churn_results = api_request( f"/churn/view/{m['name']}").json()
     env = env_fromd( Shared.Environment(), churn_results )
 
     contents = []
@@ -118,7 +123,7 @@ def render_churn_view(m):
     return html.Div(contents)
 
 def render_churn_view_test(m):
-    env = load_test( Shared.Environment(), requests.get(f"http://127.0.0.1:8000/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
+    env = load_test( Shared.Environment(), api_request( f"/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
     contents = [html.Pre(env.attr.collider.text)]
     contents += [html.Hr(), html.H4("Compile returncode"), str(env.attr.byond.compile.returncode)]
     contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
@@ -128,7 +133,7 @@ def render_churn_view_test(m):
 def render_any_from_category(category):
     root_env = base_env()
 
-    result = requests.get(f'http://127.0.0.1:8000/random_test/{category}').json()
+    result = api_request( f'/random_test/{category}').json()
     if result is None:
         return []
     test_id = json.loads( result )
@@ -166,4 +171,4 @@ layout = dbc.Container([
 
 if __name__ == '__main__':
     app.layout = layout
-    app.run_server(debug=True)
+    app.run_server(host="0.0.0.0", debug=True)

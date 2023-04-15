@@ -1,11 +1,47 @@
 version: '3.1'
 
 services:
-  dtt:
+  api-server:
     image: dtt:latest 
-    ulimits:
-        core:
-            hard: 0
-            soft: 0
+    working_dir: /DTT/src/scripts
+    entrypoint: python -m server.run
+    ports: 
+      - "8000:8000"
     volumes:
-      - ./output:/DTT/output
+      - .:/DTT
+      - /media/DTT:/media/DTT
+      - /media/ramdisk:/media/ramdisk
+  
+  worker1:
+    image: dtt:latest
+    working_dir: /DTT/src/scripts
+    entrypoint: rq worker --url redis://redis
+    volumes:
+      - .:/DTT
+      - /media/DTT:/media/DTT
+      - /media/ramdisk:/media/ramdisk
+
+  worker2:
+    image: dtt:latest
+    working_dir: /DTT/src/scripts
+    entrypoint: rq worker --url redis://redis
+    volumes:
+      - .:/DTT
+      - /media/DTT:/media/DTT
+      - /media/ramdisk:/media/ramdisk
+
+  dash:
+    image: dtt:latest
+    working_dir: /DTT/src/scripts
+    entrypoint: python -m ui.viewer
+    ports: 
+      - "8050:8050"
+    volumes:
+      - .:/DTT
+
+  redis:
+    image: redis/redis-stack:latest 
+    entrypoint: redis-server --bind "0.0.0.0"
+    ports: 
+      - "6379:6379" 
+      - "8001:8001"

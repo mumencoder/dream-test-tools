@@ -8,3 +8,4 @@
 **/*.egg-info/*
 *.pyc
 *.dmb
+**/poetry.lock

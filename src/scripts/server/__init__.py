@@ -7,7 +7,7 @@ from common import *
 app = fastapi.FastAPI()
 root_env = base_env()
 
-redis_conn = redis.Redis()
+redis_conn = redis.Redis(host="redis")
 work_queue = rq.Queue(connection=redis_conn)
 job_index = {}
 

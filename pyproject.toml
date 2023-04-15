@@ -23,6 +23,7 @@ celery = "*"
 flower = "*"
 
 redis = "*"
+rq = "*"
 
 requests = "*"
 fastapi = "*"

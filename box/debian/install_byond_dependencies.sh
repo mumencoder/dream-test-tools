@@ -1,3 +1,4 @@
+#!/bin/sh
 
 DEBIAN_FRONTEND=noninteractive
 
