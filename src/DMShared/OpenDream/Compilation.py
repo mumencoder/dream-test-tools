@@ -38,6 +38,7 @@ class Compilation(object):
 
     async def managed_compile(env):
         menv = env.branch()
+        Shared.Process.pipe_stdout(menv)
         await Compilation.invoke_compiler(menv)
         env.attr.compile.stdout = menv.attr.process.stdout
         env.attr.compile.returncode = menv.attr.process.instance.returncode

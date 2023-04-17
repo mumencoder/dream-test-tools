@@ -5,14 +5,14 @@ from ..imports import *
 async def tester_byond_compile(env):
     cenv = env.attr.benv.branch()
     cenv.attr.compilation.dm_file = env.attr.collider.text
-    DMShared.pipe_stdout(cenv)
+    Shared.Process.pipe_stdout(cenv)
     await byond_compilation(cenv)
     env.attr.byond.compile.stdout_text = cenv.attr.compile.stdout.getvalue()
     env.attr.byond.compile.returncode = cenv.attr.compile.returncode
 
     cenv = env.attr.benv.branch()
     cenv.attr.compilation.dm_file = env.attr.collider.text
-    DMShared.pipe_stdout(cenv)
+    Shared.Process.pipe_stdout(cenv)
     await byond_objtree(cenv)
     env.attr.byond.objtree.stdout_text = cenv.attr.objtree.stdout.getvalue()
     env.attr.byond.objtree.returncode = cenv.attr.objtree.returncode
@@ -22,7 +22,7 @@ async def tester_byond_compile(env):
 async def tester_opendream_compile(env):
     cenv = env.attr.oenv.branch()
     cenv.attr.compilation.dm_file = env.attr.collider.text
-    DMShared.pipe_stdout(cenv)
+    Shared.Process.pipe_stdout(cenv)
     await opendream_compilation(cenv)
     env.attr.opendream.compile.stdout_text = cenv.attr.compile.stdout.getvalue()
     env.attr.opendream.compile.returncode = cenv.attr.compile.returncode

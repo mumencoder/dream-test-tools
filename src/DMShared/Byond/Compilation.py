@@ -30,6 +30,7 @@ class Compilation(object):
 
     async def managed_compile(env):
         menv = env.branch()
+        Shared.Process.pipe_stdout(menv)
         menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)
         env.attr.compile.stdout = menv.attr.process.stdout
@@ -37,6 +38,7 @@ class Compilation(object):
 
     async def managed_codetree(env):
         menv = env.branch()
+        Shared.Process.pipe_stdout(menv)
         menv.attr.compilation.args = ["code_tree"]
         menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)
@@ -45,6 +47,7 @@ class Compilation(object):
 
     async def managed_objtree(env):
         menv = env.branch()
+        Shared.Process.pipe_stdout(menv)
         menv.attr.compilation.args = ["obj_tree"]
         menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
         await Compilation.invoke_compiler(menv)

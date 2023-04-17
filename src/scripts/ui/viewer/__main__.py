@@ -48,6 +48,8 @@ def display_page(url):
         content = render_churn_view(m)
     elif m := match_url(path, 'churn', 'view_test', '@name', '@filter', '@test_id'):
         content = render_churn_view_test(m)
+    elif m := match_url(path, 'installs', 'view_metadata', '@resource_name', '@filename'):
+        content = render_installs_view_metadata(m)
     else:
         content = html.Div(['Not a page how did you get here shoo'])
     return render(content)
@@ -73,7 +75,15 @@ def render_installs():
     for resource_name, resource in resources.items():
         actions = []
         contents.append( html.H3(resource_name) )
-        contents += [f"Resource: {resource}", html.Br()]
+        contents += [f"Resource state: {resource['state']}", html.Br()]
+        if "metadata" in resource:
+            contents += [f"Metadata: "]
+            for metadata in resource['metadata']:
+                contents.append( dcc.Link(metadata, href=f"/installs/view_metadata/{resource_name}/{metadata}") )
+            contents.append( html.Br() )
+        if resource['resource']['type'] == "byond_install":
+            if resource["state"] == "missing":
+                actions.append( html.Button('Download', id={'role':'action-btn', 'action':'download', 'resource':resource_name} ) )
         if resource['resource']['type'] == "opendream_repo":
             if resource["state"] == "missing":
                 actions.append( html.Button('Clone', id={'role':'action-btn', 'action':'clone', 'resource':resource_name} ) )
@@ -83,9 +93,18 @@ def render_installs():
                 actions.append( html.Button('Init Submodules', id={'role':'action-btn', 'action':'submodule_init', 'resource':resource_name} ) )
             if resource['state'] in ["ready", "nobuild", "oldbuild"]:
                 actions.append( html.Button('Build', id={'role':'action-btn', 'action':'build', 'resource':resource_name} ) )
+        if resource['resource']['type'] == "dream_repo":
+            if resource["state"] == "missing":
+                actions.append( html.Button('Clone', id={'role':'action-btn', 'action':'clone', 'resource':resource_name} ) )        
+            if resource['state'] in ["ready"]:
+                actions.append( html.Button('Build', id={'role':'action-btn', 'action':'dream_build', 'resource':resource_name} ) )
         contents += actions
 
     return html.Div(contents)
+
+def render_installs_view_metadata(m):
+    file = api_request(f"/installs/view_metadata/{m['resource_name']}/{m['filename']}").json()
+    return html.Div( [html.Pre( file )] )
 
 def render_churn():
     churn_results = api_request('/churn/list').json()

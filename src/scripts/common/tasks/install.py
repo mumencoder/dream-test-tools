@@ -27,12 +27,23 @@ async def status_opendream_repo(env, install_id):
         if state == 'missing':
             return "submodule_missing"
 
-    metadata = maybe_from_pickle( get_file(env.attr.metadata_dir / 'resources' / install_id), default_value={} )
+    metadata = maybe_from_pickle( get_file(env.attr.metadata_dir / 'resources' / install_id / 'build.pckl'), default_value={} )
     if 'last_build_commit' not in metadata:
         return "nobuild"
 
     if metadata['last_build_commit'] != status['branch.oid']:
         return "oldbuild"
+    
+    return "ready"
+
+async def status_dream_repo(env, repo_id):
+    env = env.branch()
+    load_dream_repo(env, repo_id)
+
+    status = await Shared.Git.Repo.status(env)
+
+    if status is None:
+        return "missing"
     
     return "ready"
 
@@ -43,5 +54,8 @@ def load_byond_install(env, install_id):
 def load_opendream_install(env, install_id):
     DMShared.OpenDream.Install.load_repo(env, env.attr.config.prefix(f".{install_id}") )
     DMShared.OpenDream.Install.load_install_from_repo(env)
+
+def load_dream_repo(env, repo_id):
+    DMShared.OpenDream.Install.load_repo(env, env.attr.config.prefix(f".{repo_id}") )
 
 import DMShared, DreamCollider

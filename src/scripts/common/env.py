@@ -88,8 +88,7 @@ def base_env():
     root_env = Shared.Environment()
 
     root_env.attr.shell.env = os.environ
-    root_env.attr.process.stdout = sys.stdout
-
+    
     config_env = Shared.Environment()
 
     if os.path.exists('server_config.yaml'):

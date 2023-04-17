@@ -19,9 +19,4 @@ def load_dotnet(env):
 
 def load_opendream_tests(env):
     clr.AddReference("Content.Tests")
-    clr.AddReference("Robust.Shared")
-
-def pipe_stdout(env):
-    env.attr.process.stdout = io.StringIO()
-    env.attr.process.stderr = env.attr.process.stdout
-    env.attr.process.piped = True      
+    clr.AddReference("Robust.Shared")   
