@@ -10,7 +10,6 @@ services:
     volumes:
       - .:/DTT
       - /media/DTT:/media/DTT
-      - /media/ramdisk:/media/ramdisk
   
   worker1:
     image: dtt:latest
@@ -19,7 +18,6 @@ services:
     volumes:
       - .:/DTT
       - /media/DTT:/media/DTT
-      - /media/ramdisk:/media/ramdisk
 
   worker2:
     image: dtt:latest
@@ -28,7 +26,6 @@ services:
     volumes:
       - .:/DTT
       - /media/DTT:/media/DTT
-      - /media/ramdisk:/media/ramdisk
 
   dash:
     image: dtt:latest

@@ -88,11 +88,11 @@ def base_env():
     root_env = Shared.Environment()
 
     root_env.attr.shell.env = os.environ
-    
+
     config_env = Shared.Environment()
 
-    if os.path.exists('server_config.yaml'):
-        with open('server_config.yaml', "r") as f:
+    if os.path.exists('/DTT/resources/local/server_config.yaml'):
+        with open('/DTT/resources/local/server_config.yaml', "r") as f:
             config_file = yaml.load( f, yaml.Loader )
     else:
         raise Exception("cannot read config")

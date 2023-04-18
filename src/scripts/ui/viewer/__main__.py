@@ -148,38 +148,6 @@ def render_churn_view_test(m):
     contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
     return html.Div(contents)
 
-#### inactive
-def render_any_from_category(category):
-    root_env = base_env()
-
-    result = api_request( f'/random_test/{category}').json()
-    if result is None:
-        return []
-    test_id = json.loads( result )
-
-    tenv = root_env.branch()
-    with open( tenv.attr.churn_dir / test_id / 'byond_compile.pickle', "rb") as f:
-        load_test(tenv, f.read())
-    pp = pprint.PrettyPrinter(indent=2)
-    return html.Div([
-        html.Pre(tenv.attr.collider.text),
-        html.Hr(),
-        html.Pre(tenv.attr.compile.stdout_text),
-        html.Hr(),
-        html.Pre(tenv.attr.objtree.stdout_text),
-        html.Hr(),
-        html.Pre(pp.pformat(tenv.attr.compile.stdout_parsed), className="pre-wrap")
-    ])
-
-def render_error_categories():
-    pass
-#    rows = []
-#    for error_category, error_ct in error_counts.items():
-#        rows.append( html.Tr( [html.Td(error_category), html.Td(error_ct), html.Td(dcc.Link("*", href=f"/view_random/{error_category}"))] ) )
-
-#    table = html.Table( [html.Tr([html.Th("Category"), html.Th("Count"), html.Th("View Random") ])] + rows, className="table")
-################
-
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 layout = dbc.Container([

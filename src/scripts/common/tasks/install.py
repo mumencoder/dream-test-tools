@@ -1,7 +1,7 @@
 
 from ..imports import *
 from ..env import *
-from ..misc import *
+from ..resources import *
 
 async def status_byond_install(env, install_id):
     env = env.branch()

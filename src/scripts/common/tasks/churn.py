@@ -1,6 +1,6 @@
 
 from ..imports import *
-from ..misc import *
+from ..resources import *
 
 from .builder import *
 from .tester import *
