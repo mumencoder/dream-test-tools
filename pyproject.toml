@@ -31,3 +31,5 @@ uvicorn = "*"
 
 dash = "*"
 dash_bootstrap_components = "*"
+
+beautifulsoup4 = "*"
