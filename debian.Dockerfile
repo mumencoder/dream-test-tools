@@ -11,8 +11,8 @@ RUN ./install_git.sh
 RUN ./install_byond_dependencies.sh
 RUN ./install_DTT_dependencies.sh
 
-COPY . /DTT
+COPY . /src/DTT
 
 RUN ./install_DTT.sh
 
-WORKDIR /DTT
+WORKDIR /src/DTT

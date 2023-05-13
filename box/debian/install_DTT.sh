@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cd /DTT
+cd /src/DTT
 poetry install

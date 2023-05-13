@@ -7,6 +7,6 @@ pip install poetry
 poetry self update
 poetry config virtualenvs.create false
 
-git clone https://github.com/mumencoder/mumenrepo /mumenrepo
-cd /mumenrepo 
+git clone https://github.com/mumencoder/mumenrepo /src/mumenrepo
+cd /src/mumenrepo 
 poetry install
