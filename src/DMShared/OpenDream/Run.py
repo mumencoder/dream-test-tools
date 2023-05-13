@@ -66,7 +66,6 @@ class Run(object):
         renv.attr.shell.program = renv.attr.opendream.server_binary
         renv.attr.shell.args = await Run.create_server_command( renv )
 
-        renv.attr.process.try_terminate = Run.wait_run_complete
         renv.attr.shell.env = os.environ
         await Shared.Process.shell(renv)
 
@@ -76,13 +75,6 @@ class Run(object):
         if os.path.exists(runlog_path):
             os.remove(runlog_path)
         env.attr.run.returncode = renv.attr.process.instance.returncode
-
-    @staticmethod
-    async def wait_run_complete(env):
-        if time.time() - env.attr.process.start_time > 10.0:
-            return True
-        else:
-            return False
                 
     async def run_opendream_dotnet():
         cenv = tenv.branch()

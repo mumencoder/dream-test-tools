@@ -85,7 +85,14 @@ class TestCase(object):
 
     @staticmethod
     def load_result(env):
-        with open( env.attr.test.base_dir / 'run.out', "r") as f:
-            env.attr.result.run_out = json.loads( f.read() )
-        with open( env.attr.test.base_dir / 'run_unexpected.out', "r") as f:
-            env.attr.result.run_unexpected_out = json.loads( f.read() )
+        try:
+            with open( env.attr.test.base_dir / 'run.out', "r") as f:
+                env.attr.result.run_out = json.loads( f.read() )
+        except Exception as e:
+            env.attr.result.run_out = e
+
+        try:
+            with open( env.attr.test.base_dir / 'run_unexpected.out', "r") as f:
+                env.attr.result.run_unexpected_out = json.loads( f.read() )
+        except Exception as e:
+            env.attr.result.run_unexpected_out = e

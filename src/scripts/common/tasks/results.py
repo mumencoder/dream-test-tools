@@ -22,11 +22,11 @@ def save_test(tenv):
 
     data = {}
     for attr in required_attrs:
-        if not tenv.attr_exists(attr):
+        if not tenv.has_attr(attr):
             raise Exception(f'missing required attr {attr}')
         data[attr] = tenv.get_attr( attr )
     for attr in optional_attrs:
-        if not tenv.attr_exists(attr):
+        if not tenv.has_attr(attr):
             continue
         data[attr] = tenv.get_attr( attr )
 
@@ -47,7 +47,7 @@ def load_test(tenv, p):
         tenv.set_attr(name, value)
 
     for attr, marshall_fn in marshall_fns:
-        if tenv.attr_exists(attr):
+        if tenv.has_attr(attr):
             tenv.set_attr(attr, marshall_fn(tenv, tenv.get_attr(attr)) )
 
     return tenv

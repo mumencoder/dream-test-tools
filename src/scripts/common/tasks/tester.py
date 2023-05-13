@@ -30,7 +30,6 @@ async def tester_opendream_compile(env):
     #env.attr.presist.add( '.compilation.dm_file', '.opendream.compile.stdout_text' )
 
 async def byond_compilation(cenv):
-    cenv.attr.compilation.root_dir = cenv.attr.ram_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
@@ -39,7 +38,6 @@ async def byond_compilation(cenv):
         shutil.rmtree( cenv.attr.compilation.root_dir )
 
 async def byond_objtree(cenv):
-    cenv.attr.compilation.root_dir = cenv.attr.ram_dir / 'byond_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )
@@ -48,7 +46,6 @@ async def byond_objtree(cenv):
         shutil.rmtree( cenv.attr.compilation.root_dir )
 
 async def opendream_compilation(cenv):
-    cenv.attr.compilation.root_dir = cenv.attr.ram_dir / 'opendream_compilation' / Shared.Random.generate_string(24)
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     with open( cenv.attr.compilation.dm_file_path, "w") as f:
         f.write( cenv.attr.compilation.dm_file )

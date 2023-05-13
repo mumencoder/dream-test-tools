@@ -52,6 +52,87 @@ class Counter(object):
         return self.visible
     
 #### inactive client code
+def render_churn():
+    churn_results = api_request('/churn/list').json()
+
+    contents = []
+    for name, result in churn_results.items():
+        contents += [ 
+            html.H3(name), 
+            dcc.Link("View Results", href=f"/churn/view/{name}"), html.Br(),
+            f"Job status: {result['status']}", html.Br(),
+        ]
+        if "output" in result:
+            contents += [ f"Results:", html.Br(), html.Pre(result["output"]), html.Br() ]
+        if "exc" in result:
+            contents += [ f"Exception:", html.Br(), html.Pre(result["exc"]), html.Br() ]
+        contents += [
+            html.Button('Clear', id={'role':'action-btn', 'action':'clear_churn', 'resource':name} ),
+            html.Button('Start', id={'role':'action-btn', 'action':'start_churn', 'resource':name} ),
+            html.Hr(),
+        ]
+
+    return html.Div( contents )
+
+def render_churn_view(m):
+    churn_results = api_request( f"/churn/view/{m['name']}").json()
+    env = env_fromd( Shared.Environment(), churn_results )
+
+    contents = []
+    for filter_name in env.attr.churn.filters:
+        contents += [ html.Div(html.H2(filter_name)), html.Br() ]
+        if filter_name not in env.attr.churn.filter_test_ids:
+            return None
+        for test_id in env.attr.churn.filter_test_ids[filter_name]:
+            contents += [ dcc.Link(test_id, href=f"/churn/view_test/{m['name']}/{filter_name}/{test_id}"), html.Br() ]
+    return html.Div(contents)
+
+def render_churn_view_test(m):
+    env = load_test( Shared.Environment(), api_request( f"/churn/view_test/{m['name']}/{m['filter']}/{m['test_id']}").content )
+    contents = [html.Pre(env.attr.collider.text)]
+    contents += [html.Hr(), html.H4("Compile returncode"), str(env.attr.byond.compile.returncode)]
+    contents += [html.Br(), html.H4("Output:"), html.Pre(env.attr.byond.compile.stdout_text)]
+    return html.Div(contents)
+
+@app.get("/churn/list")
+async def churn_list(request : fastapi.Request):
+    churn_infos = {}
+    for resource_name, resource in root_env.attr.config_file['resources'].items():
+        if resource['type'] != 'churn':
+            continue
+        result = {}
+
+        job_uuid = (resource_name, "churn")
+        job = job_index.get(job_uuid, None)
+        if job is not None:
+            result["output"] = job.result
+            if job.exc_info is not None:
+                result["exc"] = str(job.exc_info)
+        jstat = job_status(job_index, job_uuid)
+        result["status"] = jstat
+
+        churn_infos[resource_name] = result
+    return churn_infos
+
+@app.get("/churn/view/{name}")
+async def churn_view(name : str, request : fastapi.Request):
+    env = root_env.branch()
+    out_env = Shared.Environment()
+    load_churn_info(env.attr.config.prefix(f".{name}"), out_env)
+    return env_tod( out_env, {} )
+
+@app.get("/churn/view_test/{name}/{filter}/{test_id}")
+async def churn_view_test(name : str, filter : str, test_id : str, request : fastapi.Request):
+    env = root_env.branch()
+    config = env.attr.config.prefix(f".{name}")
+    load_churn_info(config, env)
+
+    if not os.path.exists( config.result_dir / filter / test_id ):
+        return None
+
+    with open( config.result_dir / filter / test_id, "rb" ) as f:
+        return fastapi.Response(f.read())
+    
 def render_any_from_category(category):
     root_env = base_env()
 

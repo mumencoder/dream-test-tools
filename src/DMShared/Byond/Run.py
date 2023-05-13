@@ -49,7 +49,6 @@ class Run(object):
         renv.attr.shell.program = f'{renv.attr.install.dir}/byond/bin/DreamDaemon'
         renv.attr.shell.args = Run.create_dreamserver_command( renv )
 
-        renv.attr.process.try_terminate = Run.wait_run_complete
         Run.default_environ( renv )
         await Shared.Process.shell(renv)
 
@@ -63,10 +62,3 @@ class Run(object):
     @staticmethod 
     def get_bytecode_file(filename):
         return filename.with_suffix('.dmb')
-
-    @staticmethod
-    async def wait_run_complete(env):
-        if time.time() - env.attr.process.start_time > 2.0:
-            return True
-        else:
-            return False

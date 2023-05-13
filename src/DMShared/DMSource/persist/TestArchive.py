@@ -20,7 +20,7 @@ class TestArchive:
             tenv = root_env.branch()
             tenv.attr.test.root_dir = Shared.Path( path )
             Metadata.load_test(tenv)
-            if tenv.attr_exists('.test.metadata.name'):
+            if tenv.has_attr('.test.metadata.name'):
                 yield tenv
 
     def iter_existing_tests(env):

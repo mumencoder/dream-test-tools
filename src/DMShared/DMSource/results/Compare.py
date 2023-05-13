@@ -82,7 +82,7 @@ class Compare(object):
             result["compile_match"] = False
 
         if result["compile_match"] is True and bcenv.attr.compilation.returncode == 0:
-            if brenv.attr_exists('.run.output') and orenv.attr_exists('.run.output'):
+            if brenv.has_attr('.run.output') and orenv.has_attr('.run.output'):
                 # TODO: support list, dict
                 if type(brenv.attr.run.output) is float and type(orenv.attr.run.output) is float:
                     ratio = brenv.attr.run.output / orenv.attr.run.output
@@ -92,7 +92,7 @@ class Compare(object):
                         result["match"] = False
                 else:
                     result["match"] = brenv.attr.run.output == orenv.attr.run.output
-            elif not brenv.attr_exists('.run.output') and not orenv.attr_exists('.run.output'):
+            elif not brenv.has_attr('.run.output') and not orenv.has_attr('.run.output'):
                 result["match"] = True
             else:
                 result["match"] = False
@@ -107,16 +107,16 @@ class Compare(object):
             output += "=== OpenDream Compile Log ===\n"
             output += ocenv.attr.compilation.log + '\n'
         if result["match"] is False and result["compile_match"] is True:
-            if brenv.attr_exists('.run.log'):
+            if brenv.has_attr('.run.log'):
                 output += "=== Byond Run Log ===\n"
                 output += str(brenv.attr.run.log) + '\n'
-            if orenv.attr_exists('.run.log'):
+            if orenv.has_attr('.run.log'):
                 output += "=== OpenDream Run Log ===\n"
                 output += str(orenv.attr.run.log) + '\n'
-            if brenv.attr_exists('.run.output'):
+            if brenv.has_attr('.run.output'):
                 output += "=== Byond Run Value ===\n"
                 output += str(brenv.attr.run.output) + '\n'
-            if orenv.attr_exists('.run.output'):
+            if orenv.has_attr('.run.output'):
                 output += "=== OpenDream Run Value ===\n"
                 output += str(orenv.attr.run.output) + '\n'
 

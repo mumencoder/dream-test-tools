@@ -1,21 +1,16 @@
 
 from .imports import *
 
-def get_file(filename, default_value=None):
-    if not os.path.exists(filename):
-        return default_value
-    with open(filename, "rb") as f:
-        return f.read()
-
-def put_file(filename, data):
-    with open(filename, "wb") as f:
-        f.write(data)
-
-def maybe_from_pickle(data, default_value=None):
-    try:
-        return pickle.loads(data)
-    except:
-        return default_value
+def iter_resources(resources, prefix=""):
+    for name, resource in resources.items():
+        if type(resource) is dict and 'type' in resource:
+            if resource['type'] == "Composite":
+                for k,v in resource.items():
+                    if k == 'type':
+                        continue
+                    yield from iter_resources(resource[k], prefix=prefix + name + ".")                
+            else:
+                yield (prefix + name, resource)
 
 def parse_csv(l):
     return [ s.strip() for s in l.split(',') if s.strip() != "," ]
