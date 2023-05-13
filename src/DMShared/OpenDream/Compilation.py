@@ -4,19 +4,21 @@ from ..common import *
 class Compilation(object):
     @staticmethod
     def convert_args(env):
-        if not env.attr_exists('.compilation.args'):
+        if not env.has_attr('.compilation.args'):
             args = []
-        s = ""
+        s = []
         for arg in args:
             if type(arg) is dict and arg["type"] == "flags":
                 for flag in arg["flags"]:
-                    s += f"--{flag} "
+                    s.append( f"--{flag} " )
+
+        s.append( env.attr.compilation.dm_file_path.name )
         return s
 
     @staticmethod
     def get_exe_path(env):
         paths = []
-        for root_dir, dirs, files in os.walk(env.attr.build.dir):
+        for root_dir, dirs, files in os.walk(env.attr.install.dir / 'DMCompiler'):
             for filename in files:
                 if filename == "DMCompiler":
                     path = os.path.join(root_dir, filename)
@@ -24,23 +26,25 @@ class Compilation(object):
         return paths
 
     @staticmethod
-    async def invoke_compiler(env):
-        penv = env.branch()
-        penv.attr.build.dir = penv.attr.install.dir / 'DMCompiler'
-        penv.attr.shell.dir = penv.attr.compilation.dm_file_path.parent
-        exe_paths = Compilation.get_exe_path(penv)
+    def find_compiler_binary(env):
+        exe_paths = Compilation.get_exe_path(env)
         if len(exe_paths) != 1:
-            raise Exception("missing/ambiguous path", penv.attr.build.dir, exe_paths)
-
-        penv.attr.shell.env = os.environ
-        penv.attr.shell.command = f"{exe_paths[0]} {Compilation.convert_args(env)} {penv.attr.compilation.dm_file_path.name}"
-        await Shared.Process.shell(penv)
+            raise Exception("missing/ambiguous path", env.attr.install.dir / 'DMCompiler', exe_paths)
+        env.attr.opendream.compiler_binary = exe_paths[0]
 
     async def managed_compile(env):
         menv = env.branch()
+
         Shared.Process.pipe_stdout(menv)
-        await Compilation.invoke_compiler(menv)
-        env.attr.compile.stdout = menv.attr.process.stdout
+        menv.attr.shell.dir = menv.attr.compilation.dm_file_path.parent
+        menv.attr.shell.env = os.environ
+        if not menv.has_attr('.opendream.compiler_binary'):
+            Compilation.find_compiler_binary(menv)
+        menv.attr.shell.program = menv.attr.opendream.compiler_binary
+        menv.attr.shell.args = Compilation.convert_args(menv)
+        await Shared.Process.shell(menv)
+
+        env.attr.compile.stdout = menv.attr.process.stdout.getvalue()
         env.attr.compile.returncode = menv.attr.process.instance.returncode
 
     async def opendream_ast(tenv):
@@ -66,7 +70,7 @@ class Compilation(object):
                 for error in errors:
                     f.write( error.ToString() + '\n')
         else:
-            if tenv.attr_exists( '.test.metadata.paths.opendream_errors' ):
+            if tenv.has_attr( '.test.metadata.paths.opendream_errors' ):
                 del tenv.attr.test.metadata.paths.opendream_errors
 
         warnings = DMCompiler.DMCompiler.warnings
@@ -76,7 +80,7 @@ class Compilation(object):
                 for warning in warnings:
                     f.write( warning.ToString() + '\n')
         else:
-            if tenv.attr_exists( '.test.metadata.paths.opendream_warnings' ):
+            if tenv.has_attr( '.test.metadata.paths.opendream_warnings' ):
                 del tenv.attr.test.metadata.paths.opendream_warnings
 
         Metadata.save_test(tenv)

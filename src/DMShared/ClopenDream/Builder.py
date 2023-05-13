@@ -13,7 +13,7 @@ class Builder(object):
         await Shared.Dotnet.Project.restore( renv )
 
         benv = env.branch()
-        if benv.attr_exists('.clopendream.build.params'):
+        if benv.has_attr('.clopendream.build.params'):
             benv.attr.dotnet.build.params = Shared.Dotnet.Project.default_params(benv.attr.clopendream.build.params)
         else:
             benv.attr.dotnet.build.params = {}

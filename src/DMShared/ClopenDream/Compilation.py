@@ -52,7 +52,7 @@ class Compilation:
                 f.write( result["parser_exc"].StackTrace + '\n')
                 f.write( "===\n" )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.clparser_throw' ):
+            if tenv.has_attr( '.test.metadata.paths.clparser_throw' ):
                 del tenv.attr.test.metadata.paths.clparser_throw
 
         if len(result["parser"].errors) > 0:
@@ -62,7 +62,7 @@ class Compilation:
                     f.write( error + '\n' )
                     f.write( "===\n" )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.clparser_errors' ):
+            if tenv.has_attr( '.test.metadata.paths.clparser_errors' ):
                 del tenv.attr.test.metadata.paths.clparser_errors
 
         if len(result["parser"].byond_errors) > 0:
@@ -71,7 +71,7 @@ class Compilation:
                 for error in result["parser"].byond_errors:
                     f.write( error.Text + '\n' )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.byond_errors' ):
+            if tenv.has_attr( '.test.metadata.paths.byond_errors' ):
                 del tenv.attr.test.metadata.paths.byond_errors
 
         if "root_node" in result and result["root_node"] is not None:
@@ -79,7 +79,7 @@ class Compilation:
             with open( tenv.attr.test.root_dir / tenv.attr.test.metadata.paths.clparser_tree, "w") as f:
                 f.write( result["root_node"].PrintLeaves(128) )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.clparser_tree' ):
+            if tenv.has_attr( '.test.metadata.paths.clparser_tree' ):
                 del tenv.attr.test.metadata.paths.clparser_tree
 
         if "convert_exc" in result:
@@ -90,7 +90,7 @@ class Compilation:
                 f.write( result["convert_exc"].StackTrace + '\n')
                 f.write( "===\n" )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.clconvert_throw' ):
+            if tenv.has_attr( '.test.metadata.paths.clconvert_throw' ):
                 del tenv.attr.test.metadata.paths.clconvert_throw
 
         if len(result["converter"].errors) > 0:
@@ -100,7 +100,7 @@ class Compilation:
                     f.write( error + '\n' )
                     f.write( "===\n" )
         else:
-            if tenv.attr_exists( '.test.metadata.paths.clconvert_errors' ):
+            if tenv.has_attr( '.test.metadata.paths.clconvert_errors' ):
                 del tenv.attr.test.metadata.paths.clconvert_errors
 
         Metadata.save_test(tenv)
@@ -133,7 +133,7 @@ class Compilation:
         
     async def run_meta(tenv):
         lexer = ClopenDream.DMLexer()
-        get_file(tenv, 'dm_file')
+        Shared.get_file(tenv, 'dm_file')
         src = ClopenDream.SourceText( tenv.attr.test.files.dm_file )
         lexer.Include( src )
 

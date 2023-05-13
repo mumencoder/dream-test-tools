@@ -20,3 +20,9 @@ class Install(object):
         Shared.Process.pipe_stdout(menv)
         await Compilation.invoke_compiler( menv )
         return menv.attr.process.instance.returncode == 1
+
+    async def status_code(env):    
+        if await Install.available( env ):
+            return "exists"
+        else:
+            return "missing"

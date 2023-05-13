@@ -20,7 +20,7 @@ class Builder(object):
         build = env.prefix('.opendream.build')
         dotnet = env.prefix('.dotnet')
 
-        if env.attr_exists('.opendream.build.params'):
+        if env.has_attr('.opendream.build.params'):
             dotnet.build.params = Shared.Dotnet.Project.default_params(build.params)
         else:
             dotnet.build.params = {}
@@ -59,3 +59,18 @@ class Builder(object):
         if len( Run.get_exe_path(env) ) != 1:
             return False
         return True
+    
+    @staticmethod
+    async def managed_build(env, build_metadata):
+        env = env.branch()
+        await Builder.build(env)
+        if env.attr.restore_env.attr.process.instance.returncode != 0:
+            raise Exception("restore failed")
+        if env.attr.compiler_env.attr.process.instance.returncode != 0:
+            raise Exception("build compile failed")
+        if env.attr.server_env.attr.process.instance.returncode != 0:
+            raise Exception("server compile failed")
+        status = await Shared.Git.Repo.status(env)
+        metadata = Shared.maybe_from_pickle( Shared.get_file(build_metadata), default_value={} )
+        metadata['last_build_commit'] = status['branch.oid']
+        Shared.put_file(build_metadata, pickle.dumps(metadata) )        

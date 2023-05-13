@@ -4,36 +4,41 @@ from ..common import *
 class Compilation(object):
     @staticmethod
     def create_dreammaker_command(penv):
-        if not penv.attr_exists('.compilation.args'):
+        if not penv.has_attr('.compilation.args'):
             args = []
         else:
             args = penv.attr.compilation.args
-        preargs = ""
-        postargs = ""
+
+        preargs = []
+        postargs = []
         for arg in args:
             if arg == "code_tree":
-                preargs += "-code_tree "
+                preargs.append("-code_tree")
             if arg == "obj_tree":
-                preargs += "-o "
-        if penv.attr_exists('.compilation.dm_file_path'):
+                preargs.append("-o")
+
+        if penv.has_attr('.compilation.dm_file_path'):
             file_path = penv.attr.compilation.dm_file_path
         else:
             file_path = ''
-        return f"{penv.attr.install.dir}/byond/bin/DreamMaker {preargs} {file_path} {postargs}"
+
+        return preargs + [file_path] + postargs        
 
     @staticmethod
-    async def invoke_compiler(env):
-        proc_env = os.environ
-        proc_env.update( {'LD_LIBRARY_PATH':f"{env.attr.install.dir}/byond/bin"} )
-        env.attr.shell.env = proc_env
-        await Shared.Process.shell(env)
+    def default_environ(env):
+        if not env.has_attr('.shell.env'):
+            env.attr.shell.env = dict(os.environ)
+        if "LD_LIBRARY_PATH" not in env.attr.shell.env:
+            env.attr.shell.env.update( {'LD_LIBRARY_PATH':f"{env.attr.install.dir}/byond/bin"} )
 
     async def managed_compile(env):
         menv = env.branch()
         Shared.Process.pipe_stdout(menv)
-        menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
-        await Compilation.invoke_compiler(menv)
-        env.attr.compile.stdout = menv.attr.process.stdout
+        menv.attr.shell.program = f'{menv.attr.install.dir}/byond/bin/DreamMaker'
+        menv.attr.shell.args = Compilation.create_dreammaker_command( menv )
+        Compilation.default_environ( menv )
+        await Shared.Process.shell(menv)
+        env.attr.compile.stdout = menv.attr.process.stdout.getvalue()
         env.attr.compile.returncode = menv.attr.process.instance.returncode
 
     async def managed_codetree(env):
@@ -41,8 +46,9 @@ class Compilation(object):
         Shared.Process.pipe_stdout(menv)
         menv.attr.compilation.args = ["code_tree"]
         menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
-        await Compilation.invoke_compiler(menv)
-        env.attr.codetree.stdout = menv.attr.process.stdout
+        Compilation.default_environ( menv )
+        await Shared.Process.shell(menv)
+        env.attr.codetree.stdout = menv.attr.process.stdout.getvalue()
         env.attr.codetree.returncode = menv.attr.process.instance.returncode
 
     async def managed_objtree(env):
@@ -50,8 +56,9 @@ class Compilation(object):
         Shared.Process.pipe_stdout(menv)
         menv.attr.compilation.args = ["obj_tree"]
         menv.attr.shell.command = Compilation.create_dreammaker_command( menv )
-        await Compilation.invoke_compiler(menv)
-        env.attr.objtree.stdout = menv.attr.process.stdout
+        Compilation.default_environ( menv )
+        await Shared.Process.shell(menv)
+        env.attr.objtree.stdout = menv.attr.process.stdout.getvalue()
         env.attr.objtree.returncode = menv.attr.process.instance.returncode
 
     def load_objtree(senv, denv):
@@ -178,7 +185,7 @@ class Compilation(object):
         denv.attr.compilation.objtree = rootobjs
 
     def iter_objtree(env):
-        if not env.attr_exists('.compilation.objtree'):
+        if not env.has_attr('.compilation.objtree'):
             return None
         nodes_left = list(env.attr.compilation.objtree)
         while len(nodes_left) > 0:

@@ -1,5 +1,6 @@
 
-import os, sys, asyncio, pathlib, time, shutil, json, random, re, gzip, textwrap, tarfile, pickle
+import os, sys, asyncio, pathlib, time, shutil, json, random, re, gzip, textwrap, tarfile, pickle, requests
+from bs4 import BeautifulSoup
 import collections, io
 import xml.dom.minidom as minidom
 

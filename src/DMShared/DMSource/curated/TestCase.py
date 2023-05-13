@@ -2,40 +2,23 @@
 from ...common import *
 
 class TestCase(object):
-    @staticmethod
-    def prepare_exec(env):
-        env.attr.test.base_dir = env.attr.test.root_dir / f'{env.attr.install.platform}.{env.attr.install.id}'
-        env.attr.test.files.fin = env.attr.test.base_dir / 'fin.out'
-        env.attr.test.files.run_log = env.attr.test.base_dir / 'run_log.out'
-        env.attr.test.files.run_unexpected = env.attr.test.base_dir / 'run_unexpected.out'
-
-    def prepare_compile(env):
-        env.attr.process.log_mode = "file"
-        env.attr.process.log_path = env.attr.test.base_dir / 'compile.log.txt'
-        env.attr.compilation.dm_file_path = env.attr.test.dm_file_path
-
-    def prepare_run(env):
-        env.attr.process.log_mode = "file"
-        env.attr.process.log_path = env.attr.test.base_dir / 'run.log.txt'
-        env.attr.run.dm_file_path = env.attr.platform_cls.Run.get_bytecode_file(env.attr.test.dm_file_path)
-        env.attr.run.args = {'trusted':True}
+    @staticmethod 
+    def iter_tests(env, path):
+        env = env.branch()
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.endswith('.dm'):
+                    env.attr.test.source_file = f"{root}/{file}"
+                    yield env
 
     @staticmethod
-    def load_test_text(env):
+    def load_test(env):
         with Shared.File.open(env.attr.test.source_file, "r") as f:
             env.attr.test.text = f.read() + '\n'
-
-    @staticmethod
-    def compute_lines(env):
-        lined_text = []
-        for i, line in enumerate(env.attr.test.text.split('\n')):
-            lined_text.append( f'{str(env.attr.test.line_start+i).ljust(4)}{line}')
-        env.attr.test.lined_text = "\n".join(lined_text)
+        TestCase.wrap(env)
 
     @staticmethod
     def wrap(env):
-        TestCase.load_test_text(env)
-
         text = textwrap.dedent(f"""                    
             #include "map.dmm"
             #include "interface.dmf"
@@ -74,28 +57,35 @@ class TestCase(object):
 
         env.attr.test.line_start = len(text.split('\n'))
         text += env.attr.test.text
-        TestCase.compute_lines(env)
+
+        lined_text = []
+        for i, line in enumerate(env.attr.test.text.split('\n')):
+            lined_text.append( f'{str(env.attr.test.line_start+i).ljust(4)}{line}')
+        env.attr.test.lined_text = "\n".join(lined_text)
 
         text += textwrap.dedent(f"""
             /world/New()
                 main()
             
-                fdel("{env.attr.test.files.run_log }")
-                fdel("{env.attr.test.files.run_unexpected}")
-                fdel("{env.attr.test.files.fin}")
-                text2file("[json_encode(_log)]", "{env.attr.test.files.run_log }")
-                text2file("[json_encode(_mismatch)]", "{env.attr.test.files.run_unexpected}")
-                text2file("FIN", "{env.attr.test.files.fin}")
+                text2file("[json_encode(_log)]", "run.out")
+                text2file("[json_encode(_mismatch)]", "run_unexpected.out")
+                text2file("FIN", "fin")
                 world.log << "shutdown()"
-                //shutdown()
+                shutdown()
             """)
 
         env.attr.test.wrapped_text = text
 
     @staticmethod
     def write(env):
-        env.attr.test.dm_file_path = env.attr.test.base_dir / 'test.dm' 
-        Shared.File.refresh(env.attr.tests.dirs.resources / 'map.dmm', env.attr.test.base_dir / 'map.dmm')
-        Shared.File.refresh(env.attr.tests.dirs.resources / 'interface.dmf', env.attr.test.base_dir / 'interface.dmf')
-        with Shared.File.open(env.attr.test.dm_file_path, "w") as o:
+        Shared.File.refresh(env.attr.dirs.resources / 'dmm' / 'map.dmm', env.attr.test.base_dir / 'map.dmm')
+        Shared.File.refresh(env.attr.dirs.resources / 'dmf' / 'interface.dmf', env.attr.test.base_dir / 'interface.dmf')
+        with Shared.File.open(env.attr.test.base_dir / 'test.dm', "w") as o:
             o.write( env.attr.test.wrapped_text  )
+
+    @staticmethod
+    def load_result(env):
+        with open( env.attr.test.base_dir / 'run.out', "r") as f:
+            env.attr.result.run_out = json.loads( f.read() )
+        with open( env.attr.test.base_dir / 'run_unexpected.out', "r") as f:
+            env.attr.result.run_unexpected_out = json.loads( f.read() )
