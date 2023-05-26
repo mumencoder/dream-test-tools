@@ -71,6 +71,4 @@ class Builder(object):
         if env.attr.server_env.attr.process.instance.returncode != 0:
             raise Exception("server compile failed")
         status = await Shared.Git.Repo.status(env)
-        metadata = Shared.maybe_from_pickle( Shared.get_file(build_metadata), default_value={} )
-        metadata['last_build_commit'] = status['branch.oid']
-        Shared.put_file(build_metadata, pickle.dumps(metadata) )        
+        build_metadata['last_build_commit'] = status['branch.oid']

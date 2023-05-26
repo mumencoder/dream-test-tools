@@ -8,6 +8,7 @@ def base_env():
     return env
 
 def load_config(env, configfile):
+    print("load config...")
     with open(configfile, "r") as f:
         gs = {}
         exec( compile(f.read(), configfile, 'exec'), gs )
@@ -18,5 +19,7 @@ def load_config(env, configfile):
 
     env.zip_with_dict( config["dirs"], assign_fn=assign_path, prefix=env.prefix('.dirs') )
 
-    env.attr.dirs.tmp = Shared.Path( '/tmp' )
-    env.attr.dirs.resources = env.attr.dirs.dtt / 'resources'
+    gs["init"](env)
+
+
+

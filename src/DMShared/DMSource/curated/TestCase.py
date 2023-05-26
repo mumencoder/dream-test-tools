@@ -8,7 +8,7 @@ class TestCase(object):
         for root, dirs, files in os.walk(path):
             for file in files:
                 if file.endswith('.dm'):
-                    env.attr.test.source_file = f"{root}/{file}"
+                    env.attr.test.source_file = Shared.Path( f"{root}/{file}" )
                     yield env
 
     @staticmethod

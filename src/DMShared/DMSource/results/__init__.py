@@ -1,1 +1,1 @@
-from .Display import *
+from .Compare import *
