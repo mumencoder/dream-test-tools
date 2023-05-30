@@ -8,18 +8,39 @@ class Builder(object):
 
     @staticmethod
     async def build(env):
-        renv = env.branch()
-        Builder.prepare_solution(renv)
-        await Shared.Dotnet.Project.restore( renv )
+        build = env.prefix('.clopendream.build')
+        dotnet = env.prefix('.dotnet')
 
-        benv = env.branch()
-        if benv.has_attr('.clopendream.build.params'):
-            benv.attr.dotnet.build.params = Shared.Dotnet.Project.default_params(benv.attr.clopendream.build.params)
+        if env.has_attr('.clopendream.build.params'):
+            dotnet.build.params = Shared.Dotnet.Project.default_params(build.params)
         else:
-            benv.attr.dotnet.build.params = {}
+            dotnet.build.params = {}
 
-        if 'configuration' not in benv.attr.dotnet.build.params:
-            benv.attr.dotnet.build.params['configuration'] = "Debug"
+        dotnet.build.params['configuration'] = 'Debug'
 
-        Builder.prepare_solution(benv)
-        await Shared.Dotnet.Project.build( benv )
+        env.attr.dotnet.solution.path = env.attr.install.dir
+        cenv = env.branch()
+        Builder.prepare_solution( cenv )
+
+        crenv = cenv.branch()
+        await Shared.Dotnet.Project.restore( crenv )
+
+        cbenv = cenv.branch()
+        if build.mode == "publish":
+            await Shared.Dotnet.Project.publish( cbenv )
+        else:
+            await Shared.Dotnet.Project.build( cbenv )
+
+        env.attr.restore_env = crenv
+        env.attr.build_env = cbenv
+
+    @staticmethod
+    async def managed_build(env, build_metadata):
+        env = env.branch()
+        await Builder.build(env)
+        if env.attr.restore_env.attr.process.instance.returncode != 0:
+            raise Exception("restore failed")
+        if env.attr.build_env.attr.process.instance.returncode != 0:
+            raise Exception("build failed")
+        status = await Shared.Git.Repo.status(env)
+        build_metadata['last_build_commit'] = status['branch.oid']
