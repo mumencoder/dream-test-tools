@@ -19,6 +19,7 @@ async def byond_test(benv, tenv):
     cenv.attr.compilation.root_dir = tenv.attr.test.base_dir
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     await DMShared.Byond.Compilation.managed_compile(cenv)
+    test_result['source'] = tenv.attr.test.text
     test_result["compile.returncode"] = cenv.attr.compile.returncode
     test_result["compile.stdout"] = cenv.attr.compile.stdout 
 
@@ -44,6 +45,7 @@ async def opendream_test(oenv, tenv):
     cenv.attr.compilation.root_dir = tenv.attr.test.base_dir
     cenv.attr.compilation.dm_file_path = cenv.attr.compilation.root_dir / 'test.dm'
     await DMShared.OpenDream.Compilation.managed_compile(cenv)
+    test_result['source'] = tenv.attr.test.text
     test_result["compile.returncode"] = cenv.attr.compile.returncode
     test_result["compile.stdout"] = cenv.attr.compile.stdout 
 

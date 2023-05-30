@@ -11,4 +11,18 @@ dash.register_page(
 )
 
 def layout():
-    return [render_nav_bar()]
+    contents = [render_nav_bar()]
+
+    contents += [html.H3("Test runs:")]
+    with open(root_env.attr.dirs.storage / 'metadata' / 'test_runs.json', "r") as f:
+        for testrun in json.loads(f.read()):
+            contents += [dcc.Link(testrun, href=f'/testrun/{testrun}'), html.Br()]
+    contents += [html.Hr()]
+
+    contents += [html.H3("Compares:")]
+    with open(root_env.attr.dirs.storage / 'metadata' / 'compares.json', "r") as f:
+        for compares in json.loads(f.read()):
+            contents += [dcc.Link(f"{compares[0]} / {compares[1]}", href=f'/compares/summary/{compares[0]}/{compares[1]}'), html.Br()]
+    contents += [html.Hr()]
+
+    return contents
