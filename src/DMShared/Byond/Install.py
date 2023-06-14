@@ -26,3 +26,8 @@ class Install(object):
             return "exists"
         else:
             return "missing"
+
+    @staticmethod
+    def latest_version(path):
+        byond_version = list(sorted( os.listdir(path), reverse=True ))[0]
+        return byond_version

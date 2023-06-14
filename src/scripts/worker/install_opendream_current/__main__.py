@@ -2,7 +2,7 @@
 from common import *
 
 root_env = base_env()
-load_config( root_env, sys.argv[1] )
+load_config( root_env, sys.argv[1], sys.argv[2] )
 
 async def main():
     oenv = root_env.branch()
@@ -21,4 +21,11 @@ async def main():
     await DMShared.OpenDream.Builder.managed_build(oenv, metadata)
     Shared.put_file(build_metadata, pickle.dumps(metadata) )        
 
+def main():
+    byond_version = list(sorted( os.listdir(root_env.attr.dirs.byond_install), reverse=True ))[0]
+
+    benv = root_env.branch()
+    benv.attr.install.dir = root_env.attr.dirs.byond_install / byond_version
+    benv.attr.process.try_terminate = termination_check
+        
 asyncio.run( main() )

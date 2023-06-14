@@ -16,7 +16,7 @@ def layout():
     contents += [html.H3("Test runs:")]
     with open(root_env.attr.dirs.storage / 'metadata' / 'test_runs.json', "r") as f:
         for testrun in json.loads(f.read()):
-            contents += [dcc.Link(testrun, href=f'/testrun/{testrun}'), html.Br()]
+            contents += [dcc.Link(testrun, href=f'/testrun/summary/{testrun}'), html.Br()]
     contents += [html.Hr()]
 
     contents += [html.H3("Compares:")]
